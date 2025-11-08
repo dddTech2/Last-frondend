@@ -1,50 +1,101 @@
-import React, { useState } from 'react';
-import { AlertCircle } from 'lucide-react';
-import FormField from './FormField';
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, FileText, Eye, MoreVertical } from 'lucide-react';
 
-const CommunicationStep2 = ({ communicationType, onNext, onBack }) => {
+const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) => {
   const [formData, setFormData] = useState({
-    campaignName: '',
-    description: '',
-    targetAudience: 'all',
-    schedule: 'immediate',
-    scheduledDate: '',
-    scheduledTime: '',
+    selectedTemplateId: '',
   });
 
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [previewContent, setPreviewContent] = useState(null);
   const [errors, setErrors] = useState({});
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Limpiar error del campo al modificarlo
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
+  // Cargar plantillas desde el endpoint
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      // TODO: Reemplazar con endpoint real
+      const response = await fetch('/api/v1/communications/templates');
+      if (response.ok) {
+        const data = await response.json();
+        setTemplates(data || []);
+      }
+    } catch (error) {
+      console.error('Error cargando plantillas:', error);
+      // Datos de prueba para demostración
+      setTemplates([
+        {
+          id: 'template-1',
+          name: 'Notificación de Deuda',
+          description: 'Plantilla para notificar deudas pendientes',
+          type: 'email',
+          status: 'active',
+          updatedAt: '2024-11-08',
+        },
+        {
+          id: 'template-2',
+          name: 'Recordatorio de Pago',
+          description: 'Recordatorio amistoso de pago',
+          type: 'whatsapp',
+          status: 'active',
+          updatedAt: '2024-11-07',
+        },
+        {
+          id: 'template-3',
+          name: 'Oferta Especial',
+          description: 'Comunicación de promociones',
+          type: 'email',
+          status: 'active',
+          updatedAt: '2024-11-06',
+        },
+      ]);
+    } finally {
+      setLoadingTemplates(false);
     }
+  };
+
+  // Cargar preview de plantilla seleccionada
+  const fetchTemplatePreview = async (templateId) => {
+    setLoadingPreview(true);
+    try {
+      // TODO: Reemplazar con endpoint real
+      const response = await fetch(`/api/v1/communications/templates/${templateId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPreviewContent(data);
+      }
+    } catch (error) {
+      console.error('Error cargando preview:', error);
+      // Contenido de prueba
+      setPreviewContent({
+        id: templateId,
+        content: 'Este es un preview de la plantilla seleccionada. Aquí se mostrará el contenido de la comunicación personalizado con los datos del cliente.',
+        variables: ['{{cliente_nombre}}', '{{monto_adeudado}}', '{{fecha_vencimiento}}'],
+      });
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleSelectTemplate = (template) => {
+    setSelectedTemplate(template);
+    setFormData(prev => ({ ...prev, selectedTemplateId: template.id }));
+    setErrors({});
+    fetchTemplatePreview(template.id);
   };
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.campaignName.trim()) {
-      newErrors.campaignName = 'El nombre de la campaña es requerido';
-    }
-    
-    if (formData.campaignName.trim().length < 3) {
-      newErrors.campaignName = 'El nombre debe tener al menos 3 caracteres';
-    }
-    
-    if (!formData.description.trim()) {
-      newErrors.description = 'La descripción es requerida';
-    }
-    
-    if (formData.schedule === 'scheduled') {
-      if (!formData.scheduledDate) {
-        newErrors.scheduledDate = 'Debes seleccionar una fecha';
-      }
-      if (!formData.scheduledTime) {
-        newErrors.scheduledTime = 'Debes seleccionar una hora';
-      }
+    if (!formData.selectedTemplateId) {
+      newErrors.selectedTemplateId = 'Debes seleccionar una plantilla';
     }
     
     setErrors(newErrors);
@@ -53,162 +104,151 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack }) => {
 
   const handleSubmit = () => {
     if (validateForm()) {
-      onNext(formData);
+      onNext({
+        ...formData,
+        selectedTemplate: selectedTemplate,
+        previewContent: previewContent,
+      });
     }
   };
 
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
-  const audienceOptions = [
-    { value: 'all', label: 'Todos los clientes' },
-    { value: 'active', label: 'Clientes activos' },
-    { value: 'inactive', label: 'Clientes inactivos' },
-    { value: 'vip', label: 'Clientes VIP' },
-    { value: 'delinquent', label: 'Clientes con deuda' },
-  ];
-
   return (
-    <div className="space-y-4 text-sm">
-      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200 rounded-lg p-3">
-        <h3 className="font-semibold text-indigo-900 mb-2 text-sm flex items-center gap-2">
-          <span className="text-lg">⚙️</span> Configuración de Campaña
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200 rounded-lg p-3 mb-3">
+        <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+          <span className="text-lg">📋</span> Seleccionar Plantilla
         </h3>
-        <p className="text-sm text-indigo-700 font-medium">
-          <span className="font-semibold">{communicationType.title}</span>
+        <p className="text-xs text-slate-600 mt-1">
+          Canal: <span className="font-semibold text-slate-900">{communicationType.title}</span>
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Nombre de la Campaña *
-          </label>
-          <input
-            type="text"
-            name="campaignName"
-            value={formData.campaignName}
-            onChange={handleChange}
-            placeholder="Ej: Campaña Q1"
-            className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
-              errors.campaignName ? 'border-red-500 bg-red-50' : 'border-indigo-300 bg-white'
-            }`}
-          />
-          {errors.campaignName && (
-            <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" /> {errors.campaignName}
-            </p>
+      {/* Contenido Principal - 2 Columnas */}
+      <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
+        {/* Columna 1: Lista de Plantillas */}
+        <div className="flex flex-col bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200 rounded-lg p-3 overflow-hidden">
+          <h4 className="font-semibold text-emerald-900 text-sm mb-2 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-emerald-700" />
+            Plantillas Disponibles
+          </h4>
+
+          {loadingTemplates ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-xs text-emerald-700">Cargando plantillas...</p>
+            </div>
+          ) : (
+            <div className="flex-1 space-y-2 overflow-y-auto">
+              {templates.length > 0 ? (
+                templates.map((template) => (
+                  <div
+                    key={template.id}
+                    onClick={() => handleSelectTemplate(template)}
+                    className={`p-2.5 rounded-lg border-2 transition-all cursor-pointer ${
+                      selectedTemplate?.id === template.id
+                        ? 'border-emerald-600 bg-emerald-100 shadow-md shadow-emerald-200'
+                        : 'border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-emerald-900 text-xs truncate">
+                          {template.name}
+                        </p>
+                        <p className="text-xs text-emerald-700 line-clamp-2 mt-0.5">
+                          {template.description}
+                        </p>
+                        <div className="flex gap-1 mt-1">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                            template.type === 'email'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
+                            {template.type === 'email' ? '✉️ Email' : '💬 WhatsApp'}
+                          </span>
+                          <span className="text-xs text-emerald-600">
+                            {new Date(template.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-xs text-emerald-600">No hay plantillas disponibles</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {errors.selectedTemplateId && (
+            <div className="mt-2 p-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {errors.selectedTemplateId}
+            </div>
           )}
         </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Descripción *
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="Describe tu campaña..."
-            rows="2"
-            className={`w-full px-3 py-2 text-xs border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none ${
-              errors.description ? 'border-red-500 bg-red-50' : 'border-indigo-300 bg-white'
-            }`}
-          />
-          {errors.description && (
-            <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" /> {errors.description}
-            </p>
+        {/* Columna 2: Preview */}
+        <div className="flex flex-col bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 overflow-hidden">
+          <h4 className="font-semibold text-purple-900 text-sm mb-2 flex items-center gap-2">
+            <Eye className="h-4 w-4 text-purple-700" />
+            Vista Previa
+          </h4>
+
+          {selectedTemplate ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {loadingPreview ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs text-purple-700">Cargando preview...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Información de la plantilla */}
+                  <div className="bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg p-2 mb-2 border border-purple-300">
+                    <p className="font-semibold text-purple-900 text-xs">{selectedTemplate.name}</p>
+                    <p className="text-xs text-purple-800 mt-0.5">{selectedTemplate.description}</p>
+                  </div>
+
+                  {/* Contenido del preview */}
+                  <div className="flex-1 bg-white rounded-lg p-2.5 border border-purple-300 overflow-y-auto">
+                    <div className="text-xs text-purple-900 leading-relaxed whitespace-pre-wrap">
+                      {previewContent?.content || 'No hay contenido disponible'}
+                    </div>
+
+                    {/* Variables disponibles */}
+                    {previewContent?.variables && previewContent.variables.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-purple-300">
+                        <p className="text-xs font-semibold text-purple-700 mb-1">Variables disponibles:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {previewContent.variables.map((variable, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full font-mono"
+                            >
+                              {variable}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-center">
+              <div>
+                <Eye className="h-8 w-8 text-purple-300 mx-auto mb-2" />
+                <p className="text-xs text-purple-600">Selecciona una plantilla para ver el preview</p>
+              </div>
+            </div>
           )}
         </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Audiencia *
-          </label>
-          <select
-            name="targetAudience"
-            value={formData.targetAudience}
-            onChange={handleChange}
-            className="w-full px-3 py-2 text-sm border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-white"
-          >
-            {audienceOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Tipo de Envío *
-          </label>
-          <select
-            name="schedule"
-            value={formData.schedule}
-            onChange={handleChange}
-            className="w-full px-3 py-2 text-sm border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-white"
-          >
-            <option value="immediate">Inmediato</option>
-            <option value="scheduled">Programado</option>
-          </select>
-        </div>
-
-        {formData.schedule === 'scheduled' && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Fecha *
-              </label>
-              <input
-                type="date"
-                name="scheduledDate"
-                value={formData.scheduledDate}
-                onChange={handleChange}
-                min={getTodayDate()}
-                className={`w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                  errors.scheduledDate ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {errors.scheduledDate && (
-                <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> {errors.scheduledDate}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Hora *
-              </label>
-              <input
-                type="time"
-                name="scheduledTime"
-                value={formData.scheduledTime}
-                onChange={handleChange}
-                className={`w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                  errors.scheduledTime ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {errors.scheduledTime && (
-                <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> {errors.scheduledTime}
-                </p>
-              )}
-            </div>
-          </>
-        )}
       </div>
 
-      <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-        <p className="font-semibold mb-1">💡 Tip</p>
-        <p>Mayor lectura en horarios de oficina (9 AM - 5 PM)</p>
-      </div>
-
-      <div className="flex gap-3 pt-3 border-t border-gray-300">
+      {/* Botones de Navegación */}
+      <div className="flex gap-3 pt-3 border-t border-purple-300 mt-3">
         <button
           onClick={onBack}
           className="px-4 py-2 text-xs rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md"
@@ -217,7 +257,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack }) => {
         </button>
         <button
           onClick={handleSubmit}
-          className="px-5 py-2 text-xs rounded-lg font-bold text-white bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-md hover:shadow-lg ml-auto"
+          className="px-5 py-2 text-xs rounded-lg font-bold text-white bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all shadow-md hover:shadow-lg ml-auto"
         >
           Siguiente
         </button>
