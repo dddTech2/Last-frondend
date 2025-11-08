@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, Mail, Send, MessageCircle } from 'lucide-react';
+import { getObligacionesByCedula } from '../services/api';
+import { debounce } from 'lodash';
 
 const CommunicationStep1 = ({ onNext, onCancel }) => {
   const [formData, setFormData] = useState({
     cedula: '',
-    obligacion: '',
+    obligaciones: [],
     tipoDeudor: '',
-    canalComunicacion: ''
+    canalComunicacion: '',
+    tipoAprobacion: ''
   });
 
   const [errors, setErrors] = useState({});
+  const [obligacionesOptions, setObligacionesOptions] = useState([]);
+  const [loadingObligaciones, setLoadingObligaciones] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,6 +22,53 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
+  };
+
+  // Debounced function para buscar obligaciones cuando cambia la cédula
+  const fetchObligacionesByCedula = debounce(async (cedula) => {
+    if (!cedula || cedula.trim() === '') {
+      setObligacionesOptions([]);
+      setFormData(prev => ({ ...prev, obligaciones: [] }));
+      return;
+    }
+
+    setLoadingObligaciones(true);
+    try {
+      const response = await getObligacionesByCedula(cedula);
+      const obligaciones = response.obligaciones || [];
+      setObligacionesOptions(obligaciones);
+
+      // Si hay solo una obligación, seleccionarla automáticamente
+      if (obligaciones.length === 1) {
+        setFormData(prev => ({ ...prev, obligaciones: [obligaciones[0].obligacion] }));
+      } else {
+        setFormData(prev => ({ ...prev, obligaciones: [] }));
+      }
+    } catch (err) {
+      console.error('Error fetching obligaciones:', err);
+      setObligacionesOptions([]);
+      setFormData(prev => ({ ...prev, obligaciones: [] }));
+    } finally {
+      setLoadingObligaciones(false);
+    }
+  }, 500);
+
+  useEffect(() => {
+    fetchObligacionesByCedula(formData.cedula);
+  }, [formData.cedula]);
+
+  const handleObligacionChange = (obligacionId) => {
+    // Si solo hay una obligación, no permitir deseleccionarla
+    if (obligacionesOptions.length === 1) {
+      return;
+    }
+
+    setFormData(prev => {
+      const obligaciones = prev.obligaciones.includes(obligacionId)
+        ? prev.obligaciones.filter(o => o !== obligacionId)
+        : [...prev.obligaciones, obligacionId];
+      return { ...prev, obligaciones };
+    });
   };
 
   const validateForm = () => {
@@ -28,8 +80,8 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
       newErrors.cedula = 'Solo se permiten números';
     }
     
-    if (!formData.obligacion) {
-      newErrors.obligacion = 'Debes seleccionar una obligación';
+    if (formData.obligaciones.length === 0) {
+      newErrors.obligaciones = 'Debes seleccionar al menos una obligación';
     }
     
     if (!formData.tipoDeudor) {
@@ -38,6 +90,10 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     
     if (!formData.canalComunicacion) {
       newErrors.canalComunicacion = 'Debes seleccionar un canal de comunicación';
+    }
+
+    if (!formData.tipoAprobacion) {
+      newErrors.tipoAprobacion = 'Debes seleccionar el tipo de comunicación';
     }
     
     setErrors(newErrors);
@@ -76,91 +132,153 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4 text-sm">
       {/* SECCIÓN 1: DATOS DEL CLIENTE */}
       <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-lg p-3">
-        <h3 className="font-semibold text-blue-900 mb-2 text-sm flex items-center gap-2">
+        <h3 className="font-semibold text-blue-900 mb-3 text-sm flex items-center gap-2">
           <span className="text-lg">👤</span> Datos del Cliente
         </h3>
 
-        <div className="space-y-2">
-          {/* Cédula */}
-          <div>
-            <label className="block text-xs font-semibold text-blue-900 mb-1">
-              Cédula *
-            </label>
-            <input
-              type="text"
-              name="cedula"
-              value={formData.cedula}
-              onChange={handleChange}
-              placeholder="1023456789"
-              className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                errors.cedula ? 'border-red-500 bg-red-50' : 'border-blue-300 bg-white'
-              }`}
-            />
-            {errors.cedula && (
-              <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> {errors.cedula}
-              </p>
-            )}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Columna 1: Cédula y Obligaciones */}
+          <div className="space-y-3">
+            {/* Cédula */}
+            <div>
+              <label className="block text-xs font-semibold text-blue-900 mb-1">
+                Cédula *
+              </label>
+              <input
+                type="text"
+                name="cedula"
+                value={formData.cedula}
+                onChange={handleChange}
+                placeholder="1023456789"
+                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                  errors.cedula ? 'border-red-500 bg-red-50' : 'border-blue-300 bg-white'
+                }`}
+              />
+              {errors.cedula && (
+                <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {errors.cedula}
+                </p>
+              )}
+            </div>
+
+            {/* Obligación */}
+            <div>
+              <label className="block text-xs font-semibold text-blue-900 mb-1.5">
+                Obligaciones * {loadingObligaciones && <span className="text-blue-600 text-xs">(Cargando...)</span>}
+              </label>
+              {obligacionesOptions.length > 0 ? (
+                <div className="space-y-2 bg-white p-2 rounded-lg border-2 border-blue-300 max-h-40 overflow-y-auto">
+                  {obligacionesOptions.map((obligacion) => (
+                    <label 
+                      key={obligacion.obligacion} 
+                      className={`flex items-center gap-2 ${obligacionesOptions.length === 1 ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.obligaciones.includes(obligacion.obligacion)}
+                        onChange={() => handleObligacionChange(obligacion.obligacion)}
+                        disabled={obligacionesOptions.length === 1}
+                        className={`w-4 h-4 accent-blue-600 ${obligacionesOptions.length === 1 ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      />
+                      <span className={`text-sm font-medium ${obligacionesOptions.length === 1 ? 'text-gray-900' : 'text-gray-700'}`}>
+                        {obligacion.obligacion}
+                        {obligacion.sistema_origen && <span className="text-xs text-gray-500 ml-2">({obligacion.sistema_origen})</span>}
+                        {obligacionesOptions.length === 1 && <span className="text-xs text-blue-600 ml-2">(Única)</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : loadingObligaciones ? (
+                <div className="text-xs text-gray-600 p-2">Cargando obligaciones...</div>
+              ) : (
+                <div className="text-xs text-gray-600 p-2">Ingresa la cédula para cargar las obligaciones</div>
+              )}
+              {errors.obligaciones && (
+                <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {errors.obligaciones}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Obligación */}
+          {/* Columna 2: Tipo de Deudor */}
           <div>
-            <label className="block text-xs font-semibold text-blue-900 mb-1">
-              Obligación *
-            </label>
-            <select
-              name="obligacion"
-              value={formData.obligacion}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                errors.obligacion ? 'border-red-500 bg-red-50' : 'border-blue-300 bg-white'
-              }`}
-            >
-              <option value="">-- Selecciona --</option>
-              {obligaciones.map(oblig => (
-                <option key={oblig.value} value={oblig.value}>
-                  {oblig.label}
-                </option>
-              ))}
-            </select>
-            {errors.obligacion && (
-              <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> {errors.obligacion}
-              </p>
-            )}
-          </div>
-
-          {/* Tipo de Deudor */}
-          <div>
-            <label className="block text-xs font-semibold text-blue-900 mb-1.5">
+            <label className="block text-xs font-semibold text-blue-900 mb-2">
               Tipo de Deudor *
             </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="space-y-2">
+              {/* Deudor */}
+              <label className="cursor-pointer group">
                 <input
                   type="radio"
                   name="tipoDeudor"
                   value="deudor"
                   checked={formData.tipoDeudor === 'deudor'}
                   onChange={handleChange}
-                  className="w-4 h-4 accent-blue-600"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 font-medium">Deudor</span>
+                <div className={`p-2.5 rounded-lg border-2 transition-all ${
+                  formData.tipoDeudor === 'deudor'
+                    ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-200'
+                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${
+                      formData.tipoDeudor === 'deudor'
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-gray-300 group-hover:border-blue-400'
+                    }`}>
+                      {formData.tipoDeudor === 'deudor' && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">Deudor</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Principal responsable</p>
+                    </div>
+                  </div>
+                </div>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+
+              {/* Codeudor */}
+              <label className="cursor-pointer group">
                 <input
                   type="radio"
                   name="tipoDeudor"
                   value="codeudor"
                   checked={formData.tipoDeudor === 'codeudor'}
                   onChange={handleChange}
-                  className="w-4 h-4 accent-blue-600"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-700 font-medium">Codeudor</span>
+                <div className={`p-2.5 rounded-lg border-2 transition-all ${
+                  formData.tipoDeudor === 'codeudor'
+                    ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-200'
+                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${
+                      formData.tipoDeudor === 'codeudor'
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-gray-300 group-hover:border-blue-400'
+                    }`}>
+                      {formData.tipoDeudor === 'codeudor' && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">Codeudor</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Responsable solidario</p>
+                    </div>
+                  </div>
+                </div>
               </label>
             </div>
             {errors.tipoDeudor && (
-              <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
+              <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" /> {errors.tipoDeudor}
               </p>
             )}
@@ -170,32 +288,146 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
 
       {/* SECCIÓN 2: CANAL DE COMUNICACIÓN */}
       <div className="bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 rounded-lg p-3">
-        <h3 className="font-semibold text-green-900 mb-2 text-sm flex items-center gap-2">
+        <h3 className="font-semibold text-green-900 mb-3 text-sm flex items-center gap-2">
           <span className="text-lg">📢</span> Canal de Comunicación
         </h3>
 
-        <div className="flex justify-center gap-3 w-full">
+        <div className="grid grid-cols-2 gap-3">
           {communicationChannels.map((channel) => (
-            <button
-              key={channel.id}
-              type="button"
-              onClick={() => setFormData(prev => ({ ...prev, canalComunicacion: channel.id }))}
-              className={`relative overflow-hidden rounded-lg p-4 text-white transition-all font-bold text-xs flex flex-col items-center justify-center gap-2 w-40 h-28 ${
+            <label key={channel.id} className="cursor-pointer group">
+              <input
+                type="radio"
+                name="canalComunicacion"
+                value={channel.id}
+                checked={formData.canalComunicacion === channel.id}
+                onChange={handleChange}
+                className="sr-only"
+              />
+              <div className={`p-3 rounded-lg border-2 transition-all ${
                 formData.canalComunicacion === channel.id
-                  ? `bg-gradient-to-br ${channel.color} shadow-lg ring-2 ring-yellow-300 scale-105`
-                  : `bg-gradient-to-br ${channel.color} shadow hover:shadow-lg hover:scale-105`
-              }`}
-            >
-              <div className="relative z-10 flex flex-col items-center gap-2">
-                {React.cloneElement(channel.icon, { className: 'h-7 w-7' })}
-                <span className="text-xs font-bold">{channel.title}</span>
+                  ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-200'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+              }`}>
+                <div className="flex items-start gap-2">
+                  <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    formData.canalComunicacion === channel.id
+                      ? 'border-blue-500 bg-blue-500'
+                      : 'border-gray-300 group-hover:border-blue-400'
+                  }`}>
+                    {formData.canalComunicacion === channel.id && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{channel.id === 'email' ? '✉️' : '💬'}</span>
+                      <p className="font-semibold text-gray-800 text-sm">{channel.title}</p>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      {channel.id === 'email' ? 'Correo electrónico' : 'WhatsApp Business'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </button>
+            </label>
           ))}
         </div>
         {errors.canalComunicacion && (
-          <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
+          <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
             <AlertCircle className="h-3 w-3" /> {errors.canalComunicacion}
+          </p>
+        )}
+      </div>
+
+      {/* SECCIÓN 3: TIPO DE COMUNICACIÓN */}
+      <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3">
+        <h3 className="font-semibold text-purple-900 mb-3 text-sm flex items-center gap-2">
+          <span className="text-lg">✓</span> Tipo de Comunicación
+        </h3>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Sin Aprobación */}
+          <label className="cursor-pointer group">
+            <input
+              type="radio"
+              name="tipoAprobacion"
+              value="sin_aprobacion"
+              checked={formData.tipoAprobacion === 'sin_aprobacion'}
+              onChange={handleChange}
+              className="sr-only"
+            />
+            <div className={`p-3 rounded-lg border-2 transition-all ${
+              formData.tipoAprobacion === 'sin_aprobacion'
+                ? 'border-green-500 bg-green-50 shadow-lg shadow-green-200'
+                : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-start gap-2">
+                <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                  formData.tipoAprobacion === 'sin_aprobacion'
+                    ? 'border-green-500 bg-green-500'
+                    : 'border-gray-300 group-hover:border-green-400'
+                }`}>
+                  {formData.tipoAprobacion === 'sin_aprobacion' && (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Sin Aprobación</p>
+                  <p className="text-xs text-gray-600 mt-0.5">Envío inmediato</p>
+                </div>
+              </div>
+              <div className="mt-2 ml-7 text-xs text-gray-600 border-l-2 border-green-200 pl-2">
+                Comunicación directa sin validación previa
+              </div>
+            </div>
+          </label>
+
+          {/* Con Aprobación */}
+          <label className="cursor-pointer group">
+            <input
+              type="radio"
+              name="tipoAprobacion"
+              value="con_aprobacion"
+              checked={formData.tipoAprobacion === 'con_aprobacion'}
+              onChange={handleChange}
+              className="sr-only"
+            />
+            <div className={`p-3 rounded-lg border-2 transition-all ${
+              formData.tipoAprobacion === 'con_aprobacion'
+                ? 'border-amber-500 bg-amber-50 shadow-lg shadow-amber-200'
+                : 'border-gray-200 bg-white hover:border-amber-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-start gap-2">
+                <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                  formData.tipoAprobacion === 'con_aprobacion'
+                    ? 'border-amber-500 bg-amber-500'
+                    : 'border-gray-300 group-hover:border-amber-400'
+                }`}>
+                  {formData.tipoAprobacion === 'con_aprobacion' && (
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Con Aprobación</p>
+                  <p className="text-xs text-gray-600 mt-0.5">Requiere validación</p>
+                </div>
+              </div>
+              <div className="mt-2 ml-7 text-xs text-gray-600 border-l-2 border-amber-200 pl-2">
+                Se requiere revisión antes del envío
+              </div>
+            </div>
+          </label>
+        </div>
+
+        {errors.tipoAprobacion && (
+          <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" /> {errors.tipoAprobacion}
           </p>
         )}
       </div>
