@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { validateForm, validators } from '../utils/InputValidator';
 import * as api from '../services/api';
@@ -32,6 +32,7 @@ const useIngresoForm = (initialState = {}) => {
     password_renovar_confirm: '',
     
     // Datos adicionales personales (nuevos)
+    // estado: Se determina automáticamente según tipo de contrato
     estado: '',
     ciudad: '',
     localidad: '', // Nueva: localidad de Bogotá
@@ -53,7 +54,38 @@ const useIngresoForm = (initialState = {}) => {
   const [cedulaValidating, setCedulaValidating] = useState(false);
 
   /**
+   * Determinar el estado del empleado según el tipo de contrato
+   * PLANTA -> PENDIENTE_APROBACION_JURIDICO
+   * CORRETAJE, TEMPORAL, CASA DE COBRO -> EN_PROCESO_DE_CONTRATACION
+   */
+  const determineEstadoByTipoContrato = useCallback((tipoContrato) => {
+    const estadoMap = {
+      'PLANTA': 'PENDIENTE_APROBACION_JURIDICO',
+      'CORRETAJE': 'EN_PROCESO_DE_CONTRATACION',
+      'TEMPORAL': 'EN_PROCESO_DE_CONTRATACION',
+      'CASA DE COBRO': 'EN_PROCESO_DE_CONTRATACION',
+    };
+    return estadoMap[tipoContrato] || 'EN_PROCESO_DE_CONTRATACION';
+  }, []);
+
+  /**
+   * Efecto: Actualizar estado automáticamente cuando cambia el tipo de contrato
+   */
+  useEffect(() => {
+    if (formData.contrato) {
+      const nuevoEstado = determineEstadoByTipoContrato(formData.contrato);
+      setFormData(prev => ({
+        ...prev,
+        estado: nuevoEstado,
+      }));
+      console.log(`✅ Estado actualizado automáticamente: ${formData.contrato} -> ${nuevoEstado}`);
+    }
+  }, [formData.contrato, determineEstadoByTipoContrato]);
+
+  /**
    * Reglas de validación del formulario
+   * NOTA: 'localidad' NO está aquí - se valida condicionalmente en validateAll()
+   * NOTA: 'password_renovar_confirm' se valida especialmente en validateField()
    */
   const validationRules = {
     cedula: validators.cedula,
@@ -67,13 +99,12 @@ const useIngresoForm = (initialState = {}) => {
     jefe_inmediato: validators.jefeInmediato,
     correo_renovar: (value) => validators.email(value, 'correo Renovar'),
     password_renovar: validators.password,
+    password_renovar_confirm: () => null, // Se valida con lógica especial en validateField
     fecha_nacimiento: validators.fechaNacimiento,
     contacto_emergencia_nombre: validators.nombreContactoEmergencia,
     contacto_emergencia_telefono: validators.telefonoEmergencia,
     genero: (value) => !value || value === '' ? 'Este campo es requerido' : null,
-    estado: (value) => !value || value === '' ? 'Este campo es requerido' : null,
     ciudad: (value) => !value || value === '' ? 'Este campo es requerido' : null,
-    localidad: (value) => !value || value === '' ? 'Este campo es requerido' : null,
     lugar: (value) => !value || value === '' ? 'Este campo es requerido' : null,
     direccion_residencia: (value) => {
       if (!value || value.toString().trim() === '') {
@@ -87,7 +118,13 @@ const useIngresoForm = (initialState = {}) => {
     eps: (value) => !value || value === '' ? 'Este campo es requerido' : null,
     fondo_pensiones: (value) => !value || value === '' ? 'Este campo es requerido' : null,
     arl: (value) => !value || value === '' ? 'Este campo es requerido' : null,
-    cantidad_hijos: (value) => !value || value === '' ? 'Este campo es requerido' : null,
+    cantidad_hijos: (value) => {
+      // Aceptar 0 como valor válido
+      if (value === '' || value === null || value === undefined) {
+        return 'Este campo es requerido';
+      }
+      return null;
+    },
   };
 
   /**
@@ -135,19 +172,27 @@ const useIngresoForm = (initialState = {}) => {
    * Validar un campo individual
    */
   const validateField = useCallback((fieldName, value) => {
+    // Manejo especial para password_renovar_confirm
+    if (fieldName === 'password_renovar_confirm') {
+      // Solo validar si ambas contraseñas están llenas
+      if (!formData.password_renovar || !value) {
+        return 'Este campo es requerido';
+      }
+      return validators.passwordMatch(formData.password_renovar, value);
+    }
+
+    // Manejo especial para jefe_inmediato
+    if (fieldName === 'jefe_inmediato') {
+      const error = validators.jefeInmediato(value, formData.cargo);
+      return error;
+    }
+
+    // Si no hay regla de validación, no hay error
     if (!validationRules[fieldName]) {
       return null;
     }
 
-    if (fieldName === 'password_renovar_confirm') {
-      return validators.passwordMatch(formData.password_renovar, value);
-    }
-
-    // Para jefe_inmediato, pasar también el cargo
-    if (fieldName === 'jefe_inmediato') {
-      return validators.jefeInmediato(value, formData.cargo);
-    }
-
+    // Ejecutar la regla de validación
     if (typeof validationRules[fieldName] === 'function') {
       return validationRules[fieldName](value);
     }
@@ -214,37 +259,12 @@ const useIngresoForm = (initialState = {}) => {
 
   /**
    * Validar todos los campos
+   * NOTA: 'localidad' es SOLO para UI cuando ciudad='BOGOTA', NO se envía al backend
    */
   const validateAll = useCallback(() => {
-    const requiredFields = {
-      cedula: formData.cedula,
-      nombre: formData.nombre,
-      celular: formData.celular,
-      correo_personal: formData.correo_personal,
-      cargo: formData.cargo,
-      area: formData.area,
-      fecha_ingreso: formData.fecha_ingreso,
-      contrato: formData.contrato,
-      jefe_inmediato: formData.jefe_inmediato,
-      fecha_nacimiento: formData.fecha_nacimiento,
-      genero: formData.genero,
-      estado: formData.estado,
-      ciudad: formData.ciudad,
-      ...(formData.ciudad === 'BOGOTA' && { localidad: formData.localidad }),
-      lugar: formData.lugar,
-      direccion_residencia: formData.direccion_residencia,
-      eps: formData.eps,
-      fondo_pensiones: formData.fondo_pensiones,
-      arl: formData.arl,
-      cantidad_hijos: formData.cantidad_hijos,
-      contacto_emergencia_nombre: formData.contacto_emergencia_nombre,
-      contacto_emergencia_telefono: formData.contacto_emergencia_telefono,
-      correo_renovar: formData.correo_renovar,
-      password_renovar: formData.password_renovar,
-      password_renovar_confirm: formData.password_renovar_confirm,
-    };
-
     const newErrors = {};
+
+    // 1. Validar todos los campos con reglas definidas en validationRules
     Object.keys(validationRules).forEach(fieldName => {
       const error = validateField(fieldName, formData[fieldName]);
       if (error) {
@@ -252,53 +272,82 @@ const useIngresoForm = (initialState = {}) => {
       }
     });
 
-    // Validar campos requeridos que no tienen reglas de validación específicas
-    let fieldsWithoutRules = ['contrato', 'fecha_nacimiento', 'genero', 'estado', 'ciudad', 'lugar', 
-                                'direccion_residencia', 'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos',
-                                'contacto_emergencia_nombre', 'contacto_emergencia_telefono'];
-    
-    // Agregar localidad solo si es Bogotá
+    // 2. Validación condicional de 'localidad' - SOLO si ciudad es BOGOTA
     if (formData.ciudad === 'BOGOTA') {
-      fieldsWithoutRules.push('localidad');
-    }
-    
-    fieldsWithoutRules.forEach(field => {
-      if (!formData[field] || formData[field].toString().trim() === '') {
-        newErrors[field] = 'Este campo es requerido';
+      if (!formData.localidad || formData.localidad.toString().trim() === '') {
+        newErrors.localidad = 'Este campo es requerido';
       }
-    });
+    }
+    // Si NO es Bogotá, asegurar que NO hay error en localidad
+    else {
+      delete newErrors.localidad;
+    }
 
-    // Validar coincidencia de contraseñas
+    // 3. Validar coincidencia de contraseñas especialmente
     if (formData.password_renovar && formData.password_renovar_confirm) {
       const passwordMatchError = validators.passwordMatch(formData.password_renovar, formData.password_renovar_confirm);
       if (passwordMatchError) {
         newErrors.password_renovar_confirm = passwordMatchError;
       }
+    } else if (formData.password_renovar || formData.password_renovar_confirm) {
+      // Si uno está lleno pero el otro no
+      if (!formData.password_renovar_confirm) {
+        newErrors.password_renovar_confirm = 'Debe confirmar la contraseña';
+      }
     }
 
-    setErrors(newErrors);
-    setTouched(
-      Object.keys(requiredFields).reduce((acc, key) => {
-        acc[key] = true;
-        return acc;
-      }, {})
-    );
+    // 4. Marcar todos los campos como tocados
+    const allFieldNames = [
+      'cedula', 'nombre', 'celular', 'correo_personal',
+      'cargo', 'area', 'fecha_ingreso', 'contrato', 'jefe_inmediato',
+      'ciudad',
+      'fecha_nacimiento', 'genero', 'lugar', 'direccion_residencia',
+      'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos',
+      'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
+      'correo_renovar', 'password_renovar', 'password_renovar_confirm',
+    ];
+    
+    // Agregar localidad a los campos tocados SOLO si es Bogotá
+    if (formData.ciudad === 'BOGOTA') {
+      allFieldNames.push('localidad');
+    }
 
-    return Object.keys(newErrors).length === 0;
+    const newTouched = allFieldNames.reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {});
+
+    setErrors(newErrors);
+    setTouched(newTouched);
+
+    // Retornar true si NO hay errores
+    const hasErrors = Object.keys(newErrors).length > 0;
+    if (hasErrors) {
+      console.error('📌 Campos con error:', Object.keys(newErrors));
+    }
+    return !hasErrors;
   }, [formData, validateField]);
 
   /**
    * Obtener datos limpios para enviar a la API
+   * IMPORTANTE: El backend NO soporta 'localidad', solo 'ciudad'
    */
   const getCleanData = useCallback(() => {
-    const { password_renovar_confirm, ...cleanData } = formData;
+    const { password_renovar_confirm, localidad, extension_3cx, cola, asignacion, ...cleanData } = formData;
     
-    // Si no es Bogotá, eliminar localidad del payload
-    if (cleanData.ciudad !== 'BOGOTA') {
-      delete cleanData.localidad;
-    }
+    // Mapear campos que tienen nombres diferentes en el backend
+    // El backend espera 'nombre_completo' no 'nombre'
+    const payloadData = {
+      ...cleanData,
+      nombre_completo: cleanData.nombre,
+      tipo_contrato: cleanData.contrato,
+    };
     
-    return cleanData;
+    // Remover campos que no existen en el backend
+    delete payloadData.nombre;
+    delete payloadData.contrato;
+    
+    return payloadData;
   }, [formData]);
 
   /**

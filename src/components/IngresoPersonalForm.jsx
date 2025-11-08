@@ -12,6 +12,20 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Función para formatear el estado del empleado de forma legible
+  const formatEstado = (estado) => {
+    const estadoMap = {
+      'PENDIENTE_APROBACION_JURIDICO': 'Pendiente Aprobación Jurídica',
+      'EN_PROCESO_DE_CONTRATACION': 'En Proceso de Contratación',
+      'ACTIVO': 'Activo',
+      'RETIRADO': 'Retirado',
+      'PENDIENTE_RETIRO_JURIDICO': 'Pendiente Retiro Jurídico',
+      'RECHAZO_JURIDICO': 'Rechazo Jurídico',
+      'RECHAZO_RETIRO_JURIDICO': 'Rechazo Retiro Jurídico',
+    };
+    return estadoMap[estado] || estado || '—';
+  };
+
   // Obtener la fecha de hoy en formato YYYY-MM-DD para desabilitar fechas futuras
   const getTodayDate = () => {
     const today = new Date();
@@ -158,7 +172,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     // Validar campos de step 2 - Datos laborales y personales
     const step2Fields = [
       'cargo', 'area', 'fecha_ingreso', 'contrato', 'jefe_inmediato',
-      'fecha_nacimiento', 'genero', 'estado', 'ciudad', 'lugar', 'direccion_residencia',
+      'fecha_nacimiento', 'genero', 'ciudad', 'lugar', 'direccion_residencia',
       'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos', 'contacto_emergencia_nombre',
       'contacto_emergencia_telefono'
     ];
@@ -199,7 +213,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       // Marcar todos los campos del step 2 como touched para que se muestren los errores
       const allStep2Fields = [
         'cargo', 'area', 'fecha_ingreso', 'contrato', 'jefe_inmediato',
-        'fecha_nacimiento', 'genero', 'estado', 'ciudad', 'localidad',
+        'fecha_nacimiento', 'genero', 'ciudad', 'localidad',
         'lugar', 'direccion_residencia', 'eps', 'fondo_pensiones', 'arl',
         'cantidad_hijos', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'
       ];
@@ -218,7 +232,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         jefe_inmediato: 'Jefe Inmediato',
         fecha_nacimiento: 'Fecha de Nacimiento',
         genero: 'Género',
-        estado: 'Estado Civil',
         ciudad: 'Ciudad',
         localidad: 'Localidad',
         lugar: 'Lugar de Trabajo',
@@ -264,15 +277,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     { value: 'CORRETAJE', label: 'Corretaje' },
     { value: 'TEMPORAL', label: 'Temporal' },
     { value: 'CASA DE COBRO', label: 'Casa de Cobro' },
-  ];
-
-  // Opciones para estado civil
-  const estadosOptions = [
-    { value: 'SOLTERO', label: 'Soltero' },
-    { value: 'CASADO', label: 'Casado' },
-    { value: 'DIVORCIADO', label: 'Divorciado' },
-    { value: 'VIUDO', label: 'Viudo' },
-    { value: 'UNION_LIBRE', label: 'Unión Libre' },
   ];
 
   // Opciones para ciudades principales de Colombia
@@ -409,7 +413,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       jefe_inmediato: 'Jefe Inmediato',
       fecha_nacimiento: 'Fecha de Nacimiento',
       genero: 'Género',
-      estado: 'Estado Civil',
       ciudad: 'Ciudad',
       localidad: 'Localidad',
       lugar: 'Lugar de Trabajo',
@@ -431,7 +434,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     if (!formData.jefe_inmediato) missingFields.push(fieldLabels.jefe_inmediato);
     if (!formData.fecha_nacimiento) missingFields.push(fieldLabels.fecha_nacimiento);
     if (!formData.genero) missingFields.push(fieldLabels.genero);
-    if (!formData.estado) missingFields.push(fieldLabels.estado);
     if (!formData.ciudad) missingFields.push(fieldLabels.ciudad);
     if (formData.ciudad === 'BOGOTA' && !formData.localidad) missingFields.push(fieldLabels.localidad);
     if (!formData.lugar) missingFields.push(fieldLabels.lugar);
@@ -455,7 +457,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       formData.jefe_inmediato &&
       formData.fecha_nacimiento &&
       formData.genero &&
-      formData.estado &&
       formData.ciudad &&
       (formData.ciudad === 'BOGOTA' ? formData.localidad : true) &&
       formData.lugar &&
@@ -467,6 +468,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       formData.contacto_emergencia_nombre &&
       formData.contacto_emergencia_telefono
       // extension_3cx, cola, adminfo, asignacion son OPCIONALES - no validar
+      // estado se determina automáticamente según tipo de contrato
     );
 
     return baseValidation;
@@ -495,6 +497,38 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
 
     const isValid = validateAll();
     if (!isValid) {
+      // Debug: Log detallado de errores para el desarrollador
+      console.group('❌ VALIDACIÓN FALLIDA');
+      console.error('Errores encontrados:', errors);
+      console.error('Datos actuales:', {
+        cedula: formData.cedula,
+        nombre: formData.nombre,
+        celular: formData.celular,
+        correo_personal: formData.correo_personal,
+        cargo: formData.cargo,
+        area: formData.area,
+        fecha_ingreso: formData.fecha_ingreso,
+        contrato: formData.contrato,
+        jefe_inmediato: formData.jefe_inmediato,
+        estado: formData.estado,
+        ciudad: formData.ciudad,
+        localidad: formData.localidad,
+        fecha_nacimiento: formData.fecha_nacimiento,
+        genero: formData.genero,
+        lugar: formData.lugar,
+        direccion_residencia: formData.direccion_residencia,
+        eps: formData.eps,
+        fondo_pensiones: formData.fondo_pensiones,
+        arl: formData.arl,
+        cantidad_hijos: formData.cantidad_hijos,
+        contacto_emergencia_nombre: formData.contacto_emergencia_nombre,
+        contacto_emergencia_telefono: formData.contacto_emergencia_telefono,
+        correo_renovar: formData.correo_renovar,
+        password_renovar: '[OCULTO]',
+        password_renovar_confirm: '[OCULTO]',
+      });
+      console.groupEnd();
+      
       setSubmitError('Por favor completa todos los campos requeridos correctamente');
       return;
     }
@@ -787,23 +821,15 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         </div>
 
         <div>
-          <FormField
-            label="Estado Civil"
-            name="estado"
-            type="select"
-            value={formData.estado}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            options={estadosOptions}
-            required
-            disabled={isSubmitting}
-            error={!!getFieldError('estado')}
-          />
-          {getFieldError('estado') && (
-            <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-              <AlertCircle className="h-4 w-4" /> {getFieldError('estado')}
-            </p>
-          )}
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Estado del Empleado
+          </label>
+          <div className="w-full px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 font-semibold">
+            {formData.estado ? formatEstado(formData.estado) : 'Se determina según el tipo de contrato'}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.contrato ? `Asignado automáticamente para contrato: ${formData.contrato}` : 'Selecciona un tipo de contrato'}
+          </p>
         </div>
 
         <div>
@@ -1131,9 +1157,17 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       // Especiales: dropdowns que necesitan valores legibles
       const dropdownMaps = {
         genero: { 'M': 'Masculino', 'F': 'Femenino', 'O': 'Otro' },
-        estado: { 'Soltero': 'Soltero', 'Casado': 'Casado', 'Divorciado': 'Divorciado', 'Viudo': 'Viudo', 'Unión Libre': 'Unión Libre' },
-        lugar: { 'Oficina': 'Oficina', 'Casa': 'Casa', 'Híbrido': 'Híbrido' },
-        contrato: { 'Planta': 'Planta', 'Corretaje': 'Corretaje', 'Temporal': 'Temporal', 'Casa de Cobro': 'Casa de Cobro' },
+        estado: {
+          'PENDIENTE_APROBACION_JURIDICO': 'Pendiente Aprobación Jurídica',
+          'EN_PROCESO_DE_CONTRATACION': 'En Proceso de Contratación',
+          'ACTIVO': 'Activo',
+          'RETIRADO': 'Retirado',
+          'PENDIENTE_RETIRO_JURIDICO': 'Pendiente Retiro Jurídico',
+          'RECHAZO_JURIDICO': 'Rechazo Jurídico',
+          'RECHAZO_RETIRO_JURIDICO': 'Rechazo Retiro Jurídico',
+        },
+        lugar: { 'OFICINA': 'Oficina', 'CASA': 'Casa', 'HIBRIDO': 'Híbrido' },
+        contrato: { 'PLANTA': 'Planta', 'CORRETAJE': 'Corretaje', 'TEMPORAL': 'Temporal', 'CASA DE COBRO': 'Casa de Cobro' },
       };
       
       if (dropdownMaps[field] && dropdownMaps[field][value]) {
@@ -1264,7 +1298,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
               <p className="text-sm text-gray-800 mt-1">{formatValue('genero', formData.genero)}</p>
             </div>
             <div className="bg-gray-50 p-3 rounded">
-              <p className="text-xs text-gray-500 font-semibold uppercase">Estado Civil</p>
+              <p className="text-xs text-gray-500 font-semibold uppercase">Estado del Empleado</p>
               <p className="text-sm text-gray-800 mt-1">{formatValue('estado', formData.estado)}</p>
             </div>
             <div className="bg-gray-50 p-3 rounded">

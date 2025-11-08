@@ -14,19 +14,9 @@ const ProveedoresForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
 
   const [selectedPermisos, setSelectedPermisos] = useState([]);
 
-  // DEBUG: Log cuando cambia formData
-  React.useEffect(() => {
-    console.log('ProveedoresForm updated:', formData);
-  }, [formData]);
-
   const handleChange = (e) => {
-    console.log('onChange disparado:', e.target.name, e.target.value);
     const { name, value } = e.target;
-    setFormData(prevState => {
-      const newState = { ...prevState, [name]: value };
-      console.log('Nuevo estado:', newState);
-      return newState;
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const togglePermiso = (permiso) => {
@@ -39,7 +29,6 @@ const ProveedoresForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted with data:', formData);
     if (onSubmit) {
       await onSubmit({ ...formData, permisos: selectedPermisos });
     }
