@@ -378,3 +378,11 @@ export const approveContract = (cedula) => apiRequest(`/employees/${cedula}/juri
 export const rejectContract = (cedula, motivo) => apiRequest(`/employees/${cedula}/juridico/reject`, 'POST', { motivo });
 export const approveRetirement = (cedula) => apiRequest(`/employees/${cedula}/retire/approve`, 'POST', {});
 export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${cedula}/retire/reject`, 'POST', { motivo_rechazo_juridico: motivo });
+
+// --- Endpoints de Comunicaciones (Documents) ---
+export const getCommunicationTemplates = (statusFilter = 'APPROVED') => apiRequest(`/communications/templates?status_filter=${statusFilter}`);
+export const getCommunicationTemplate = (templateId) => apiRequest(`/communications/templates/${templateId}`);
+export const createCommunicationTemplate = (templateData) => apiRequest('/communications/templates', 'POST', templateData);
+export const updateCommunicationTemplate = (templateId, templateData) => apiRequest(`/communications/templates/${templateId}`, 'PUT', templateData);
+export const generateCommunication = (communicationData) => apiRequest('/communications/generate', 'POST', communicationData);
+export const sendCommunication = (commId, sendData) => apiRequest(`/communications/${commId}/send`, 'PATCH', sendData);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, FileText, Eye, MoreVertical } from 'lucide-react';
+import { AlertCircle, FileText, Eye } from 'lucide-react';
+import { getCommunicationTemplates, getCommunicationTemplate } from '../services/api';
 
 const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) => {
   const [formData, setFormData] = useState({
@@ -21,41 +22,12 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      // TODO: Reemplazar con endpoint real
-      const response = await fetch('/api/v1/communications/templates');
-      if (response.ok) {
-        const data = await response.json();
-        setTemplates(data || []);
-      }
+      // Pasar status_filter='APPROVED' como parámetro al endpoint
+      const data = await getCommunicationTemplates('APPROVED');
+      setTemplates(data || []);
     } catch (error) {
       console.error('Error cargando plantillas:', error);
-      // Datos de prueba para demostración
-      setTemplates([
-        {
-          id: 'template-1',
-          name: 'Notificación de Deuda',
-          description: 'Plantilla para notificar deudas pendientes',
-          type: 'email',
-          status: 'active',
-          updatedAt: '2024-11-08',
-        },
-        {
-          id: 'template-2',
-          name: 'Recordatorio de Pago',
-          description: 'Recordatorio amistoso de pago',
-          type: 'whatsapp',
-          status: 'active',
-          updatedAt: '2024-11-07',
-        },
-        {
-          id: 'template-3',
-          name: 'Oferta Especial',
-          description: 'Comunicación de promociones',
-          type: 'email',
-          status: 'active',
-          updatedAt: '2024-11-06',
-        },
-      ]);
+      setTemplates([]);
     } finally {
       setLoadingTemplates(false);
     }
@@ -65,20 +37,11 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
   const fetchTemplatePreview = async (templateId) => {
     setLoadingPreview(true);
     try {
-      // TODO: Reemplazar con endpoint real
-      const response = await fetch(`/api/v1/communications/templates/${templateId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewContent(data);
-      }
+      const data = await getCommunicationTemplate(templateId);
+      setPreviewContent(data);
     } catch (error) {
       console.error('Error cargando preview:', error);
-      // Contenido de prueba
-      setPreviewContent({
-        id: templateId,
-        content: 'Este es un preview de la plantilla seleccionada. Aquí se mostrará el contenido de la comunicación personalizado con los datos del cliente.',
-        variables: ['{{cliente_nombre}}', '{{monto_adeudado}}', '{{fecha_vencimiento}}'],
-      });
+      setPreviewContent(null);
     } finally {
       setLoadingPreview(false);
     }
@@ -104,11 +67,19 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
 
   const handleSubmit = () => {
     if (validateForm()) {
-      onNext({
+      // Si es sin aprobación, pasar type: AUTOMATIC
+      const submissionData = {
         ...formData,
         selectedTemplate: selectedTemplate,
         previewContent: previewContent,
-      });
+      };
+
+      // Agregar type: AUTOMATIC si tipoAprobacion es sin_aprobacion
+      if (step1Data?.tipoAprobacion === 'sin_aprobacion') {
+        submissionData.type = 'AUTOMATIC';
+      }
+
+      onNext(submissionData);
     }
   };
 
@@ -120,7 +91,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
           <span className="text-lg">📋</span> Seleccionar Plantilla
         </h3>
         <p className="text-xs text-slate-600 mt-1">
-          Canal: <span className="font-semibold text-slate-900">{communicationType.title}</span>
+          Estado: <span className="font-semibold text-slate-900">APROBADA</span>
         </p>
       </div>
 
@@ -159,15 +130,11 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                           {template.description}
                         </p>
                         <div className="flex gap-1 mt-1">
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                            template.type === 'email'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}>
-                            {template.type === 'email' ? '✉️ Email' : '💬 WhatsApp'}
+                          <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                            ✓ {template.status || 'APPROVED'}
                           </span>
                           <span className="text-xs text-emerald-600">
-                            {new Date(template.updatedAt).toLocaleDateString()}
+                            {template.updated_at ? new Date(template.updated_at).toLocaleDateString() : ''}
                           </span>
                         </div>
                       </div>
