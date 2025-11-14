@@ -129,6 +129,7 @@ const CommunicationsWizard = () => {
               communicationType={selectedCommunication}
               onNext={handleStep2Submit}
               onBack={() => goToStep(1)}
+              step1Data={step1Data}
             />
           )}
         </div>

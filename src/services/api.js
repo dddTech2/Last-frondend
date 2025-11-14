@@ -380,9 +380,52 @@ export const approveRetirement = (cedula) => apiRequest(`/employees/${cedula}/re
 export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${cedula}/retire/reject`, 'POST', { motivo_rechazo_juridico: motivo });
 
 // --- Endpoints de Comunicaciones (Documents) ---
-export const getCommunicationTemplates = (statusFilter = 'APPROVED') => apiRequest(`/communications/templates?status_filter=${statusFilter}`);
+export const getCommunicationTemplates = (statusFilter = 'APPROVED', templateType = null) => {
+  let endpoint = `/communications/templates?status_filter=${statusFilter}`;
+  if (templateType) {
+    endpoint += `&template_type=${templateType}`;
+  }
+  return apiRequest(endpoint);
+};
 export const getCommunicationTemplate = (templateId) => apiRequest(`/communications/templates/${templateId}`);
+export const getCommunicationTemplateFile = async (filePath) => {
+  const token = getAuthToken();
+  const headers = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/communications/templates/file/${encodeURIComponent(filePath)}`, {
+      method: 'GET',
+      headers,  
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    // Obtener el tipo MIME de la respuesta
+    const mimeType = response.headers.get('content-type') || 'text/plain';
+    const blob = await response.blob();
+    
+    // Retornar blob con tipo MIME
+    return {
+      blob,
+      mimeType,
+      url: URL.createObjectURL(blob),
+    };
+  } catch (error) {
+    console.error(`Error fetching template file: ${error.message}`);
+    throw error;
+  }
+};
 export const createCommunicationTemplate = (templateData) => apiRequest('/communications/templates', 'POST', templateData);
 export const updateCommunicationTemplate = (templateId, templateData) => apiRequest(`/communications/templates/${templateId}`, 'PUT', templateData);
 export const generateCommunication = (communicationData) => apiRequest('/communications/generate', 'POST', communicationData);
 export const sendCommunication = (commId, sendData) => apiRequest(`/communications/${commId}/send`, 'PATCH', sendData);
+
+// --- Endpoints para campos de plantillas de comunicación ---
+export const getCommunicationTemplateFields = (templateId) => apiRequest(`/communications/templates/${templateId}/fields`);
+export const updateCommunicationTemplateField = (fieldId, fieldData) => apiRequest(`/communications/templates/fields/${fieldId}`, 'PUT', fieldData);
