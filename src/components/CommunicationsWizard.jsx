@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import CommunicationStep1 from './CommunicationStep1';
 import CommunicationStep2 from './CommunicationStep2';
 import CommunicationStep3 from './CommunicationStep3';
+import CommunicationStep4 from './CommunicationStep4';
 import './CommunicationsWizard.css';
 
 const CommunicationsWizard = () => {
@@ -38,7 +39,7 @@ const CommunicationsWizard = () => {
     calculateHeights();
     window.addEventListener('resize', calculateHeights);
     return () => window.removeEventListener('resize', calculateHeights);
-  }, [currentStep, step1Data, campaignConfig]);
+  }, [currentStep, step1Data, campaignConfig, completedData]);
 
   const handleStep1Submit = (data) => {
     setStep1Data(data);
@@ -59,6 +60,12 @@ const CommunicationsWizard = () => {
   const handleStep3Submit = (finalData) => {
     setCompletedData(finalData);
     goToStep(4);
+  };
+
+  const handleStep4Complete = () => {
+    // After document generation and preview confirmation
+    // Reset wizard for next campaign
+    handleReset();
   };
 
   const goToStep = (stepNumber) => {
@@ -182,89 +189,17 @@ const CommunicationsWizard = () => {
           className="wizard-step__content"
           ref={(el) => (stepRefs.current['content-4'] = el)}
         >
-          {completedData ? (
-            <CompletionSummary data={completedData} onReset={handleReset} />
-          ) : (
-            <div className="completion-placeholder">
-              <div className="text-6xl mb-4">✅</div>
-              <h2 className="text-3xl font-bold text-green-900 mb-2">¡Listo para Enviar!</h2>
-              <p className="text-green-700">Tu campaña está configurada y lista para ser enviada</p>
-              <div className="flex gap-4 justify-center pt-8">
-                <button
-                  onClick={() => goToStep(3)}
-                  className="px-8 py-3 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                  ← Anterior
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="px-8 py-3 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                >
-                  Crear Nueva Campaña
-                </button>
-              </div>
-            </div>
+          {completedData && (
+            <CommunicationStep4
+              campaignConfig={completedData}
+              onBack={() => goToStep(3)}
+              onComplete={handleStep4Complete}
+            />
           )}
         </div>
       </div>
     </div>
   );
 };
-
-// Completion Summary Component
-const CompletionSummary = ({ data, onReset }) => (
-  <div className="completion-summary">
-    <div className="completion-success">
-      <div className="text-6xl mb-4">✅</div>
-      <h2 className="text-3xl font-bold text-green-900 mb-2">¡Campaña Creada Exitosamente!</h2>
-      <p className="text-green-700 text-lg">Tu campaña está lista para ser enviada</p>
-    </div>
-
-    {/* Summary Details Grid */}
-    <div className="completion-grid">
-      <div className="completion-card completion-card--blue">
-        <p className="completion-card__label">Cédula</p>
-        <p className="completion-card__value">{data.cedula}</p>
-      </div>
-      <div className="completion-card completion-card--purple">
-        <p className="completion-card__label">Tipo de Deudor</p>
-        <p className="completion-card__value">{data.tipoDeudor === 'deudor' ? 'Deudor' : 'Codeudor'}</p>
-      </div>
-      <div className="completion-card completion-card--indigo">
-        <p className="completion-card__label">Canal</p>
-        <p className="completion-card__value">{data.canalComunicacion.toUpperCase()}</p>
-      </div>
-      <div className="completion-card completion-card--orange">
-        <p className="completion-card__label">Obligación</p>
-        <p className="completion-card__value">{data.obligacion}</p>
-      </div>
-    </div>
-
-    {/* Message Preview */}
-    {data.messageContent && (
-      <div className="completion-preview">
-        <p className="completion-preview__label">Vista Previa del Mensaje</p>
-        <div className="completion-preview__content">
-          {data.messageContent}
-        </div>
-      </div>
-    )}
-
-    <div className="completion-actions">
-      <button
-        onClick={onReset}
-        className="btn btn--primary"
-      >
-        Crear Nueva Campaña
-      </button>
-      <button
-        onClick={() => console.log('Descargar reporte...')}
-        className="btn btn--secondary"
-      >
-        Descargar Reporte
-      </button>
-    </div>
-  </div>
-);
 
 export default CommunicationsWizard;

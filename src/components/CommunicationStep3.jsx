@@ -9,9 +9,31 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   const [loadingFields, setLoadingFields] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
+  // Helper function para obtener la clave correcta de un field
+  // USO INTERNO: Usar `id` (UUID único del field)
+  // Para API: Transformamos a usar field_name en handleSubmit
+  const getFieldKey = (field, index, usedKeys = new Set()) => {
+    const candidates = [field?.field_name, field?.id, field?.field_id, field?.field_label, index != null ? `field_${index}` : null];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (!usedKeys.has(candidate)) {
+        usedKeys.add(candidate);
+        return candidate;
+      }
+    }
+    let fallbackIndex = index ?? usedKeys.size;
+    let key;
+    do {
+      key = `field_${fallbackIndex++}`;
+    } while (usedKeys.has(key));
+    usedKeys.add(key);
+    return key;
+  };
+
   // Funciones de validación específicas por tipo de campo
-  const validateFieldValue = (field) => {
-    const value = fieldValues[field.id];
+  const validateFieldValue = (field, index) => {
+    const key = field.__fieldKey || getFieldKey(field, index);
+    const value = fieldValues[key];
 
     // Campos requeridos vacíos
     if (field.is_required && !value?.trim()) {
@@ -156,20 +178,30 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
         
         if (Array.isArray(fields)) {
           // Filtrar campos que NO son SYSTEM_DATA
-          const editableFields = fields.filter(f => f.field_type !== 'SYSTEM_DATA');
+          const usedKeys = new Set();
+          const editableFields = fields
+            .filter(f => f.field_type !== 'SYSTEM_DATA')
+            .map((field, index) => {
+              const fieldKey = getFieldKey(field, index, usedKeys);
+              return { ...field, __fieldKey: fieldKey, __index: index };
+            });
+            const filteredEditableFields = editableFields.filter(Boolean);
           
-          console.log('Editable fields found:', editableFields.length);
-          editableFields.forEach(f => {
-            console.log(`  - ${f.field_label} (${f.field_type})`);
+          console.log('Editable fields found:', filteredEditableFields.length);
+          filteredEditableFields.forEach((f, idx) => {
+            console.log(`[${idx}] ${f.field_label} (${f.field_type}) -> key: ${f.__fieldKey}`);
           });
           
-          setTemplateFields(editableFields);
+          setTemplateFields(filteredEditableFields);
           
-          // Inicializar valores vacíos
+          // Inicializar valores vacíos usando __fieldKey como clave
           const initialValues = {};
-          editableFields.forEach(field => {
-            initialValues[field.id] = '';
+          filteredEditableFields.forEach(field => {
+            const key = field.__fieldKey;
+            console.log(`Inicializando [${field.__index}]: "${key}"`);
+            initialValues[key] = '';
           });
+          console.log('initialValues keys:', Object.keys(initialValues));
           setFieldValues(initialValues);
         }
       } catch (error) {
@@ -186,10 +218,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   const validateFormFields = () => {
     const newFieldErrors = {};
     
-    templateFields.forEach(field => {
-      const error = validateFieldValue(field);
+    templateFields.forEach((field, index) => {
+      const error = validateFieldValue(field, index);
       if (error) {
-        newFieldErrors[field.id] = error;
+        newFieldErrors[field.__fieldKey] = error;
       }
     });
 
@@ -201,13 +233,48 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
     if (validateFormFields()) {
       const finalFieldValues = { ...fieldValues };
       
-      Object.entries(nameFieldParts).forEach(([fieldId, parts]) => {
-        finalFieldValues[fieldId] = joinNameFrom4Parts(parts);
+      Object.entries(nameFieldParts).forEach(([fieldName, parts]) => {
+        finalFieldValues[fieldName] = joinNameFrom4Parts(parts);
+      });
+
+      // Construir dos versiones de los datos:
+      // 1. templateFieldsForAPI: Usa field_name como claves (lo que API espera)
+      // 2. fieldMetadata: Usa field_name como claves con metadata
+      const templateFieldsForAPI = {};
+      const fieldMetadata = {};
+      
+      templateFields.forEach(field => {
+        const fieldKey = field.__fieldKey; // UUID o field_name (depende de API)
+        const fieldName = field.field_name; // Siempre el nombre legible
+        const value = finalFieldValues[fieldKey];
+        
+        // Para API: usar field_name como clave
+        templateFieldsForAPI[fieldName] = value;
+        
+        // Para metadata: también usar field_name como clave
+        fieldMetadata[fieldName] = {
+          label: field.field_label,
+          type: field.field_type,
+          value: value
+        };
+      });
+
+      console.log('=== STEP 3 SUBMIT DEBUG ===');
+      console.log('fieldValues keys:', Object.keys(fieldValues));
+      console.log('finalFieldValues keys:', Object.keys(finalFieldValues));
+      console.log('finalFieldValues:', finalFieldValues);
+      console.log('templateFieldsForAPI keys:', Object.keys(templateFieldsForAPI));
+      console.log('templateFieldsForAPI:', templateFieldsForAPI);
+      console.log('fieldMetadata:', fieldMetadata);
+      console.log('Enviando a Step 4:', {
+        templateFields: templateFieldsForAPI,
+        fieldMetadata: fieldMetadata
       });
 
       onNext({
         ...campaignConfig,
-        templateFields: finalFieldValues,
+        templateFields: templateFieldsForAPI,
+        fieldMetadata: fieldMetadata,
       });
     }
   };
@@ -281,7 +348,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
         ) : (
           <div className="space-y-4">
             {templateFields.map(field => (
-              <div key={field.id} className="space-y-2">
+              <div key={field.__fieldKey} className="space-y-2">
                 <label className="block text-xs font-semibold text-gray-900">
                   {field.field_label}
                   {field.is_required && <span className="text-red-600 ml-1">*</span>}
@@ -297,12 +364,12 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={fieldValues[field.id] || ''}
-                    onChange={(e) => handleNumberChange(field.id, e.target.value)}
+                    value={fieldValues[field.__fieldKey] || ''}
+                    onChange={(e) => handleNumberChange(field.__fieldKey, e.target.value)}
                     placeholder="Ej: 12345678"
                     maxLength="12"
                     className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all font-mono ${
-                      fieldErrors[field.id] 
+                      fieldErrors[field.__fieldKey] 
                         ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                         : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                     }`}
@@ -310,10 +377,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                 ) : field.field_type === 'DATE' ? (
                   <input
                     type="date"
-                    value={fieldValues[field.id] || ''}
-                    onChange={(e) => handleDateChange(field.id, e.target.value)}
+                    value={fieldValues[field.__fieldKey] || ''}
+                    onChange={(e) => handleDateChange(field.__fieldKey, e.target.value)}
                     className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer ${
-                      fieldErrors[field.id] 
+                      fieldErrors[field.__fieldKey] 
                         ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                         : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                     }`}
@@ -325,19 +392,19 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                         <label className="block text-xs text-gray-600 font-medium mb-1">Primer Nombre</label>
                         <input
                           type="text"
-                          value={nameFieldParts[field.id]?.[0] || ''}
+                          value={nameFieldParts[field.__fieldKey]?.[0] || ''}
                           onChange={(e) => {
-                            const parts = nameFieldParts[field.id] || ['', '', '', ''];
+                            const parts = [...(nameFieldParts[field.__fieldKey] || ['', '', '', ''])];
                             parts[0] = e.target.value;
-                            setNameFieldParts(prev => ({ ...prev, [field.id]: parts }));
+                            setNameFieldParts(prev => ({ ...prev, [field.__fieldKey]: parts }));
                             setFieldValues(prev => ({
                               ...prev,
-                              [field.id]: joinNameFrom4Parts(parts)
+                              [field.__fieldKey]: joinNameFrom4Parts(parts)
                             }));
                           }}
                           placeholder="Ej: Juan"
                           className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.id] 
+                            fieldErrors[field.__fieldKey] 
                               ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                               : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                           }`}
@@ -348,19 +415,19 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                         <label className="block text-xs text-gray-600 font-medium mb-1">Primer Apellido</label>
                         <input
                           type="text"
-                          value={nameFieldParts[field.id]?.[1] || ''}
+                          value={nameFieldParts[field.__fieldKey]?.[1] || ''}
                           onChange={(e) => {
-                            const parts = nameFieldParts[field.id] || ['', '', '', ''];
+                            const parts = [...(nameFieldParts[field.__fieldKey] || ['', '', '', ''])];
                             parts[1] = e.target.value;
-                            setNameFieldParts(prev => ({ ...prev, [field.id]: parts }));
+                            setNameFieldParts(prev => ({ ...prev, [field.__fieldKey]: parts }));
                             setFieldValues(prev => ({
                               ...prev,
-                              [field.id]: joinNameFrom4Parts(parts)
+                              [field.__fieldKey]: joinNameFrom4Parts(parts)
                             }));
                           }}
                           placeholder="Ej: García"
                           className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.id] 
+                            fieldErrors[field.__fieldKey] 
                               ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                               : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                           }`}
@@ -371,19 +438,19 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                         <label className="block text-xs text-gray-600 font-medium mb-1">Segundo Apellido</label>
                         <input
                           type="text"
-                          value={nameFieldParts[field.id]?.[2] || ''}
+                          value={nameFieldParts[field.__fieldKey]?.[2] || ''}
                           onChange={(e) => {
-                            const parts = nameFieldParts[field.id] || ['', '', '', ''];
+                            const parts = [...(nameFieldParts[field.__fieldKey] || ['', '', '', ''])];
                             parts[2] = e.target.value;
-                            setNameFieldParts(prev => ({ ...prev, [field.id]: parts }));
+                            setNameFieldParts(prev => ({ ...prev, [field.__fieldKey]: parts }));
                             setFieldValues(prev => ({
                               ...prev,
-                              [field.id]: joinNameFrom4Parts(parts)
+                              [field.__fieldKey]: joinNameFrom4Parts(parts)
                             }));
                           }}
                           placeholder="Ej: Martínez"
                           className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.id] 
+                            fieldErrors[field.__fieldKey] 
                               ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                               : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                           }`}
@@ -394,19 +461,19 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                         <label className="block text-xs text-gray-600 font-medium mb-1">Segundo Nombre (Opt.)</label>
                         <input
                           type="text"
-                          value={nameFieldParts[field.id]?.[3] || ''}
+                          value={nameFieldParts[field.__fieldKey]?.[3] || ''}
                           onChange={(e) => {
-                            const parts = nameFieldParts[field.id] || ['', '', '', ''];
+                            const parts = [...(nameFieldParts[field.__fieldKey] || ['', '', '', ''])];
                             parts[3] = e.target.value;
-                            setNameFieldParts(prev => ({ ...prev, [field.id]: parts }));
+                            setNameFieldParts(prev => ({ ...prev, [field.__fieldKey]: parts }));
                             setFieldValues(prev => ({
                               ...prev,
-                              [field.id]: joinNameFrom4Parts(parts)
+                              [field.__fieldKey]: joinNameFrom4Parts(parts)
                             }));
                           }}
                           placeholder="Ej: Carlos"
                           className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.id] 
+                            fieldErrors[field.__fieldKey] 
                               ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                               : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                           }`}
@@ -414,26 +481,26 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                       </div>
                     </div>
                     <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                      <strong>Resultado:</strong> {fieldValues[field.id] || '(Nombre completo)'}
+                      <strong>Resultado:</strong> {fieldValues[field.__fieldKey] || '(Nombre completo)'}
                     </div>
                   </div>
                 ) : (
                   <input
                     type="text"
-                    value={fieldValues[field.id] || ''}
-                    onChange={(e) => handleTextChange(field.id, e.target.value)}
+                    value={fieldValues[field.__fieldKey] || ''}
+                    onChange={(e) => handleTextChange(field.__fieldKey, e.target.value)}
                     placeholder={`Ingresa ${field.field_label.toLowerCase()}`}
                     className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                      fieldErrors[field.id] 
+                      fieldErrors[field.__fieldKey] 
                         ? 'border-red-500 bg-red-50 focus:ring-red-500' 
                         : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                     }`}
                   />
                 )}
 
-                {fieldErrors[field.id] && (
+                {fieldErrors[field.__fieldKey] && (
                   <p className="text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> {fieldErrors[field.id]}
+                    <AlertCircle className="h-3 w-3" /> {fieldErrors[field.__fieldKey]}
                   </p>
                 )}
               </div>

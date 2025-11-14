@@ -425,6 +425,45 @@ export const createCommunicationTemplate = (templateData) => apiRequest('/commun
 export const updateCommunicationTemplate = (templateId, templateData) => apiRequest(`/communications/templates/${templateId}`, 'PUT', templateData);
 export const generateCommunication = (communicationData) => apiRequest('/communications/generate', 'POST', communicationData);
 export const sendCommunication = (commId, sendData) => apiRequest(`/communications/${commId}/send`, 'PATCH', sendData);
+export const getCommunicationPreview = async (commId) => {
+  const token = getAuthToken();
+  const headers = {
+    'Accept': 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,text/plain,application/json'
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}/communications/${commId}/preview`, {
+    method: 'GET',
+    headers
+  });
+
+  if (!response.ok) {
+    try {
+      const contentType = response.headers.get('Content-Type') || '';
+      if (contentType.includes('application/json')) {
+        const errorData = await response.json();
+        if (Array.isArray(errorData?.detail)) {
+          throw new Error(errorData.detail.map(err => err.msg || err.message || JSON.stringify(err)).join('; '));
+        }
+        throw new Error(errorData?.detail || errorData?.message || `Error ${response.status}`);
+      }
+      const text = await response.text();
+      throw new Error(text || `Error ${response.status}`);
+    } catch (error) {
+      console.error('Error obteniendo preview de comunicación:', error);
+      throw error;
+    }
+  }
+
+  const contentType = response.headers.get('Content-Type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+  if (contentType.startsWith('text/')) {
+    return response.text();
+  }
+  return response.blob();
+};
 
 // --- Endpoints para campos de plantillas de comunicación ---
 export const getCommunicationTemplateFields = (templateId) => apiRequest(`/communications/templates/${templateId}/fields`);
