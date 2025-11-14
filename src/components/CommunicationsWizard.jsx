@@ -90,7 +90,7 @@ const CommunicationsWizard = () => {
     <div className="wizard-container">
       {/* Step 1 */}
       <div
-        className={`wizard-step ${currentStep === 1 ? 'is-active' : ''}`}
+        className={`wizard-step stepper-paso stepper-paso-1 ${currentStep === 1 ? 'is-active' : ''}`}
       >
         <div
           className="wizard-step__header"
@@ -115,7 +115,7 @@ const CommunicationsWizard = () => {
 
       {/* Step 2 */}
       <div
-        className={`wizard-step ${currentStep === 2 ? 'is-active' : ''}`}
+        className={`wizard-step stepper-paso stepper-paso-2 ${currentStep === 2 ? 'is-active' : ''}`}
       >
         <div
           className="wizard-step__header"
@@ -144,7 +144,7 @@ const CommunicationsWizard = () => {
 
       {/* Step 3 */}
       <div
-        className={`wizard-step ${currentStep === 3 ? 'is-active' : ''}`}
+        className={`wizard-step stepper-paso stepper-paso-3 ${currentStep === 3 ? 'is-active' : ''}`}
       >
         <div
           className="wizard-step__header"
@@ -173,7 +173,7 @@ const CommunicationsWizard = () => {
 
       {/* Step 4 */}
       <div
-        className={`wizard-step ${currentStep === 4 ? 'is-active' : ''}`}
+        className={`wizard-step stepper-paso stepper-paso-4 ${currentStep === 4 ? 'is-active' : ''}`}
       >
         <div
           className="wizard-step__header"
