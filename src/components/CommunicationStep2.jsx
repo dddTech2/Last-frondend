@@ -66,7 +66,7 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile, templateName }) => {
         <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div>
             <h3 className="font-semibold text-gray-900">{templateName}</h3>
-            <p className="text-xs text-gray-600 mt-1">MIME: {previewFile.mimeType}</p>
+            <p className="text-sm text-gray-600 mt-1">MIME: {previewFile.mimeType}</p>
           </div>
           <button
             onClick={onClose}
@@ -257,13 +257,13 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col text-base">
       {/* Header */}
       <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200 rounded-lg p-3 mb-3">
-        <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+        <h3 className="font-semibold text-slate-900 text-base flex items-center gap-2">
           <span className="text-lg">📋</span> Seleccionar Plantilla
         </h3>
-        <p className="text-xs text-slate-600 mt-1">
+        <p className="text-sm text-slate-600 mt-1">
           Estado: <span className="font-semibold text-slate-900">APROBADA</span>
         </p>
       </div>
@@ -272,14 +272,14 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
       <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
         {/* Columna 1: Lista de Plantillas */}
         <div className="flex flex-col bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200 rounded-lg p-3 overflow-hidden">
-          <h4 className="font-semibold text-emerald-900 text-sm mb-2 flex items-center gap-2">
+          <h4 className="font-semibold text-emerald-900 text-base mb-2 flex items-center gap-2">
             <FileText className="h-4 w-4 text-emerald-700" />
             Plantillas Disponibles
           </h4>
 
           {loadingTemplates ? (
             <div className="flex items-center justify-center py-8">
-              <p className="text-xs text-emerald-700">Cargando plantillas...</p>
+              <p className="text-sm text-emerald-700">Cargando plantillas...</p>
             </div>
           ) : (
             <div className="flex-1 space-y-2 overflow-y-auto">
@@ -296,17 +296,17 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-emerald-900 text-xs truncate">
+                        <p className="font-semibold text-emerald-900 text-sm truncate">
                           {template.name}
                         </p>
-                        <p className="text-xs text-emerald-700 line-clamp-2 mt-0.5">
+                        <p className="text-sm text-emerald-700 line-clamp-2 mt-0.5">
                           {template.description}
                         </p>
                         <div className="flex gap-1 mt-1">
-                          <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                          <span className="text-sm px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
                             ✓ {template.status || 'APPROVED'}
                           </span>
-                          <span className="text-xs text-emerald-600">
+                          <span className="text-sm text-emerald-600">
                             {template.updated_at ? new Date(template.updated_at).toLocaleDateString() : ''}
                           </span>
                         </div>
@@ -316,14 +316,14 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-xs text-emerald-600">No hay plantillas disponibles</p>
+                  <p className="text-sm text-emerald-600">No hay plantillas disponibles</p>
                 </div>
               )}
             </div>
           )}
 
           {errors.selectedTemplateId && (
-            <div className="mt-2 p-1.5 bg-red-50 border border-red-200 rounded text-xs text-red-600 flex items-center gap-1">
+            <div className="mt-2 p-1.5 bg-red-50 border border-red-200 rounded text-sm text-red-600 flex items-center gap-1">
               <AlertCircle className="h-3 w-3" /> {errors.selectedTemplateId}
             </div>
           )}
@@ -331,7 +331,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
 
         {/* Columna 2: Preview */}
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 overflow-hidden">
-          <h4 className="font-semibold text-purple-900 text-sm mb-2 flex items-center gap-2">
+          <h4 className="font-semibold text-purple-900 text-base mb-2 flex items-center gap-2">
             <Eye className="h-4 w-4 text-purple-700" />
             Vista Previa
           </h4>
@@ -340,14 +340,14 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
             <div className="flex-1 flex flex-col overflow-hidden">
               {loadingPreview ? (
                 <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs text-purple-700">Cargando preview...</p>
+                  <p className="text-sm text-purple-700">Cargando preview...</p>
                 </div>
               ) : (
                 <>
                   {/* Información de la plantilla */}
                   <div className="bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg p-2 mb-2 border border-purple-300">
-                    <p className="font-semibold text-purple-900 text-xs">{selectedTemplate.name}</p>
-                    <p className="text-xs text-purple-800 mt-0.5">{selectedTemplate.description}</p>
+                    <p className="font-semibold text-purple-900 text-sm">{selectedTemplate.name}</p>
+                    <p className="text-sm text-purple-800 mt-0.5">{selectedTemplate.description}</p>
                   </div>
 
                   {/* Contenido del preview - Archivo o Texto */}
@@ -382,7 +382,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                           ) : previewFile.mimeType.startsWith('text/') ? (
                             // Texto
                             <div className="overflow-auto">
-                              <pre className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-mono p-2 bg-white rounded">
+                              <pre className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-mono p-2 bg-white rounded">
                                 {previewFile.blob && <TextPreview blob={previewFile.blob} />}
                               </pre>
                             </div>
@@ -390,7 +390,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                             // Archivo genérico
                             <div className="flex flex-col items-center justify-center h-full text-center">
                               <FileText className="h-12 w-12 text-purple-300 mb-2" />
-                              <p className="text-xs text-purple-600">Archivo: {previewFile.mimeType}</p>
+                              <p className="text-sm text-purple-600">Archivo: {previewFile.mimeType}</p>
                             </div>
                           )}
                         </div>
@@ -399,7 +399,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                         <div className="flex gap-2 pt-2 border-t border-purple-300">
                           <button
                             onClick={() => setShowFullModal(true)}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
                           >
                             <Maximize2 className="h-3 w-3" />
                             Ver Completo
@@ -411,7 +411,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                               a.download = `${selectedTemplate.name}`;
                               a.click();
                             }}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
                           >
                             <Download className="h-3 w-3" />
                             Descargar
@@ -421,19 +421,19 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                     ) : (
                       <>
                         {/* Contenido de texto original */}
-                        <div className="text-xs text-purple-900 leading-relaxed whitespace-pre-wrap">
+                        <div className="text-sm text-purple-900 leading-relaxed whitespace-pre-wrap">
                           {previewContent?.content || 'No hay contenido disponible'}
                         </div>
 
                         {/* Variables disponibles */}
                         {previewContent?.variables && previewContent.variables.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-purple-300">
-                            <p className="text-xs font-semibold text-purple-700 mb-1">Variables disponibles:</p>
+                            <p className="text-sm font-semibold text-purple-700 mb-1">Variables disponibles:</p>
                             <div className="flex flex-wrap gap-1">
                               {previewContent.variables.map((variable, idx) => (
                                 <span
                                   key={idx}
-                                  className="text-xs bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full font-mono"
+                                  className="text-sm bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full font-mono"
                                 >
                                   {variable}
                                 </span>
@@ -451,7 +451,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
             <div className="flex-1 flex items-center justify-center text-center">
               <div>
                 <Eye className="h-8 w-8 text-purple-300 mx-auto mb-2" />
-                <p className="text-xs text-purple-600">Selecciona una plantilla para ver el preview</p>
+                <p className="text-sm text-purple-600">Selecciona una plantilla para ver el preview</p>
               </div>
             </div>
           )}

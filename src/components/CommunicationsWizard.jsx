@@ -11,6 +11,7 @@ const CommunicationsWizard = () => {
   const [selectedCommunication, setSelectedCommunication] = useState(null);
   const [campaignConfig, setCampaignConfig] = useState(null);
   const [completedData, setCompletedData] = useState(null);
+  const [step4RunId, setStep4RunId] = useState(0);
   const [stepHeights, setStepHeights] = useState({});
   const stepRefs = useRef({});
 
@@ -59,6 +60,7 @@ const CommunicationsWizard = () => {
 
   const handleStep3Submit = (finalData) => {
     setCompletedData(finalData);
+    setStep4RunId((prev) => prev + 1);
     goToStep(4);
   };
 
@@ -84,6 +86,7 @@ const CommunicationsWizard = () => {
     setSelectedCommunication(null);
     setCampaignConfig(null);
     setCompletedData(null);
+    setStep4RunId(0);
   };
 
   return (
@@ -191,6 +194,8 @@ const CommunicationsWizard = () => {
         >
           {completedData && (
             <CommunicationStep4
+              key={step4RunId}
+              runId={step4RunId}
               campaignConfig={completedData}
               onBack={() => goToStep(3)}
               onComplete={handleStep4Complete}

@@ -285,9 +285,9 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
 
   if (!isFormOrLegal) {
     return (
-      <div className="space-y-4 text-sm p-4">
+      <div className="space-y-4 text-base p-4">
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 border border-yellow-200 rounded-lg p-4 text-center">
-          <p className="text-yellow-700 text-sm font-medium">
+          <p className="text-yellow-700 text-base font-medium">
             Esta plantilla no requiere campos adicionales.
           </p>
         </div>
@@ -295,13 +295,13 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
         <div className="flex gap-3 pt-4 border-t border-gray-300">
           <button
             onClick={onBack}
-            className="px-4 py-2 text-xs rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md"
+            className="px-4 py-2 text-sm rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md"
           >
             Atrás
           </button>
           <button
             onClick={handleSubmit}
-            className="px-5 py-2 text-xs rounded-lg font-bold text-white bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg ml-auto"
+            className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg ml-auto"
           >
             Continuar
           </button>
@@ -311,24 +311,24 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   }
 
   return (
-    <div className="space-y-4 text-sm max-h-full overflow-y-auto p-4">
+    <div className="space-y-4 text-base max-h-full overflow-y-auto p-4">
       {/* Header */}
       <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-lg p-3">
-        <h3 className="font-semibold text-blue-900 mb-2 text-sm flex items-center gap-2">
+        <h3 className="font-semibold text-blue-900 mb-2 text-base flex items-center gap-2">
           <span className="text-lg">📋</span> Campos del Documento
         </h3>
-        <p className="text-blue-700 text-xs font-medium">
+        <p className="text-blue-700 text-sm font-medium">
           Completa los campos requeridos para generar el documento
         </p>
       </div>
 
       {/* Resumen de la plantilla */}
       <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200 rounded-lg p-3 space-y-2">
-        <div className="flex items-center gap-2 text-emerald-900 text-xs">
+        <div className="flex items-center gap-2 text-emerald-900 text-sm">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <span><strong>Plantilla:</strong> {campaignConfig?.selectedTemplate?.name || 'No especificada'}</span>
         </div>
-        <div className="flex items-center gap-2 text-emerald-900 text-xs">
+        <div className="flex items-center gap-2 text-emerald-900 text-sm">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <span><strong>Tipo:</strong> {templateType || 'No especificado'}</span>
         </div>
@@ -349,11 +349,11 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
           <div className="space-y-4">
             {templateFields.map(field => (
               <div key={field.__fieldKey} className="space-y-2">
-                <label className="block text-xs font-semibold text-gray-900">
+                <label className="block text-sm font-bold leading-tight bg-gradient-to-r from-white via-purple-100 to-indigo-100 text-transparent bg-clip-text drop-shadow-sm">
                   {field.field_label}
                   {field.is_required && <span className="text-red-600 ml-1">*</span>}
                   {field.field_type !== 'TEXT' && (
-                    <span className="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                    <span className="ml-2 text-sm font-medium text-indigo-700/80 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
                       {field.field_type === 'NUMBER' ? '(Números)' : field.field_type === 'DATE' ? '(Fecha)' : ''}
                     </span>
                   )}
@@ -389,7 +389,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-600 font-medium mb-1">Primer Nombre</label>
+                        <label className="block text-sm text-purple-700 font-semibold mb-1">Primer Nombre</label>
                         <input
                           type="text"
                           value={nameFieldParts[field.__fieldKey]?.[0] || ''}
@@ -412,7 +412,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                       </div>
 
                       <div>
-                        <label className="block text-xs text-gray-600 font-medium mb-1">Primer Apellido</label>
+                        <label className="block text-sm text-purple-700 font-semibold mb-1">Primer Apellido</label>
                         <input
                           type="text"
                           value={nameFieldParts[field.__fieldKey]?.[1] || ''}
@@ -435,7 +435,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                       </div>
 
                       <div>
-                        <label className="block text-xs text-gray-600 font-medium mb-1">Segundo Apellido</label>
+                        <label className="block text-sm text-purple-700 font-semibold mb-1">Segundo Apellido</label>
                         <input
                           type="text"
                           value={nameFieldParts[field.__fieldKey]?.[2] || ''}
@@ -458,7 +458,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                       </div>
 
                       <div>
-                        <label className="block text-xs text-gray-600 font-medium mb-1">Segundo Nombre (Opt.)</label>
+                        <label className="block text-sm text-purple-700 font-semibold mb-1">Segundo Nombre (Opt.)</label>
                         <input
                           type="text"
                           value={nameFieldParts[field.__fieldKey]?.[3] || ''}
@@ -480,7 +480,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                         />
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">
                       <strong>Resultado:</strong> {fieldValues[field.__fieldKey] || '(Nombre completo)'}
                     </div>
                   </div>
@@ -499,7 +499,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                 )}
 
                 {fieldErrors[field.__fieldKey] && (
-                  <p className="text-xs text-red-600 flex items-center gap-1">
+                  <p className="text-sm text-red-600 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" /> {fieldErrors[field.__fieldKey]}
                   </p>
                 )}
@@ -513,14 +513,14 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
       <div className="flex gap-3 pt-4 border-t border-gray-300">
         <button
           onClick={onBack}
-          className="px-4 py-2 text-xs rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md"
+          className="px-4 py-2 text-sm rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md"
         >
           Atrás
         </button>
         <button
           onClick={handleSubmit}
           disabled={loadingFields || templateFields.length === 0}
-          className="px-5 py-2 text-xs rounded-lg font-bold text-white bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuar
         </button>

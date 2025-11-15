@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Loader, CheckCircle2, Download, Eye, ArrowLeft, Maximize2, X } from 'lucide-react';
 import { generateCommunication, getCommunicationPreview } from '../services/api';
 import * as mammoth from 'mammoth';
@@ -53,7 +53,7 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile }) => {
         <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div>
             <h3 className="font-semibold text-gray-900">Vista Previa Completa</h3>
-            <p className="text-xs text-gray-600 mt-1">
+            <p className="text-sm text-gray-600 mt-1">
               {previewFile.mimeType || 'Documento'}
             </p>
           </div>
@@ -91,7 +91,7 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile }) => {
             </div>
           ) : previewFile.mimeType?.startsWith('text/') ? (
             <div className="p-4 bg-white">
-              <pre className="text-xs whitespace-pre-wrap font-mono text-gray-800 break-words">
+              <pre className="text-sm whitespace-pre-wrap font-mono text-gray-800 break-words">
                 {previewFile.text || previewFile.url}
               </pre>
             </div>
@@ -106,7 +106,7 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile }) => {
   );
 };
 
-const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
+const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const [generating, setGenerating] = useState(false);
   const [commId, setCommId] = useState(null);
   const [previewData, setPreviewData] = useState(null);
@@ -114,6 +114,21 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showFullModal, setShowFullModal] = useState(false);
+  const runIdRef = useRef(runId);
+
+  useEffect(() => {
+    runIdRef.current = runId;
+  }, [runId]);
+
+  useEffect(() => {
+    setGenerating(false);
+    setCommId(null);
+    setPreviewData(null);
+    setPreviewFile(null);
+    setPreviewLoading(false);
+    setError(null);
+    setShowFullModal(false);
+  }, [runId, campaignConfig]);
 
   // Logging al recibir en Step4
   useEffect(() => {
@@ -131,6 +146,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
   }, [commId]);
 
   const loadPreview = async () => {
+    const currentRunId = runIdRef.current;
     setPreviewLoading(true);
     try {
       console.log('Cargando preview para comm_id:', commId);
@@ -201,13 +217,19 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
         }
 
         console.log('fileObj final:', fileObj);
-        setPreviewFile(fileObj);
+        if (runIdRef.current === currentRunId) {
+          setPreviewFile(fileObj);
+        }
       }
     } catch (err) {
       console.error('Error loading preview:', err);
-      setError(`No se pudo cargar el preview: ${err.message}`);
+      if (runIdRef.current === currentRunId) {
+        setError(`No se pudo cargar el preview: ${err.message}`);
+      }
     } finally {
-      setPreviewLoading(false);
+      if (runIdRef.current === currentRunId) {
+        setPreviewLoading(false);
+      }
     }
   };
 
@@ -266,10 +288,10 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
       <div className="h-full flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 mb-3">
-          <h3 className="font-semibold text-purple-900 mb-2 text-sm flex items-center gap-2">
+          <h3 className="font-semibold text-purple-900 mb-2 text-base flex items-center gap-2">
             <span className="text-lg">✓</span> Resumen Final
           </h3>
-          <p className="text-purple-700 text-xs font-medium">
+          <p className="text-purple-700 text-sm font-medium">
             Revisa la información y genera el documento
           </p>
         </div>
@@ -278,15 +300,15 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
         <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
           {/* Columna 1: Resumen de datos */}
           <div className="flex flex-col bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-lg p-3 overflow-y-auto">
-            <h4 className="font-semibold text-blue-900 text-sm mb-2 flex items-center gap-2">
+            <h4 className="font-semibold text-blue-900 text-base mb-2 flex items-center gap-2">
               <span>📋</span> Resumen de Datos
             </h4>
 
             <div className="space-y-3">
               {/* Datos del cliente */}
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <h5 className="text-xs font-bold text-blue-900 mb-1.5">👤 Datos del Cliente</h5>
-                <div className="space-y-1 text-xs text-blue-800">
+                <h5 className="text-sm font-bold text-blue-900 mb-1.5">👤 Datos del Cliente</h5>
+                <div className="space-y-1 text-sm text-blue-800">
                   <p><strong>Cédula:</strong> {campaignConfig.cedula || 'N/A'}</p>
                   <p><strong>Tipo de Deudor:</strong> {campaignConfig.tipoDeudor === 'deudor' ? 'Deudor' : 'Codeudor'}</p>
                 </div>
@@ -294,8 +316,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
 
               {/* Datos de la comunicación */}
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <h5 className="text-xs font-bold text-blue-900 mb-1.5">📧 Comunicación</h5>
-                <div className="space-y-1 text-xs text-blue-800">
+                <h5 className="text-sm font-bold text-blue-900 mb-1.5">📧 Comunicación</h5>
+                <div className="space-y-1 text-sm text-blue-800">
                   <p><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo Electrónico' : 'WhatsApp'}</p>
                   <p><strong>Tipo:</strong> {campaignConfig.tipoAprobacion === 'sin_aprobacion' ? 'Sin Aprobación' : 'Con Aprobación'}</p>
                 </div>
@@ -303,8 +325,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
 
               {/* Plantilla */}
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <h5 className="text-xs font-bold text-blue-900 mb-1.5">📄 Plantilla</h5>
-                <div className="space-y-1 text-xs text-blue-800">
+                <h5 className="text-sm font-bold text-blue-900 mb-1.5">📄 Plantilla</h5>
+                <div className="space-y-1 text-sm text-blue-800">
                   <p><strong>Nombre:</strong> {campaignConfig.selectedTemplate?.name || 'N/A'}</p>
                   <p><strong>Tipo:</strong> {campaignConfig.selectedTemplate?.type || 'N/A'}</p>
                 </div>
@@ -313,8 +335,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
             {/* Campos rellenados (si hay) */}
             {campaignConfig.templateFields && Object.keys(campaignConfig.templateFields).length > 0 && (
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <h5 className="text-xs font-bold text-blue-900 mb-1.5">📝 Campos Completados</h5>
-                <div className="space-y-1 text-xs text-blue-800 max-h-32 overflow-y-auto">
+                <h5 className="text-sm font-bold text-blue-900 mb-1.5">📝 Campos Completados</h5>
+                <div className="space-y-1 text-sm text-blue-800 max-h-32 overflow-y-auto">
                   {Object.entries(campaignConfig.templateFields).map(([key, value]) => {
                     const metadata = campaignConfig.fieldMetadata?.[key];
                     const label = metadata?.label || key;
@@ -331,8 +353,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex gap-2">
                   <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-semibold text-red-900">Error</p>
-                    <p className="text-xs text-red-700">{error}</p>
+                    <p className="text-sm font-semibold text-red-900">Error</p>
+                    <p className="text-sm text-red-700">{error}</p>
                   </div>
                 </div>
               )}
@@ -352,7 +374,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
               </div>
               <div>
                 <p className="text-sm font-semibold text-purple-900 mb-1">¡Listo para Generar!</p>
-                <p className="text-xs text-purple-700 mb-4">
+                <p className="text-sm text-purple-700 mb-4">
                   Presiona el botón para generar el documento y ver su vista previa
                 </p>
               </div>
@@ -382,7 +404,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
           <button
             onClick={onBack}
             disabled={generating}
-            className="px-4 py-2 text-xs rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <ArrowLeft className="h-3 w-3" />
             Atrás
@@ -398,11 +420,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
       <div className="h-full flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 mb-3">
-          <h3 className="font-semibold text-purple-900 mb-2 text-sm flex items-center gap-2">
+          <h3 className="font-semibold text-purple-900 mb-2 text-base flex items-center gap-2">
             <Loader className="h-4 w-4 animate-spin" />
             Generando Preview
           </h3>
-          <p className="text-purple-700 text-xs font-medium">
+          <p className="text-purple-700 text-sm font-medium">
             Estamos preparando la vista previa del documento...
           </p>
         </div>
@@ -411,15 +433,15 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
         <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
           {/* Columna 1: Resumen */}
           <div className="flex flex-col bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-lg p-3 overflow-y-auto">
-            <h4 className="font-semibold text-blue-900 text-sm mb-2">📋 Resumen de Datos</h4>
+            <h4 className="font-semibold text-blue-900 text-base mb-2">📋 Resumen de Datos</h4>
             <div className="space-y-2">
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <p className="text-xs"><strong>Cédula:</strong> {campaignConfig.cedula}</p>
-                <p className="text-xs"><strong>Deudor:</strong> {campaignConfig.tipoDeudor === 'deudor' ? 'Deudor' : 'Codeudor'}</p>
+                <p className="text-sm"><strong>Cédula:</strong> {campaignConfig.cedula}</p>
+                <p className="text-sm"><strong>Deudor:</strong> {campaignConfig.tipoDeudor === 'deudor' ? 'Deudor' : 'Codeudor'}</p>
               </div>
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <p className="text-xs"><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo' : 'WhatsApp'}</p>
-                <p className="text-xs"><strong>Plantilla:</strong> {campaignConfig.selectedTemplate?.name}</p>
+                <p className="text-sm"><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo' : 'WhatsApp'}</p>
+                <p className="text-sm"><strong>Plantilla:</strong> {campaignConfig.selectedTemplate?.name}</p>
               </div>
             </div>
           </div>
@@ -427,7 +449,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
           {/* Columna 2: Loading */}
           <div className="flex flex-col bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 items-center justify-center">
             <Loader className="h-8 w-8 text-purple-600 animate-spin mb-2" />
-            <p className="text-xs text-purple-700">Preparando preview...</p>
+            <p className="text-sm text-purple-700">Preparando preview...</p>
           </div>
         </div>
 
@@ -436,7 +458,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
           <button
             onClick={onBack}
             disabled={true}
-            className="px-4 py-2 text-xs rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 disabled:opacity-50 flex items-center gap-2"
           >
             <ArrowLeft className="h-3 w-3" />
             Atrás
@@ -451,11 +473,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 rounded-lg p-3 mb-3">
-        <h3 className="font-semibold text-green-900 mb-1 text-sm flex items-center gap-2">
+        <h3 className="font-semibold text-green-900 mb-1 text-base flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           Documento Generado
         </h3>
-        <p className="text-green-700 text-xs">
+        <p className="text-green-700 text-sm">
           ID: <code className="bg-white px-1.5 rounded">{commId}</code>
         </p>
       </div>
@@ -464,15 +486,15 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
       <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
         {/* Columna 1: Resumen de datos */}
         <div className="flex flex-col bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-lg p-3 overflow-y-auto">
-          <h4 className="font-semibold text-blue-900 text-sm mb-2 flex items-center gap-2">
+          <h4 className="font-semibold text-blue-900 text-base mb-2 flex items-center gap-2">
             <span>📋</span> Resumen de Datos
           </h4>
 
           <div className="space-y-2.5">
             {/* Datos del cliente */}
             <div className="bg-white border border-blue-200 rounded-lg p-2">
-              <h5 className="text-xs font-bold text-blue-900 mb-1">👤 Cliente</h5>
-              <div className="space-y-0.5 text-xs text-blue-800">
+              <h5 className="text-sm font-bold text-blue-900 mb-1">👤 Cliente</h5>
+              <div className="space-y-0.5 text-sm text-blue-800">
                 <p><strong>Cédula:</strong> {campaignConfig.cedula || 'N/A'}</p>
                 <p><strong>Tipo:</strong> {campaignConfig.tipoDeudor === 'deudor' ? 'Deudor' : 'Codeudor'}</p>
               </div>
@@ -480,8 +502,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
 
             {/* Datos de la comunicación */}
             <div className="bg-white border border-blue-200 rounded-lg p-2">
-              <h5 className="text-xs font-bold text-blue-900 mb-1">📧 Comunicación</h5>
-              <div className="space-y-0.5 text-xs text-blue-800">
+              <h5 className="text-sm font-bold text-blue-900 mb-1">📧 Comunicación</h5>
+              <div className="space-y-0.5 text-sm text-blue-800">
                 <p><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo' : 'WhatsApp'}</p>
                 <p><strong>Tipo:</strong> {campaignConfig.tipoAprobacion === 'sin_aprobacion' ? 'Sin Aprobación' : 'Con Aprobación'}</p>
               </div>
@@ -489,8 +511,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
 
             {/* Plantilla */}
             <div className="bg-white border border-blue-200 rounded-lg p-2">
-              <h5 className="text-xs font-bold text-blue-900 mb-1">📄 Plantilla</h5>
-              <div className="space-y-0.5 text-xs text-blue-800">
+              <h5 className="text-sm font-bold text-blue-900 mb-1">📄 Plantilla</h5>
+              <div className="space-y-0.5 text-sm text-blue-800">
                 <p><strong>Nombre:</strong> {campaignConfig.selectedTemplate?.name || 'N/A'}</p>
                 <p><strong>Tipo:</strong> {campaignConfig.selectedTemplate?.type || 'N/A'}</p>
               </div>
@@ -499,8 +521,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
             {/* Campos rellenados */}
             {campaignConfig.templateFields && Object.keys(campaignConfig.templateFields).length > 0 && (
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <h5 className="text-xs font-bold text-blue-900 mb-1">📝 Campos</h5>
-                <div className="space-y-0.5 text-xs text-blue-800 max-h-24 overflow-y-auto">
+                <h5 className="text-sm font-bold text-blue-900 mb-1">📝 Campos</h5>
+                <div className="space-y-0.5 text-sm text-blue-800 max-h-24 overflow-y-auto">
                   {Object.entries(campaignConfig.templateFields).map(([key, value]) => {
                     const metadata = campaignConfig.fieldMetadata?.[key];
                     const label = metadata?.label || key;
@@ -519,19 +541,19 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
         {/* Columna 2: Preview del documento */}
         <div className="flex flex-col bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-purple-900 text-sm">✨ Vista Previa</h4>
+            <h4 className="font-semibold text-purple-900 text-base">✨ Vista Previa</h4>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => previewFile?.url && window.open(previewFile.url, '_blank')}
                 disabled={!previewFile?.url}
-                className="px-2.5 py-1 text-xs rounded-lg font-semibold text-gray-700 bg-white/90 hover:bg-white shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2.5 py-1 text-sm rounded-lg font-semibold text-gray-700 bg-white/90 hover:bg-white shadow disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Abrir pestaña
               </button>
               <button
                 onClick={() => previewFile && setShowFullModal(true)}
                 disabled={!previewFile}
-                className="px-2.5 py-1 text-xs rounded bg-purple-600 text-white hover:bg-purple-700 transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2.5 py-1 text-sm rounded bg-purple-600 text-white hover:bg-purple-700 transition-all flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Maximize2 className="h-3 w-3" />
                 Expandir
@@ -567,13 +589,13 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
                   </div>
                 ) : previewFile.mimeType?.startsWith('text/') ? (
                   <div className="p-4 bg-white overflow-auto">
-                    <pre className="text-xs whitespace-pre-wrap font-mono text-gray-800 break-words">
+                    <pre className="text-sm whitespace-pre-wrap font-mono text-gray-800 break-words">
                       {previewFile.text || previewFile.url}
                     </pre>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-500">
-                    <p className="text-xs">Tipo: {previewFile.mimeType || 'desconocido'}</p>
+                    <p className="text-sm">Tipo: {previewFile.mimeType || 'desconocido'}</p>
                   </div>
                 )}
               </>
@@ -581,12 +603,12 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
               <div className="flex items-center justify-center h-full p-4">
                 <div className="text-center">
                   <AlertCircle className="h-6 w-6 text-red-600 mx-auto mb-2" />
-                  <p className="text-xs text-red-700">{error}</p>
+                  <p className="text-sm text-red-700">{error}</p>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-xs text-gray-500">Sin vista previa disponible</p>
+                <p className="text-sm text-gray-500">Sin vista previa disponible</p>
               </div>
             )}
           </div>
@@ -604,14 +626,14 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete }) => {
       <div className="flex gap-3 pt-3 border-t border-purple-300 mt-3">
         <button
           onClick={onBack}
-          className="px-4 py-2 text-xs rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+          className="px-4 py-2 text-sm rounded-lg font-bold text-gray-700 bg-gradient-to-br from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
         >
           <ArrowLeft className="h-3 w-3" />
           Atrás
         </button>
         <button
           onClick={() => onComplete && onComplete(commId)}
-          className="px-5 py-2 text-xs rounded-lg font-bold text-white bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg ml-auto flex items-center gap-2"
+          className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg ml-auto flex items-center gap-2"
         >
           <Download className="h-3 w-3" />
           Confirmar y Continuar
