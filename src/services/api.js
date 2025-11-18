@@ -472,3 +472,10 @@ export const getCommunicationPreview = async (commId) => {
 // --- Endpoints para campos de plantillas de comunicación ---
 export const getCommunicationTemplateFields = (templateId) => apiRequest(`/communications/templates/${templateId}/fields`);
 export const updateCommunicationTemplateField = (fieldId, fieldData) => apiRequest(`/communications/templates/fields/${fieldId}`, 'PUT', fieldData);
+
+// --- Endpoints de Comunicaciones Jurídicas ---
+export const getLegalBatches = () => apiRequest('/communications/legal/batches');
+export const getLegalBatchCommunications = (batchId) => apiRequest(`/communications/legal/batches/${batchId}/communications`);
+export const uploadLegalBatchReview = (batchId, file) => apiRequestWithFile(`/communications/legal/batches/${batchId}/upload-review`, 'POST', file);
+export const generateLegalBatchCorrespondence = (batchId) => apiRequest(`/communications/legal/batches/${batchId}/generate-correspondence`, 'POST');
+export const sendLegalBatchCorrespondence = (batchId, credentials) => apiRequest(`/communications/legal/batches/${batchId}/send`, 'POST', credentials);
