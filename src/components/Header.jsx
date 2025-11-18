@@ -17,6 +17,7 @@ const TemplatesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h
 const ReportsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
 const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
 const BriefcaseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
+const LegalApprovalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5-2h-3V4a1 1 0 00-1-1H8a1 1 0 00-1 1v4H4a1 1 0 00-1 1v11a1 1 0 001 1h16a1 1 0 001-1V11a1 1 0 00-1-1z" /></svg>;
 
 
 const Header = ({ onOpenChangePassword }) => {
@@ -55,23 +56,42 @@ const Header = ({ onOpenChangePassword }) => {
   const navLinkClasses = "flex items-center text-gray-600 hover:text-blue-600 transition-all duration-300 ease-in-out group";
   const activeLinkClasses = "text-blue-600 font-semibold";
 
+  const resolvedRoles = Array.isArray(user?.decoded?.roles)
+    ? user.decoded.roles
+    : user?.decoded?.role
+      ? [user.decoded.role]
+      : [];
+
   const allNavLinks = [
     { to: "/", text: "Dashboard", icon: <DashboardIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Jurídico", "Directora de Operaciones"] },
     { to: "/clients", text: "Clientes", icon: <ClientsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor"] },
     { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, roles: ["Admin", "Super Administrador", "Coordinador"] },
     {
-      to: user?.decoded?.roles?.some(r => ["Admin", "Super Administrador", "Jurídico", "Directora de Operaciones"].includes(r)) ? "/templates/approval" : "/templates",
+      to: resolvedRoles.some(r => ["Admin", "Super Administrador", "Jurídico", "Directora de Operaciones"].includes(r)) ? "/templates/approval" : "/templates",
       text: "Plantillas",
       icon: <TemplatesIcon />,
       roles: ["Admin", "Super Administrador", "Coordinador", "Jurídico", "Directora de Operaciones"]
+    },
+    {
+      to: "/communications/legal-approval",
+      text: "Aprobación Jurídica",
+      icon: <LegalApprovalIcon />,
+      roles: ["Admin", "Super Administrador", "Jurídico", "Juridico"],
+      strictForRoles: true
     },
     { to: "/reports", text: "Reportes", icon: <ReportsIcon />, roles: ["Admin", "Super Administrador", "Coordinador"] },
     { to: "/chat", text: "Chat Unificado", icon: <ChatIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor"] },
     { to: "/administracion-personal", text: "Admón. Personal", icon: <BriefcaseIcon />, roles: ["Admin", "Super Administrador", "Jurídico"] },
   ];
 
-  const accessibleNavLinks = user?.decoded?.roles
-    ? allNavLinks.filter(link => user.decoded.roles.some(userRole => link.roles.includes(userRole)))
+  const hasSuperAdmin = resolvedRoles.includes("Super Administrador");
+  const accessibleNavLinks = resolvedRoles.length > 0
+    ? allNavLinks.filter(link => {
+        if (hasSuperAdmin && !link.strictForRoles) {
+          return true;
+        }
+        return resolvedRoles.some(userRole => link.roles.includes(userRole));
+      })
     : [];
 
   return (

@@ -7,6 +7,7 @@ import CreateCampaignPage from '../pages/CreateCampaignPage';
 import TemplateManagerPage from '../pages/TemplateManagerPage';
 import TemplateEditorPage from '../pages/TemplateEditorPage';
 import TemplateApprovalPage from '../pages/TemplateApprovalPage';
+import LegalCommunicationsApprovalPage from '../pages/LegalCommunicationsApprovalPage';
 import WhatsAppChatPage from '../pages/WhatsAppChatPage';
 import AdministracionPersonal from '../pages/AdministracionPersonal';
 import ComunicacionesPage from '../pages/ComunicacionesPage';
@@ -27,6 +28,7 @@ export const AppRouter = () => {
         <Route path="templates/new" element={<TemplateEditorPage />} />
         <Route path="templates/:id/edit" element={<TemplateEditorPage />} />
         <Route path="templates/approval" element={<TemplateApprovalPage />} />
+        <Route path="communications/legal-approval" element={<LegalCommunicationsApprovalPage />} />
         <Route path="chat" element={<WhatsAppChatPage />} />
         <Route path="administracion-personal" element={<AdministracionPersonal />} />
         <Route path="comunicaciones" element={<ComunicacionesPage />} />
