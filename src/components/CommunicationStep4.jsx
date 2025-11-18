@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, Loader, CheckCircle2, Download, Eye, ArrowLeft, Maximize2, X } from 'lucide-react';
-import { generateCommunication, getCommunicationPreview } from '../services/api';
+import { AlertCircle, Loader, CheckCircle2, ArrowLeft, Maximize2, X, Send } from 'lucide-react';
+import { generateCommunication, getCommunicationPreview, sendCommunication } from '../services/api';
 import * as mammoth from 'mammoth';
 
 // Componente para renderizar documentos DOCX
@@ -114,6 +114,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showFullModal, setShowFullModal] = useState(false);
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [senderPassword, setSenderPassword] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
+  const [sendSuccess, setSendSuccess] = useState('');
   const runIdRef = useRef(runId);
 
   useEffect(() => {
@@ -128,6 +133,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setPreviewLoading(false);
     setError(null);
     setShowFullModal(false);
+    setShowPasswordPrompt(false);
+    setSenderPassword('');
+    setSending(false);
+    setSendError(null);
+    setSendSuccess('');
   }, [runId, campaignConfig]);
 
   // Logging al recibir en Step4
@@ -144,6 +154,66 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       loadPreview();
     }
   }, [commId]);
+
+  const channelParam = (campaignConfig.canalComunicacion || '').toUpperCase();
+  const channelFriendlyName = campaignConfig.canalComunicacion === 'email'
+    ? 'Correo electrónico'
+    : campaignConfig.canalComunicacion === 'whatsapp'
+      ? 'WhatsApp'
+      : campaignConfig.canalComunicacion || 'Canal';
+  const recipientContact = campaignConfig.contactValue || '';
+  const contactLabel = campaignConfig.canalComunicacion === 'email'
+    ? 'Correo de salida'
+    : campaignConfig.canalComunicacion === 'whatsapp'
+      ? 'Número de salida'
+      : 'Contacto';
+  const canSend = Boolean(commId && recipientContact && channelParam);
+
+  const handleOpenPasswordPrompt = () => {
+    setSenderPassword('');
+    setSendError(null);
+    setShowPasswordPrompt(true);
+  };
+
+  const handleClosePasswordPrompt = () => {
+    if (sending) return;
+    setShowPasswordPrompt(false);
+    setSenderPassword('');
+    setSendError(null);
+  };
+
+  const handleConfirmSend = async () => {
+    if (!senderPassword.trim()) {
+      setSendError('Debes ingresar la contraseña de envío.');
+      return;
+    }
+    if (!canSend) {
+      setSendError('Faltan datos para enviar la comunicación.');
+      return;
+    }
+
+    setSending(true);
+    setSendError(null);
+    try {
+      await sendCommunication(commId, channelParam, {
+        recipient_contact: recipientContact,
+        sender_password: senderPassword.trim(),
+      });
+      setShowPasswordPrompt(false);
+      setSenderPassword('');
+      setSendSuccess('¡Comunicación enviada con éxito!');
+    } catch (err) {
+      setSendError(err.message || 'No se pudo enviar la comunicación');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleFinishAfterSend = () => {
+    if (onComplete) {
+      onComplete(commId);
+    }
+  };
 
   const loadPreview = async () => {
     const currentRunId = runIdRef.current;
@@ -482,6 +552,24 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
         </p>
       </div>
 
+      {sendSuccess && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">{sendSuccess}</p>
+              <p className="text-xs text-emerald-700">Puedes cerrar este flujo cuando estés listo.</p>
+            </div>
+          </div>
+          <button
+            onClick={handleFinishAfterSend}
+            className="px-4 py-2 text-xs rounded-lg font-semibold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 transition-all shadow"
+          >
+            Cerrar y finalizar
+          </button>
+        </div>
+      )}
+
       {/* Contenido Principal - 2 Columnas */}
       <div className="flex-1 grid grid-cols-2 gap-3 min-h-0">
         {/* Columna 1: Resumen de datos */}
@@ -506,6 +594,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
               <div className="space-y-0.5 text-sm text-blue-800">
                 <p><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo' : 'WhatsApp'}</p>
                 <p><strong>Tipo:</strong> {campaignConfig.tipoAprobacion === 'sin_aprobacion' ? 'Sin Aprobación' : 'Con Aprobación'}</p>
+                <p><strong>{contactLabel}:</strong> {recipientContact || 'No disponible'}</p>
               </div>
             </div>
 
@@ -631,14 +720,92 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
           <ArrowLeft className="h-3 w-3" />
           Atrás
         </button>
-        <button
-          onClick={() => onComplete && onComplete(commId)}
-          className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg ml-auto flex items-center gap-2"
-        >
-          <Download className="h-3 w-3" />
-          Confirmar y Continuar
-        </button>
+        {sendSuccess ? (
+          <button
+            onClick={handleFinishAfterSend}
+            className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-md hover:shadow-lg ml-auto flex items-center gap-2"
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Finalizar
+          </button>
+        ) : (
+          <button
+            onClick={handleOpenPasswordPrompt}
+            disabled={!canSend || sending}
+            className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg ml-auto flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Send className="h-3 w-3" />
+            Confirmar y enviar
+          </button>
+        )}
       </div>
+
+      {!recipientContact && (
+        <p className="text-xs text-red-600 mt-2">
+          No encontramos un contacto para este canal. Regresa al Paso 1 para seleccionarlo.
+        </p>
+      )}
+
+      {showPasswordPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            {sending ? (
+              <div className="flex flex-col items-center text-center py-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mb-4">
+                  <Loader className="h-8 w-8 text-purple-600 animate-spin" />
+                </div>
+                <p className="text-sm font-semibold text-purple-900 mb-1">Enviando comunicación...</p>
+                <p className="text-xs text-purple-600">Esto puede tardar unos segundos.</p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Confirmar y enviar</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Se enviará por <strong>{channelFriendlyName}</strong> desde:
+                    <span className="block text-gray-900 font-medium">{recipientContact || 'No disponible'}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Contraseña del remitente *</label>
+                  <input
+                    type="password"
+                    value={senderPassword}
+                    onChange={(e) => setSenderPassword(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Ingresa tu contraseña"
+                    disabled={sending}
+                  />
+                  {sendError && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> {sendError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+                  <button
+                    onClick={handleClosePasswordPrompt}
+                    disabled={sending}
+                    className="px-4 py-2 text-sm rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition disabled:opacity-60"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleConfirmSend}
+                    disabled={sending}
+                    className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition disabled:opacity-60 flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    Enviar ahora
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

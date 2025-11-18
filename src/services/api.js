@@ -332,6 +332,7 @@ export const getResultadoGestor = (cedula) => apiRequest(`/client-info/resultado
 export const getCompromisos = (cedula) => apiRequest(`/client-info/compromisos/${cedula}`);
 export const getObligaciones = (cedula) => apiRequest(`/client-info/obligaciones/${cedula}`);
 export const getObligacionesByCedula = (cedula) => apiRequest(`/client-info/obligaciones/${cedula}`);
+export const getClientChannelsByCedula = (cedula) => apiRequest(`/client-info/channels/${cedula}`);
 
 // --- Endpoints de Políticas de Condonación ---
 export const calculateCondonation = (obligation_ids) => apiRequest('/condonation-policies/calculate', 'POST', { obligation_ids });
@@ -424,7 +425,10 @@ export const getCommunicationTemplateFile = async (filePath) => {
 export const createCommunicationTemplate = (templateData) => apiRequest('/communications/templates', 'POST', templateData);
 export const updateCommunicationTemplate = (templateId, templateData) => apiRequest(`/communications/templates/${templateId}`, 'PUT', templateData);
 export const generateCommunication = (communicationData) => apiRequest('/communications/generate', 'POST', communicationData);
-export const sendCommunication = (commId, sendData) => apiRequest(`/communications/${commId}/send`, 'PATCH', sendData);
+export const sendCommunication = (commId, channel, sendData) => {
+  const query = channel ? `?channel=${encodeURIComponent(channel)}` : '';
+  return apiRequest(`/communications/${commId}/send${query}`, 'PATCH', sendData);
+};
 export const getCommunicationPreview = async (commId) => {
   const token = getAuthToken();
   const headers = {

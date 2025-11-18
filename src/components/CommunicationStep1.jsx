@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Mail, Send, MessageCircle } from 'lucide-react';
-import { getObligacionesByCedula } from '../services/api';
+import { getObligacionesByCedula, getClientChannelsByCedula } from '../services/api';
 import { debounce } from 'lodash';
 
 const CommunicationStep1 = ({ onNext, onCancel }) => {
@@ -9,18 +9,33 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     obligaciones: [],
     tipoDeudor: '',
     canalComunicacion: '',
-    tipoAprobacion: ''
+    tipoAprobacion: '',
+    contactValue: ''
   });
 
   const [errors, setErrors] = useState({});
   const [obligacionesOptions, setObligacionesOptions] = useState([]);
   const [loadingObligaciones, setLoadingObligaciones] = useState(false);
+  const [contactsByChannel, setContactsByChannel] = useState({});
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'canalComunicacion') {
+      setFormData(prev => ({ ...prev, [name]: value, contactValue: '' }));
+    } else if (name === 'contactValue') {
+      setFormData(prev => ({ ...prev, contactValue: value }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
+    }
+    if (name === 'canalComunicacion' && errors.contactValue) {
+      setErrors(prev => ({ ...prev, contactValue: null }));
+    }
+    if (name === 'contactValue' && errors.contactValue) {
+      setErrors(prev => ({ ...prev, contactValue: null }));
     }
   };
 
@@ -57,6 +72,80 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     fetchObligacionesByCedula(formData.cedula);
   }, [formData.cedula]);
 
+  const fetchContactsByCedula = debounce(async (cedula) => {
+    if (!cedula || cedula.trim() === '') {
+      setContactsByChannel({});
+      setFormData(prev => ({ ...prev, contactValue: '' }));
+      return;
+    }
+
+    setLoadingContacts(true);
+    try {
+      const response = await getClientChannelsByCedula(cedula);
+      const grouped = (response?.contacts || []).reduce((acc, contact) => {
+        const channel = (contact.channel || '').toUpperCase();
+        if (!channel || !contact.contact_value) return acc;
+        if (!acc[channel]) acc[channel] = [];
+        if (!acc[channel].includes(contact.contact_value)) {
+          acc[channel].push(contact.contact_value);
+        }
+        return acc;
+      }, {});
+      setContactsByChannel(grouped);
+    } catch (err) {
+      console.error('Error fetching channel contacts:', err);
+      setContactsByChannel({});
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, 500);
+
+  useEffect(() => {
+    fetchContactsByCedula(formData.cedula);
+  }, [formData.cedula]);
+
+  const selectedChannelValue = formData.canalComunicacion;
+  const selectedChannelKey = selectedChannelValue === 'email'
+    ? 'EMAIL'
+    : selectedChannelValue === 'whatsapp'
+      ? 'WHATSAPP'
+      : null;
+
+  const availableContacts = selectedChannelKey ? (contactsByChannel[selectedChannelKey] || []) : [];
+
+  useEffect(() => {
+    if (!selectedChannelKey) {
+      return;
+    }
+
+    const currentContacts = contactsByChannel[selectedChannelKey] || [];
+    if (currentContacts.length === 0) {
+      return;
+    }
+
+    setFormData(prev => {
+      if (prev.canalComunicacion !== selectedChannelValue) {
+        return prev;
+      }
+      if (currentContacts.length === 1) {
+        return prev.contactValue === currentContacts[0]
+          ? prev
+          : { ...prev, contactValue: currentContacts[0] };
+      }
+      if (currentContacts.includes(prev.contactValue)) {
+        return prev;
+      }
+      return { ...prev, contactValue: '' };
+    });
+  }, [selectedChannelKey, selectedChannelValue, contactsByChannel]);
+
+  const handleContactSelect = (value) => {
+    setFormData(prev => ({ ...prev, contactValue: value }));
+    if (errors.contactValue) {
+      setErrors(prev => ({ ...prev, contactValue: null }));
+    }
+  };
+
   const handleObligacionChange = (obligacionId) => {
     // Si solo hay una obligación, no permitir deseleccionarla
     if (obligacionesOptions.length === 1) {
@@ -90,6 +179,12 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     
     if (!formData.canalComunicacion) {
       newErrors.canalComunicacion = 'Debes seleccionar un canal de comunicación';
+    }
+
+    if ((formData.canalComunicacion === 'email' || formData.canalComunicacion === 'whatsapp') && !formData.contactValue.trim()) {
+      newErrors.contactValue = formData.canalComunicacion === 'email'
+        ? 'Debes seleccionar o ingresar un correo de destino'
+        : 'Debes seleccionar o ingresar un número de WhatsApp';
     }
 
     if (!formData.tipoAprobacion) {
@@ -338,6 +433,52 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
           <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
             <AlertCircle className="h-3 w-3" /> {errors.canalComunicacion}
           </p>
+        )}
+
+        {formData.canalComunicacion && (
+          <div className="mt-4">
+            <label className="block text-xs font-semibold text-green-900 mb-1.5">
+              {formData.canalComunicacion === 'email' ? 'Correo de destino *' : 'Número de WhatsApp *'}
+              {loadingContacts && <span className="text-green-700 text-xs ml-2">(Cargando...)</span>}
+            </label>
+            {availableContacts.length > 0 ? (
+              <div className="space-y-2 bg-white p-2 rounded-lg border-2 border-green-200">
+                {availableContacts.map((contact) => (
+                  <label key={contact} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="contactValueOption"
+                      checked={formData.contactValue === contact}
+                      onChange={() => handleContactSelect(contact)}
+                      className="w-4 h-4 accent-green-600"
+                    />
+                    <span className="text-sm font-medium text-gray-700">{contact}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <input
+                type={formData.canalComunicacion === 'email' ? 'email' : 'tel'}
+                name="contactValue"
+                value={formData.contactValue}
+                onChange={handleChange}
+                placeholder={formData.canalComunicacion === 'email' ? 'cliente@correo.com' : '3001234567'}
+                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
+                  errors.contactValue ? 'border-red-500 bg-red-50' : 'border-green-200 bg-white'
+                }`}
+              />
+            )}
+            {errors.contactValue && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> {errors.contactValue}
+              </p>
+            )}
+            {!loadingContacts && availableContacts.length === 0 && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                No encontramos contactos registrados para este canal. Ingresa uno manualmente.
+              </p>
+            )}
+          </div>
         )}
       </div>
 
