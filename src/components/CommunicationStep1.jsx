@@ -213,7 +213,8 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
       id: 'whatsapp',
       title: 'WhatsApp',
       icon: <Send className="h-12 w-12" />,
-      color: 'from-emerald-500 to-green-600'
+      color: 'from-emerald-500 to-green-600',
+      disabled: true,
     }
   ];
 
@@ -389,7 +390,10 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
 
         <div className="grid grid-cols-2 gap-3">
           {communicationChannels.map((channel) => (
-            <label key={channel.id} className="cursor-pointer group">
+            <label
+              key={channel.id}
+              className={`group ${channel.disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+            >
               <input
                 type="radio"
                 name="canalComunicacion"
@@ -397,6 +401,7 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                 checked={formData.canalComunicacion === channel.id}
                 onChange={handleChange}
                 className="sr-only"
+                disabled={channel.disabled}
               />
               <div className={`p-3 rounded-lg border-2 transition-all ${
                 formData.canalComunicacion === channel.id
@@ -421,7 +426,12 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                       <p className="font-semibold text-gray-800 text-sm">{channel.title}</p>
                     </div>
                     <p className="text-xs text-gray-600 mt-0.5">
-                      {channel.id === 'email' ? 'Correo electrónico' : 'WhatsApp Business'}
+                      {channel.id === 'email'
+                        ? 'Correo electrónico'
+                        : channel.disabled
+                          ? 'Temporalmente inhabilitado'
+                          : 'WhatsApp Business'
+                      }
                     </p>
                   </div>
                 </div>
