@@ -9,6 +9,7 @@ import * as api from '../services/api'; // Importamos todas las funciones de api
 const usePersonalAPI = () => {
   const [employees, setEmployees] = useState([]);
   const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [pendingRetirements, setPendingRetirements] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -55,6 +56,13 @@ const usePersonalAPI = () => {
     }
   }, [handleApiCall]);
 
+  const fetchPendingRetirements = useCallback(async () => {
+    const response = await handleApiCall(api.getEmployees, { estado: 'PENDIENTE_RETIRO_JURIDICO', size: 100 });
+    if (response) {
+      setPendingRetirements(response.items);
+    }
+  }, [handleApiCall]);
+
   const createEmployee = useCallback(async (employeeData) => {
     const createdEmployee = await handleApiCall(api.createEmployee, employeeData);
     if (createdEmployee) {
@@ -94,6 +102,18 @@ const usePersonalAPI = () => {
     setPendingApprovals(prev => prev.filter(emp => emp.cedula !== cedula));
   }, [handleApiCall]);
 
+  const approveRetirement = useCallback(async (cedula) => {
+    await handleApiCall(api.approveRetirement, cedula);
+    toast.success('Retiro aprobado. El empleado ha sido retirado.');
+    setPendingRetirements(prev => prev.filter(emp => emp.cedula !== cedula));
+  }, [handleApiCall]);
+
+  const rejectRetirement = useCallback(async (cedula, motivo) => {
+    await handleApiCall(api.rejectRetirement, cedula, motivo);
+    toast.warn('Retiro rechazado.');
+    setPendingRetirements(prev => prev.filter(emp => emp.cedula !== cedula));
+  }, [handleApiCall]);
+
   const getEmployeeDetails = useCallback(async (cedula) => {
     setIsDetailLoading(true);
     try {
@@ -108,17 +128,21 @@ const usePersonalAPI = () => {
   return {
     employees,
     pendingApprovals,
+    pendingRetirements,
     isLoading,
     isDetailLoading,
     error,
     pagination,
     fetchEmployees,
     fetchPendingApprovals,
+    fetchPendingRetirements,
     createEmployee,
     updateEmployee,
     requestRetirement,
     approveContract,
     rejectContract,
+    approveRetirement,
+    rejectRetirement,
     getEmployeeDetails,
   };
 };

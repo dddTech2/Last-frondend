@@ -27,7 +27,7 @@ const RetiroPersonalForm = ({ onSubmit, isSubmitting = false, empleado = null, o
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('Form submitted with data:', formData);
-    if (onSubmit) await onSubmit({...formData, estado: 'RETIRO_SOLICITADO'});
+    if (onSubmit) await onSubmit({...formData, estado: 'PENDIENTE_RETIRO_JURIDICO'});
   };
 
   return (

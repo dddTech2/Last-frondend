@@ -346,6 +346,16 @@ const useIngresoForm = (initialState = {}) => {
     // Remover campos que no existen en el backend
     delete payloadData.nombre;
     delete payloadData.contrato;
+
+    // Si adminfo está vacío, no enviarlo
+    if (!payloadData.adminfo || payloadData.adminfo.trim() === '') {
+      delete payloadData.adminfo;
+    }
+
+    // Si correo_renovar está vacío, no enviarlo
+    if (!payloadData.correo_renovar || payloadData.correo_renovar.trim() === '') {
+      delete payloadData.correo_renovar;
+    }
     
     return payloadData;
   }, [formData]);

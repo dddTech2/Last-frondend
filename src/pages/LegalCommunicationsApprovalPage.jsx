@@ -1,397 +1,313 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, Clock, RefreshCcw, Upload, FileOutput, Send } from 'lucide-react';
-import {
-  getLegalBatches,
-  getLegalBatchCommunications,
-  uploadLegalBatchReview,
-  generateLegalBatchCorrespondence,
-  sendLegalBatchCorrespondence,
-} from '../services/api';
-
-const statusLabels = {
-  PENDING: 'Pendiente',
-  APPROVED: 'Aprobada',
-  REJECTED: 'Rechazada',
-};
-
-const statusColors = {
-  PENDING: 'bg-amber-100 text-amber-800',
-  APPROVED: 'bg-emerald-100 text-emerald-800',
-  REJECTED: 'bg-rose-100 text-rose-800',
-};
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserPlus, UserMinus, CheckCircle, XCircle, AlertCircle, Loader2, MessageSquare, Eye } from 'lucide-react';
+import { toast } from 'sonner';
+import ModernModal from '../components/ModernModal';
+import FormField from '../components/FormField';
+import PersonalDetailView from '../components/PersonalDetailView';
+import * as api from '../services/api';
 
 const LegalCommunicationsApprovalPage = () => {
-  const [statusFilter, setStatusFilter] = useState('PENDING');
-  const [batches, setBatches] = useState([]);
-  const [selectedBatch, setSelectedBatch] = useState(null);
-  const [communications, setCommunications] = useState([]);
-  const [loadingBatches, setLoadingBatches] = useState(true);
-  const [loadingCommunications, setLoadingCommunications] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState('INGRESOS');
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Estado para ver detalles
+  const [viewDetailModal, setViewDetailModal] = useState(false);
+  const [selectedPersonal, setSelectedPersonal] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Estado para el modal de rechazo
+  const [rejectionModal, setRejectionModal] = useState({ isOpen: false, cedula: null, type: null });
+  const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [banner, setBanner] = useState(null);
-  const [credentialsOpen, setCredentialsOpen] = useState(false);
-  const [senderEmail, setSenderEmail] = useState('analistaia@renovarfinanciera.com');
-  const [senderPassword, setSenderPassword] = useState('Renovar2025*');
-  const fileInputRef = useRef(null);
 
-  const showBanner = (type, message) => {
-    setBanner({ type, message });
-    setTimeout(() => setBanner(null), 5000);
-  };
+  // Cargar datos según la pestaña activa
+  const fetchData = useCallback(async () => {
+    if (activeTab === 'COMUNICACIONES') return; // Módulo deshabilitado
 
-  const handleSelectBatch = useCallback(async (batch) => {
-    if (!batch) return;
-    setSelectedBatch(batch);
-    setLoadingCommunications(true);
+    setLoading(true);
     try {
-      const data = await getLegalBatchCommunications(batch.id);
-      const normalized = Array.isArray(data?.communications)
-        ? data.communications
-        : Array.isArray(data)
-          ? data
-          : [];
-      setCommunications(normalized);
-    } catch (err) {
-      setCommunications([]);
-      showBanner('error', err?.message || 'No pudimos cargar las comunicaciones del batch.');
-    } finally {
-      setLoadingCommunications(false);
-    }
-  }, []);
-
-  const loadBatches = useCallback(async () => {
-    setLoadingBatches(true);
-    try {
-      const data = await getLegalBatches();
-      const normalized = Array.isArray(data?.batches)
-        ? data.batches
-        : Array.isArray(data)
-          ? data
-          : [];
-      setBatches(normalized);
-      if (normalized.length) {
-        const alreadySelected = normalized.find(batch => batch.id === selectedBatch?.id);
-        await handleSelectBatch(alreadySelected || normalized[0]);
-      } else {
-        setSelectedBatch(null);
-        setCommunications([]);
+      let params = {};
+      if (activeTab === 'INGRESOS') {
+        params = { estado: 'PENDIENTE_APROBACION_JURIDICO' };
+      } else if (activeTab === 'RETIROS') {
+        params = { estado: 'PENDIENTE_RETIRO_JURIDICO' };
       }
-    } catch (err) {
-      showBanner('error', err?.message || 'No pudimos cargar los batches jurídicos.');
+
+      const response = await api.getEmployees(params);
+      // Manejar respuesta paginada o array directo
+      const items = response.items || response || [];
+      setData(Array.isArray(items) ? items : []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('No se pudieron cargar los datos pendientes.');
+      setData([]);
     } finally {
-      setLoadingBatches(false);
+      setLoading(false);
     }
-  }, [handleSelectBatch, selectedBatch?.id]);
+  }, [activeTab]);
 
   useEffect(() => {
-    loadBatches();
-  }, [loadBatches]);
+    fetchData();
+  }, [fetchData]);
 
-  const filteredCommunications = useMemo(() => {
-    if (statusFilter === 'ALL') return communications;
-    return communications.filter(comm =>
-      statusFilter === 'PENDING'
-        ? comm.status === 'PENDING'
-        : comm.status === statusFilter
-    );
-  }, [communications, statusFilter]);
-
-  const handleRefresh = () => {
-    setStatusFilter(prev => prev);
-    if (selectedBatch) {
-      handleSelectBatch(selectedBatch);
-    }
-  };
-
-  const triggerFilePicker = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleUploadReview = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file || !selectedBatch) return;
-    setUploading(true);
+  // Handler para ver detalles
+  const handleViewDetail = async (personal) => {
+    setSelectedPersonal(personal);
+    setViewDetailModal(true);
+    setDetailLoading(true);
     try {
-      await uploadLegalBatchReview(selectedBatch.id, file);
-      showBanner('success', 'Archivo CSV cargado correctamente.');
-      await handleSelectBatch(selectedBatch);
-    } catch (err) {
-      showBanner('error', err?.message || 'No pudimos cargar el archivo CSV.');
+      const details = await api.getEmployeeByCedula(personal.cedula);
+      if (details) {
+        setSelectedPersonal(details);
+      }
+    } catch (error) {
+      console.error('Error fetching details:', error);
+      toast.error('Error al cargar los detalles del empleado');
     } finally {
-      setUploading(false);
-      event.target.value = '';
+      setDetailLoading(false);
     }
   };
 
-  const handleGenerate = async () => {
-    if (!selectedBatch) return;
+  // Handlers de Aprobación
+  const handleApprove = async (cedula) => {
     setActionLoading(true);
     try {
-      await generateLegalBatchCorrespondence(selectedBatch.id);
-      showBanner('success', 'Correspondencia generada correctamente.');
-      await handleSelectBatch(selectedBatch);
-    } catch (err) {
-      showBanner('error', err?.message || 'No pudimos generar la correspondencia.');
+      if (activeTab === 'INGRESOS') {
+        await api.approveContract(cedula);
+        toast.success('Contrato aprobado correctamente');
+      } else if (activeTab === 'RETIROS') {
+        await api.approveRetirement(cedula);
+        toast.success('Retiro aprobado correctamente');
+      }
+      fetchData(); // Recargar lista
+    } catch (error) {
+      console.error('Error approving:', error);
+      toast.error(error.message || 'Error al aprobar la solicitud');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleSend = async () => {
-    if (!selectedBatch) return;
+  // Handlers de Rechazo
+  const openRejectionModal = (cedula) => {
+    setRejectionModal({ isOpen: true, cedula, type: activeTab });
+    setRejectionReason('');
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error('Debes ingresar un motivo de rechazo');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      await sendLegalBatchCorrespondence(selectedBatch.id, {
-        sender_email: senderEmail,
-        sender_password: senderPassword,
-      });
-      showBanner('success', 'Correspondencia enviada correctamente.');
-      await handleSelectBatch(selectedBatch);
-    } catch (err) {
-      showBanner('error', err?.message || 'No pudimos enviar la correspondencia.');
+      if (rejectionModal.type === 'INGRESOS') {
+        await api.rejectContract(rejectionModal.cedula, rejectionReason);
+        toast.success('Contrato rechazado correctamente');
+      } else if (rejectionModal.type === 'RETIROS') {
+        // Nota: El backend espera 'motivo_rechazo_juridico' en el body, api.rejectRetirement ya lo maneja
+        await api.rejectRetirement(rejectionModal.cedula, rejectionReason);
+        toast.success('Retiro rechazado correctamente');
+      }
+      setRejectionModal({ isOpen: false, cedula: null, type: null });
+      fetchData();
+    } catch (error) {
+      console.error('Error rejecting:', error);
+      toast.error(error.message || 'Error al rechazar la solicitud');
     } finally {
       setActionLoading(false);
-      setCredentialsOpen(false);
     }
   };
 
-  const renderStatusBadge = (status) => (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[status] || 'bg-gray-100 text-gray-700'}`}>
-      {statusLabels[status] || status}
-    </span>
-  );
+  // Estilos de botones (Tabs)
+  const getButtonClasses = (tabName) => {
+    const baseClasses = "flex-1 flex items-center justify-center py-2 px-5 rounded-lg text-sm font-medium transition-colors duration-200 gap-2";
+    if (activeTab === tabName) {
+      return `${baseClasses} bg-white text-gray-800 shadow-sm`;
+    }
+    return `${baseClasses} text-gray-500 hover:bg-gray-200`;
+  };
 
-  return (
-    <div className="p-8 bg-gray-50 min-h-screen space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Aprobación Jurídica de Comunicaciones</h1>
-          <p className="text-gray-500 text-sm">Revisa, aprueba o rechaza comunicaciones finales antes de su envío.</p>
+  // Renderizado de Tabla
+  const renderTable = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+          <Loader2 className="h-8 w-8 animate-spin mb-2 text-blue-600" />
+          <p>Cargando solicitudes...</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={loadBatches}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-100"
-            disabled={loadingBatches}
-          >
-            <RefreshCcw className={`h-4 w-4 ${loadingBatches ? 'animate-spin' : ''}`} />
-            Recargar batches
-          </button>
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-100"
-            disabled={loadingCommunications || !selectedBatch}
-          >
-            <RefreshCcw className={`h-4 w-4 ${loadingCommunications ? 'animate-spin' : ''}`} />
-            Refrescar comunicaciones
-          </button>
+      );
+    }
+
+    if (data.length === 0) {
+      return (
+        <div className="bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-500">
+          <div className="flex justify-center mb-4">
+            {activeTab === 'INGRESOS' ? <UserPlus className="h-12 w-12 text-gray-300" /> : <UserMinus className="h-12 w-12 text-gray-300" />}
+          </div>
+          <p className="text-lg font-medium text-gray-900">No hay solicitudes pendientes</p>
+          <p className="text-sm">Actualmente no hay {activeTab === 'INGRESOS' ? 'ingresos' : 'retiros'} que requieran aprobación.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4">Nombre Completo</th>
+                <th className="px-6 py-4">Cédula</th>
+                <th className="px-6 py-4">Cargo</th>
+                <th className="px-6 py-4">Área</th>
+                <th className="px-6 py-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {data.map((item) => (
+                <tr key={item.cedula} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-900">{item.nombre}</td>
+                  <td className="px-6 py-4 text-gray-600 font-mono">{item.cedula}</td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {item.cargo}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-600">{item.area}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleViewDetail(item)}
+                        disabled={detailLoading}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Ver Detalles"
+                      >
+                        <Eye className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleApprove(item.cedula)}
+                        disabled={actionLoading}
+                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Aprobar"
+                      >
+                        <CheckCircle className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => openRejectionModal(item.cedula)}
+                        disabled={actionLoading}
+                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="Rechazar"
+                      >
+                        <XCircle className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-      {banner && (
-        <div className={`border rounded-xl p-4 flex items-start gap-3 ${
-          banner.type === 'error'
-            ? 'bg-rose-50 border-rose-200 text-rose-700'
-            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-        }`}>
-          <span className="font-semibold">{banner.type === 'error' ? 'Atención' : 'Éxito'}:</span>
-          <p className="text-sm">{banner.message}</p>
-        </div>
-      )}
+    );
+  };
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800">Batches jurídicos</h2>
-        {loadingBatches ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-sm text-gray-500">Cargando batches...</div>
-        ) : batches.length === 0 ? (
-          <div className="bg-white border border-dashed border-gray-300 rounded-xl p-6 text-center text-sm text-gray-500">
-            No hay batches jurídicos disponibles por ahora.
+  return (
+    <div className="p-8 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Centro de Aprobaciones Jurídicas</h1>
+        <p className="text-gray-500 mt-1">Gestiona las aprobaciones de ingresos, retiros y comunicaciones desde un solo lugar.</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-6 bg-gray-100 p-1 rounded-xl flex gap-1 overflow-x-auto">
+        <button onClick={() => setActiveTab('INGRESOS')} className={getButtonClasses('INGRESOS')}>
+          <UserPlus className="h-4 w-4" />
+          Ingresos
+        </button>
+        <button onClick={() => setActiveTab('RETIROS')} className={getButtonClasses('RETIROS')}>
+          <UserMinus className="h-4 w-4" />
+          Retiros
+        </button>
+        <button onClick={() => setActiveTab('COMUNICACIONES')} className={getButtonClasses('COMUNICACIONES')}>
+          <MessageSquare className="h-4 w-4" />
+          Comunicaciones
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[400px]">
+        {activeTab === 'COMUNICACIONES' ? (
+          <div className="bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-500 h-full flex flex-col items-center justify-center">
+            <AlertCircle className="h-12 w-12 text-amber-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900">Módulo Deshabilitado</h3>
+            <p className="text-sm max-w-md mx-auto mt-2">
+              La aprobación de batches jurídicos se encuentra temporalmente deshabilitada. Por favor contacte al administrador del sistema para más información.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {batches.map(batch => (
-              <button
-                key={batch.id}
-                onClick={() => handleSelectBatch(batch)}
-                className={`text-left border rounded-xl p-4 shadow-sm hover:border-gray-400 transition ${
-                  selectedBatch?.id === batch.id ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white'
-                }`}
-              >
-                <p className="text-xs font-semibold text-gray-400">Batch ID</p>
-                <p className="font-mono text-sm text-gray-800 mb-2">{batch.id}</p>
-                <p className="text-xs font-semibold text-gray-400">Creado</p>
-                <p className="text-sm text-gray-800 mb-2">{batch.created_at ? new Date(batch.created_at).toLocaleString() : 'Sin fecha'}</p>
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>{renderStatusBadge(batch.status || 'PENDING')}</span>
-                  <span>{batch.total_records ?? batch.total ?? 0} registros</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          renderTable()
         )}
       </div>
 
-      {selectedBatch && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl p-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-400">Batch seleccionado</p>
-              <p className="font-mono text-sm text-gray-800">{selectedBatch.id}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={triggerFilePicker}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-100 disabled:opacity-60"
-                disabled={uploading}
-              >
-                <Upload className={`h-4 w-4 ${uploading ? 'animate-pulse' : ''}`} />
-                {uploading ? 'Cargando...' : 'Subir CSV de revisión'}
-              </button>
-              <button
-                onClick={handleGenerate}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gray-900 rounded-lg shadow-sm hover:bg-gray-800 disabled:opacity-60"
-                disabled={actionLoading}
-              >
-                <FileOutput className={`h-4 w-4 ${actionLoading ? 'animate-spin' : ''}`} />
-                Generar PDFs
-              </button>
-              <button
-                onClick={() => setCredentialsOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 rounded-lg shadow-sm hover:bg-rose-700"
-              >
-                <Send className="h-4 w-4" />
-                Enviar correspondencia
-              </button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleUploadReview}
-            />
+      {/* Modal de Rechazo */}
+      <ModernModal
+        isOpen={rejectionModal.isOpen}
+        onClose={() => setRejectionModal({ isOpen: false, cedula: null, type: null })}
+        title={`Rechazar Solicitud - ${rejectionModal.type === 'INGRESOS' ? 'Ingreso' : 'Retiro'}`}
+        size="md"
+        actions={
+          <div className="flex gap-3">
+            <button
+              onClick={() => setRejectionModal({ isOpen: false, cedula: null, type: null })}
+              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+              disabled={actionLoading}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmReject}
+              className="px-4 py-2 text-white bg-rose-600 hover:bg-rose-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+              disabled={actionLoading}
+            >
+              {actionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirmar Rechazo
+            </button>
           </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-1 flex gap-1">
-            {[
-              { key: 'ALL', label: 'Todas' },
-              { key: 'PENDING', label: 'Pendientes' },
-              { key: 'APPROVED', label: 'Aprobadas' },
-              { key: 'REJECTED', label: 'Rechazadas' },
-            ].map(filter => (
-              <button
-                key={filter.key}
-                onClick={() => setStatusFilter(filter.key)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
-                  statusFilter === filter.key ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <p className="text-sm text-amber-800">
+              Esta acción notificará al área correspondiente para que realice las correcciones necesarias.
+            </p>
           </div>
+          <FormField
+            label="Motivo del rechazo"
+            type="textarea"
+            placeholder="Describe detalladamente por qué se rechaza esta solicitud..."
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            required
+            className="min-h-[120px]"
+          />
         </div>
-      )}
+      </ModernModal>
 
-      {loadingCommunications ? (
-        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center space-y-2">
-          <Clock className="h-10 w-10 text-blue-500 mx-auto animate-spin" />
-          <p className="font-semibold text-gray-700">Cargando comunicaciones...</p>
-          <p className="text-sm text-gray-500">Esto tomará solo un momento.</p>
-        </div>
-      ) : (
-        selectedBatch && (
-          <>
-            {filteredCommunications.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-xl p-10 text-center space-y-2">
-                <ArrowLeftRight className="h-10 w-10 text-gray-400 mx-auto" />
-                <p className="font-semibold text-gray-700">Sin comunicaciones con este filtro</p>
-                <p className="text-sm text-gray-500">Prueba cambiando el filtro o vuelve más tarde.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {filteredCommunications.map(comm => (
-                  <div
-                    key={comm.id || comm.communication_id}
-                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4"
-                  >
-                    <div>
-                      <p className="text-sm font-mono text-gray-800">{comm.id || comm.communication_id}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-800">{comm.clientName || comm.client_name || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-800">{comm.templateName || comm.template_name || 'Sin plantilla'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-800">{comm.channel || 'N/A'}</p>
-                    </div>
-                    <div className="flex flex-col items-start">
-                      {renderStatusBadge(comm.status || comm.review_status || 'PENDING')}
-                    </div>
-                    {comm.status === 'PENDING' && (
-                      <div className="flex gap-2">
-                        <button className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">Aprobar</button>
-                        <button className="px-4 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg">Rechazar</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )
-      )}
-
-      {credentialsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div>
-              <p className="text-lg font-semibold text-gray-800">Enviar correspondencia</p>
-              <p className="text-sm text-gray-500">Ingresa las credenciales autorizadas para completar el envío.</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-500">Correo</label>
-                <input
-                  type="email"
-                  value={senderEmail}
-                  onChange={(e) => setSenderEmail(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-                  placeholder="correo@renovarfinanciera.com"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500">Contraseña</label>
-                <input
-                  type="password"
-                  value={senderPassword}
-                  onChange={(e) => setSenderPassword(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setCredentialsOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSend}
-                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-60"
-                disabled={actionLoading || !senderEmail || !senderPassword}
-              >
-                {actionLoading ? 'Enviando...' : 'Enviar ahora'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modal de Ver Detalles */}
+      {selectedPersonal && (
+        <ModernModal
+          isOpen={viewDetailModal}
+          onClose={() => setViewDetailModal(false)}
+          title={`Detalles - ${selectedPersonal.nombre}`}
+          size="xl"
+        >
+          <PersonalDetailView personal={selectedPersonal} isLoading={detailLoading} />
+        </ModernModal>
       )}
     </div>
   );

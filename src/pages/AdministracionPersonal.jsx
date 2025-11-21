@@ -3,9 +3,12 @@ import ModernModal from '../components/ModernModal';
 import IngresoPersonalForm from '../components/IngresoPersonalForm';
 import RetiroPersonalForm from '../components/RetiroPersonalForm';
 import ProveedoresForm from '../components/ProveedoresForm';
+import AprobacionRetiroJuricoModal from '../components/AprobacionRetiroJuricoModal';
+import RechazoJuricoModal from '../components/RechazoJuricoModal';
+import RetiroJuricoModal from '../components/RetiroJuricoModal';
 import FormField from '../components/FormField';
 import PersonalDetailView from '../components/PersonalDetailView';
-import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
+import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToCSV, exportToXLSX } from '../utils/exportToCSV';
 import usePersonalAPI from '../hooks/usePersonalAPI';
@@ -31,8 +34,12 @@ const AdministracionPersonal = () => {
     requestRetirement,
     pendingApprovals,
     fetchPendingApprovals,
+    pendingRetirements,
+    fetchPendingRetirements,
     approveContract,
     rejectContract,
+    approveRetirement,
+    rejectRetirement,
     getEmployeeDetails,
   } = usePersonalAPI();
 
@@ -52,6 +59,12 @@ const AdministracionPersonal = () => {
   const [editFormData, setEditFormData] = useState(null);
   const [rejectionModal, setRejectionModal] = useState({ isOpen: false, cedula: null });
   const [rejectionReason, setRejectionReason] = useState('');
+  
+  // Nuevos estados para los modales de retiro
+  const [aprobacionRetiroModal, setAprobacionRetiroModal] = useState({ isOpen: false, empleado: null });
+  const [rechazoRetiroModal, setRechazoRetiroModal] = useState({ isOpen: false, empleado: null });
+  const [retiroJuridicoModal, setRetiroJuridicoModal] = useState({ isOpen: false, empleado: null });
+
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
 
@@ -122,7 +135,8 @@ const AdministracionPersonal = () => {
   // Cargar aprobaciones pendientes al montar el componente
   useEffect(() => {
     fetchPendingApprovals();
-  }, [fetchPendingApprovals]);
+    fetchPendingRetirements();
+  }, [fetchPendingApprovals, fetchPendingRetirements]);
 
 
   // === OPCIONES PARA FILTROS (Simulado, idealmente vendrían de la API) ===
@@ -312,6 +326,63 @@ const AdministracionPersonal = () => {
     }
   };
 
+  // --- Handlers para Retiros Jurídicos ---
+
+  const handleOpenApproveRetirement = (empleado) => {
+    setAprobacionRetiroModal({ isOpen: true, empleado });
+  };
+
+  const handleSubmitApproveRetirement = async (data) => {
+    setIsFormSubmitting(true);
+    try {
+      await approveRetirement(data.cedula_empleado);
+      setAprobacionRetiroModal({ isOpen: false, empleado: null });
+      reloadAllEmployees(); // Refrescar lista principal
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
+  const handleOpenRejectRetirement = (empleado) => {
+    setRechazoRetiroModal({ isOpen: true, empleado });
+  };
+
+  const handleSubmitRejectRetirement = async (data) => {
+    setIsFormSubmitting(true);
+    try {
+      await rejectRetirement(data.cedula_empleado, data.motivo_rechazo);
+      setRechazoRetiroModal({ isOpen: false, empleado: null });
+      reloadAllEmployees();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
+  // Este handler sería para el "Retiro Jurídico" directo (el otro módulo)
+  // Podríamos poner un botón en la lista principal o en la tarjeta de acciones
+  const handleOpenRetiroJuridico = (empleado) => {
+    setRetiroJuridicoModal({ isOpen: true, empleado });
+  };
+
+  const handleSubmitRetiroJuridico = async (data) => {
+    setIsFormSubmitting(true);
+    try {
+      // Usamos approveRetirement o una función específica si existiera 'processRetirement'
+      // Como RetiroJuricoModal envía 'accion: PROCESAR_RETIRO_JURIDICO', asumimos que es un retiro aprobado
+      await approveRetirement(data.cedula_empleado); 
+      setRetiroJuridicoModal({ isOpen: false, empleado: null });
+      reloadAllEmployees();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
   // Resetear paginación cuando cambian filtros
   useEffect(() => {
     setCurrentPage(1);
@@ -442,11 +513,21 @@ const AdministracionPersonal = () => {
                 className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out text-center flex flex-col items-center"
               >
                 <UserMinusIcon />
-                <h2 className="text-xl font-semibold text-gray-800">Retiro de Personal</h2>
-                <p className="text-gray-500 mt-2">Gestionar la baja de empleados.</p>
+                <h2 className="text-xl font-semibold text-gray-800">Solicitud de Retiro</h2>
+                <p className="text-gray-500 mt-2">Solicitar la baja de un empleado.</p>
               </button>
 
-              {/* Tarjeta 3: Creación de Usuarios para Proveedores */}
+              {/* Tarjeta 3: Retiro Jurídico (Directo) */}
+              <button
+                onClick={() => setRetiroJuridicoModal({ isOpen: true, empleado: null })}
+                className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out text-center flex flex-col items-center"
+              >
+                <LogOut className="h-10 w-10 text-orange-600 mb-4" />
+                <h2 className="text-xl font-semibold text-gray-800">Retiro Jurídico</h2>
+                <p className="text-gray-500 mt-2">Procesar retiro directamente.</p>
+              </button>
+
+              {/* Tarjeta 4: Creación de Usuarios para Proveedores */}
               <div className="bg-gray-100 p-8 rounded-lg shadow-inner text-center flex flex-col items-center cursor-not-allowed">
                 <BriefcaseIcon />
                 <h2 className="text-xl font-semibold text-gray-500">Usuarios para Proveedores</h2>
@@ -456,57 +537,8 @@ const AdministracionPersonal = () => {
           </div>
 
           {/* SECCIÓN 2: BANDEJA DE APROBACIONES */}
-          {pendingApprovals.length > 0 && (
-            <div className="mb-12 bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-yellow-50 to-orange-50">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                  <ShieldCheck className="h-6 w-6 text-orange-600" />
-                  Bandeja de Aprobaciones Jurídicas ({pendingApprovals.length})
-                </h2>
-                <p className="text-gray-600 text-sm mt-1">Nuevos empleados pendientes de aprobación</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Cédula</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Tipo Contrato</th>
-                      <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {pendingApprovals.map((personal) => (
-                      <tr key={personal.cedula}>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{personal.nombre}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{personal.cedula}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{personal.contrato}</td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleApprove(personal.cedula)}
-                              className="p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
-                              title="Aprobar Contrato"
-                            >
-                              <CheckCircle className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleOpenRejectionModal(personal.cedula)}
-                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                              title="Rechazar Contrato"
-                            >
-                              <XCircle className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
+          {/* Las bandejas de aprobación se han movido a LegalCommunicationsApprovalPage.jsx */}
+          
           {/* SECCIÓN 3: GESTIÓN DE PERSONAL */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             {/* Header */}
@@ -870,6 +902,39 @@ const AdministracionPersonal = () => {
           required
         />
       </ModernModal>
+
+      {/* MODAL: Aprobación de Retiro */}
+      {aprobacionRetiroModal.isOpen && (
+        <AprobacionRetiroJuricoModal
+          isOpen={aprobacionRetiroModal.isOpen}
+          onClose={() => setAprobacionRetiroModal({ isOpen: false, empleado: null })}
+          onSubmit={handleSubmitApproveRetirement}
+          empleado={aprobacionRetiroModal.empleado}
+          isSubmitting={isFormSubmitting}
+        />
+      )}
+
+      {/* MODAL: Rechazo de Retiro */}
+      {rechazoRetiroModal.isOpen && (
+        <RechazoJuricoModal
+          isOpen={rechazoRetiroModal.isOpen}
+          onClose={() => setRechazoRetiroModal({ isOpen: false, empleado: null })}
+          onSubmit={handleSubmitRejectRetirement}
+          empleado={rechazoRetiroModal.empleado}
+          isSubmitting={isFormSubmitting}
+        />
+      )}
+
+      {/* MODAL: Retiro Jurídico */}
+      {retiroJuridicoModal.isOpen && (
+        <RetiroJuricoModal
+          isOpen={retiroJuridicoModal.isOpen}
+          onClose={() => setRetiroJuridicoModal({ isOpen: false, empleado: null })}
+          onSubmit={handleSubmitRetiroJuridico}
+          empleado={retiroJuridicoModal.empleado}
+          isSubmitting={isFormSubmitting}
+        />
+      )}
     </>
   );
 };
