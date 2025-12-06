@@ -11,6 +11,7 @@ import LegalCommunicationsApprovalPage from '../pages/LegalCommunicationsApprova
 import WhatsAppChatPage from '../pages/WhatsAppChatPage';
 import AdministracionPersonal from '../pages/AdministracionPersonal';
 import ComunicacionesPage from '../pages/ComunicacionesPage';
+import CommunicationBuilderPage from '../pages/CommunicationBuilderPage';
 import ProtectedRoute from './ProtectedRoute';
 export const AppRouter = () => {
   return (
@@ -29,6 +30,7 @@ export const AppRouter = () => {
         <Route path="templates/:id/edit" element={<TemplateEditorPage />} />
         <Route path="templates/approval" element={<TemplateApprovalPage />} />
         <Route path="communications/legal-approval" element={<LegalCommunicationsApprovalPage />} />
+        <Route path="communications/builder" element={<CommunicationBuilderPage />} />
         <Route path="chat" element={<WhatsAppChatPage />} />
         <Route path="administracion-personal" element={<AdministracionPersonal />} />
         <Route path="comunicaciones" element={<ComunicacionesPage />} />

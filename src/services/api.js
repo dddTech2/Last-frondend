@@ -423,6 +423,7 @@ export const getCommunicationTemplateFile = async (filePath) => {
   }
 };
 export const createCommunicationTemplate = (templateData) => apiRequest('/communications/templates', 'POST', templateData);
+export const uploadCommunicationTemplateFile = (file) => apiRequestWithFile('/communications/templates/upload', 'POST', file);
 export const updateCommunicationTemplate = (templateId, templateData) => apiRequest(`/communications/templates/${templateId}`, 'PUT', templateData);
 export const generateCommunication = (communicationData) => apiRequest('/communications/generate', 'POST', communicationData);
 export const sendCommunication = (commId, channel, sendData) => {
