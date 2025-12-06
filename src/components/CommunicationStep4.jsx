@@ -108,7 +108,10 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile }) => {
 
 const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const [generating, setGenerating] = useState(false);
-  const [commId, setCommId] = useState(null);
+  const [generatedDocs, setGeneratedDocs] = useState([]);
+  const [selectedDocIndex, setSelectedDocIndex] = useState(0);
+  const commId = generatedDocs[selectedDocIndex]?.id;
+
   const [previewData, setPreviewData] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -127,7 +130,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
 
   useEffect(() => {
     setGenerating(false);
-    setCommId(null);
+    setGeneratedDocs([]);
+    setSelectedDocIndex(0);
     setPreviewData(null);
     setPreviewFile(null);
     setPreviewLoading(false);
@@ -140,6 +144,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setSendSuccess('');
   }, [runId, campaignConfig]);
 
+  useEffect(() => {
+    setPreviewData(null);
+    setPreviewFile(null);
+  }, [selectedDocIndex]);
+
   // Logging al recibir en Step4
   useEffect(() => {
     console.log('=== STEP 4 RECEIVED ===');
@@ -150,7 +159,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
 
   // Cargar preview cuando se obtiene comm_id
   useEffect(() => {
-    if (commId && !previewData) {
+    if (commId) {
       loadPreview();
     }
   }, [commId]);
@@ -195,13 +204,18 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setSending(true);
     setSendError(null);
     try {
-      await sendCommunication(commId, channelParam, {
-        recipient_contact: recipientContact,
-        sender_password: senderPassword.trim(),
-      });
+      // Enviar todas las comunicaciones generadas
+      for (const doc of generatedDocs) {
+        await sendCommunication(doc.id, channelParam, {
+          recipient_contact: recipientContact,
+          sender_password: senderPassword.trim(),
+        });
+      }
       setShowPasswordPrompt(false);
       setSenderPassword('');
-      setSendSuccess('¡Comunicación enviada con éxito!');
+      setSendSuccess(generatedDocs.length > 1 
+        ? '¡Comunicaciones enviadas con éxito!' 
+        : '¡Comunicación enviada con éxito!');
     } catch (err) {
       setSendError(err.message || 'No se pudo enviar la comunicación');
     } finally {
@@ -339,11 +353,12 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       console.log('Generate response:', response);
 
       // Manejar si la respuesta es un array (el backend podría devolver una lista)
-      const commData = Array.isArray(response) ? response[0] : response;
+      const docs = Array.isArray(response) ? response : [response];
 
-      if (commData?.id) {
-        setCommId(commData.id);
-        console.log('Communication generated successfully with ID:', commData.id);
+      if (docs.length > 0 && docs[0]?.id) {
+        setGeneratedDocs(docs);
+        setSelectedDocIndex(0);
+        console.log('Communications generated successfully:', docs);
       } else {
         throw new Error('No se recibió ID de comunicación');
       }
@@ -546,13 +561,35 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 rounded-lg p-3 mb-3">
-        <h3 className="font-semibold text-green-900 mb-1 text-base flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          Documento Generado
-        </h3>
-        <p className="text-green-700 text-sm">
-          ID: <code className="bg-white px-1.5 rounded">{commId}</code>
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-green-900 mb-1 text-base flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              Documento Generado {generatedDocs.length > 1 ? `(${selectedDocIndex + 1}/${generatedDocs.length})` : ''}
+            </h3>
+            <p className="text-green-700 text-sm">
+              ID: <code className="bg-white px-1.5 rounded">{commId}</code>
+            </p>
+          </div>
+          
+          {generatedDocs.length > 1 && (
+            <div className="flex gap-2">
+              {generatedDocs.map((doc, index) => (
+                <button
+                  key={doc.id}
+                  onClick={() => setSelectedDocIndex(index)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+                    selectedDocIndex === index
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-white text-green-700 border border-green-200 hover:bg-green-50'
+                  }`}
+                >
+                  Doc {index + 1}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {sendSuccess && (
