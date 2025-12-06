@@ -338,9 +338,12 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       const response = await generateCommunication(communicationData);
       console.log('Generate response:', response);
 
-      if (response?.id) {
-        setCommId(response.id);
-        console.log('Communication generated successfully with ID:', response.id);
+      // Manejar si la respuesta es un array (el backend podría devolver una lista)
+      const commData = Array.isArray(response) ? response[0] : response;
+
+      if (commData?.id) {
+        setCommId(commData.id);
+        console.log('Communication generated successfully with ID:', commData.id);
       } else {
         throw new Error('No se recibió ID de comunicación');
       }
