@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, FileText, Eye, Download, Maximize2, X } from 'lucide-react';
+import { AlertCircle, FileText, Eye, Download, Maximize2, X, Search } from 'lucide-react';
 import { getCommunicationTemplates, getCommunicationTemplate, getCommunicationTemplateFile } from '../services/api';
 import * as mammoth from 'mammoth';
+import JoditEditor from 'jodit-react';
 
 // Componente helper para renderizar texto desde Blob
 const TextPreview = ({ blob }) => {
@@ -47,11 +48,32 @@ const DocxPreview = ({ blob }) => {
     return <div className="text-sm text-red-600">{error}</div>;
   }
 
+  const config = {
+    readonly: true,
+    toolbar: false,
+    statusbar: false,
+    height: '100%',
+    minHeight: 500,
+    width: '100%',
+    showCharsCounter: false,
+    showWordsCounter: false,
+    showXPathInStatusbar: false,
+    buttons: [],
+    style: {
+      border: '1px solid #e2e8f0',
+      borderRadius: '0.5rem'
+    }
+  };
+
   return (
-    <div 
-      className="prose prose-sm max-w-none p-4 bg-white rounded-lg"
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-    />
+    <div className="w-full h-full bg-white rounded-lg overflow-hidden">
+      <JoditEditor
+        value={htmlContent}
+        config={config}
+        tabIndex={-1}
+        onChange={() => {}}
+      />
+    </div>
   );
 };
 
@@ -94,7 +116,7 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile, templateName }) => {
             />
           ) : previewFile.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? (
             // DOCX
-            <div className="p-4">
+            <div className="p-4 h-full">
               {previewFile.blob && <DocxPreview blob={previewFile.blob} />}
             </div>
           ) : previewFile.mimeType.startsWith('text/') ? (
@@ -152,6 +174,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [showFullModal, setShowFullModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Cargar plantillas desde el endpoint
   useEffect(() => {
@@ -256,6 +279,11 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
     }
   };
 
+  const filteredTemplates = templates.filter(template => 
+    template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (template.description && template.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <div className="h-full flex flex-col text-base">
       {/* Header */}
@@ -277,14 +305,34 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
             Plantillas Disponibles
           </h4>
 
+          {/* Buscador */}
+          <div className="mb-3 relative">
+            <input 
+              type="text"
+              placeholder="Buscar plantilla..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white/80 placeholder-emerald-400 text-emerald-900"
+            />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 text-emerald-400 hover:text-emerald-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           {loadingTemplates ? (
             <div className="flex items-center justify-center py-8">
               <p className="text-sm text-emerald-700">Cargando plantillas...</p>
             </div>
           ) : (
             <div className="flex-1 space-y-2 overflow-y-auto">
-              {templates.length > 0 ? (
-                templates.map((template) => (
+              {filteredTemplates.length > 0 ? (
+                filteredTemplates.map((template) => (
                   <div
                     key={template.id}
                     onClick={() => handleSelectTemplate(template)}
@@ -316,7 +364,9 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-sm text-emerald-600">No hay plantillas disponibles</p>
+                  <p className="text-sm text-emerald-600">
+                    {searchQuery ? 'No se encontraron plantillas con ese criterio' : 'No hay plantillas disponibles'}
+                  </p>
                 </div>
               )}
             </div>
@@ -353,71 +403,30 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                   {/* Contenido del preview - Archivo o Texto */}
                   <div className="flex-1 bg-white rounded-lg p-2.5 border border-purple-300 overflow-y-auto flex flex-col">
                     {previewFile ? (
-                      <>
-                        {/* Vista previa del archivo */}
-                        <div className="flex-1 flex flex-col min-h-0 bg-gray-50 rounded-lg border border-purple-200 p-2 mb-2">
+                      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 rounded-lg border border-purple-200 p-6">
+                        <div className="bg-white p-4 rounded-full shadow-sm mb-4">
                           {previewFile.mimeType.startsWith('image/') ? (
-                            // Imagen
-                            <div className="flex items-center justify-center h-full">
-                              <img 
-                                src={previewFile.url} 
-                                alt="Template preview" 
-                                className="max-w-full max-h-full object-contain rounded"
-                              />
-                            </div>
+                            <Eye className="h-12 w-12 text-purple-500" />
                           ) : previewFile.mimeType === 'application/pdf' ? (
-                            // PDF
-                            <div className="w-full h-full flex flex-col">
-                              <iframe
-                                src={previewFile.url}
-                                className="flex-1 rounded border border-gray-300"
-                                title="PDF Preview"
-                              />
-                            </div>
+                            <FileText className="h-12 w-12 text-red-500" />
                           ) : previewFile.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? (
-                            // DOCX
-                            <div className="overflow-auto">
-                              {previewFile.blob && <DocxPreview blob={previewFile.blob} />}
-                            </div>
-                          ) : previewFile.mimeType.startsWith('text/') ? (
-                            // Texto
-                            <div className="overflow-auto">
-                              <pre className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-mono p-2 bg-white rounded">
-                                {previewFile.blob && <TextPreview blob={previewFile.blob} />}
-                              </pre>
-                            </div>
+                            <FileText className="h-12 w-12 text-blue-500" />
                           ) : (
-                            // Archivo genérico
-                            <div className="flex flex-col items-center justify-center h-full text-center">
-                              <FileText className="h-12 w-12 text-purple-300 mb-2" />
-                              <p className="text-sm text-purple-600">Archivo: {previewFile.mimeType}</p>
-                            </div>
+                            <FileText className="h-12 w-12 text-gray-500" />
                           )}
                         </div>
+                        
+                        <p className="text-purple-900 font-medium mb-1">Documento de Plantilla</p>
+                        <p className="text-purple-600 text-xs mb-6">{previewFile.mimeType}</p>
 
-                        {/* Botones de acción */}
-                        <div className="flex gap-2 pt-2 border-t border-purple-300">
-                          <button
-                            onClick={() => setShowFullModal(true)}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium transition-colors"
-                          >
-                            <Maximize2 className="h-3 w-3" />
-                            Ver Completo
-                          </button>
-                          <button
-                            onClick={() => {
-                              const a = document.createElement('a');
-                              a.href = previewFile.url;
-                              a.download = `${selectedTemplate.name}`;
-                              a.click();
-                            }}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
-                          >
-                            <Download className="h-3 w-3" />
-                            Descargar
-                          </button>
-                        </div>
-                      </>
+                        <button
+                          onClick={() => setShowFullModal(true)}
+                          className="flex items-center justify-center gap-2 px-6 py-3 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                          Ver Documento Completo
+                        </button>
+                      </div>
                     ) : (
                       <>
                         {/* Contenido de texto original */}

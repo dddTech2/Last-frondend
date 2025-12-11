@@ -54,8 +54,24 @@ const CommunicationsWizard = () => {
   };
 
   const handleStep2Submit = (config) => {
-    setCampaignConfig({ ...config, ...step1Data });
-    goToStep(3);
+    const fullConfig = { ...config, ...step1Data };
+    setCampaignConfig(fullConfig);
+
+    // Verificar si la plantilla requiere campos adicionales (Step 3)
+    const templateType = config.selectedTemplate?.type;
+    const isFormOrLegal = templateType === 'FORM' || templateType === 'LEGAL';
+
+    if (!isFormOrLegal) {
+      // Si no requiere campos, saltar directamente al Step 4
+      // Preparamos los datos finales asumiendo que no hay fieldValues
+      const finalData = { ...fullConfig, fieldValues: {} };
+      setCompletedData(finalData);
+      setStep4RunId((prev) => prev + 1);
+      goToStep(4);
+    } else {
+      // Si requiere campos, ir al Step 3 normalmente
+      goToStep(3);
+    }
   };
 
   const handleStep3Submit = (finalData) => {
