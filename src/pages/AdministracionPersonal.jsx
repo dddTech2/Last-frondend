@@ -3,12 +3,13 @@ import ModernModal from '../components/ModernModal';
 import IngresoPersonalForm from '../components/IngresoPersonalForm';
 import RetiroPersonalForm from '../components/RetiroPersonalForm';
 import ProveedoresForm from '../components/ProveedoresForm';
+import TecnologiaForm from '../components/TecnologiaForm';
 import AprobacionRetiroJuricoModal from '../components/AprobacionRetiroJuricoModal';
 import RechazoJuricoModal from '../components/RechazoJuricoModal';
 import RetiroJuricoModal from '../components/RetiroJuricoModal';
 import FormField from '../components/FormField';
 import PersonalDetailView from '../components/PersonalDetailView';
-import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck, LogOut } from 'lucide-react';
+import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck, LogOut, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToCSV, exportToXLSX } from '../utils/exportToCSV';
 import usePersonalAPI from '../hooks/usePersonalAPI';
@@ -64,6 +65,7 @@ const AdministracionPersonal = () => {
   const [aprobacionRetiroModal, setAprobacionRetiroModal] = useState({ isOpen: false, empleado: null });
   const [rechazoRetiroModal, setRechazoRetiroModal] = useState({ isOpen: false, empleado: null });
   const [retiroJuridicoModal, setRetiroJuridicoModal] = useState({ isOpen: false, empleado: null });
+  const [tecnologiaModal, setTecnologiaModal] = useState(false);
 
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
@@ -383,6 +385,20 @@ const AdministracionPersonal = () => {
     }
   };
 
+  const handleUpdateTechnology = async (data) => {
+    setIsFormSubmitting(true);
+    try {
+      await updateEmployee(data.cedula, data);
+      setTecnologiaModal(false);
+      toast.success('Información tecnológica actualizada correctamente');
+      reloadAllEmployees();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
   // Resetear paginación cuando cambian filtros
   useEffect(() => {
     setCurrentPage(1);
@@ -527,7 +543,17 @@ const AdministracionPersonal = () => {
                 <p className="text-gray-500 mt-2">Procesar retiro directamente.</p>
               </button>
 
-              {/* Tarjeta 4: Creación de Usuarios para Proveedores */}
+              {/* Tarjeta 4: Actualización Tecnológica */}
+              <button
+                onClick={() => setTecnologiaModal(true)}
+                className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out text-center flex flex-col items-center"
+              >
+                <Monitor className="h-10 w-10 text-purple-600 mb-4" />
+                <h2 className="text-xl font-semibold text-gray-800">Actualización Tecnológica</h2>
+                <p className="text-gray-500 mt-2">Actualizar correos, extensiones y usuarios.</p>
+              </button>
+
+              {/* Tarjeta 5: Creación de Usuarios para Proveedores */}
               <div className="bg-gray-100 p-8 rounded-lg shadow-inner text-center flex flex-col items-center cursor-not-allowed">
                 <BriefcaseIcon />
                 <h2 className="text-xl font-semibold text-gray-500">Usuarios para Proveedores</h2>
@@ -934,6 +960,24 @@ const AdministracionPersonal = () => {
           empleado={retiroJuridicoModal.empleado}
           isSubmitting={isFormSubmitting}
         />
+      )}
+
+      {/* MODAL: Actualización Tecnológica */}
+      {tecnologiaModal && (
+        <ModernModal
+          isOpen={true}
+          onClose={() => setTecnologiaModal(false)}
+          title="Actualización Tecnológica"
+          icon={<Monitor className="h-6 w-6 text-purple-600" />}
+          size="lg"
+        >
+          <TecnologiaForm
+            employees={allEmployees}
+            onSubmit={handleUpdateTechnology}
+            onCancel={() => setTecnologiaModal(false)}
+            isSubmitting={isFormSubmitting}
+          />
+        </ModernModal>
       )}
     </>
   );

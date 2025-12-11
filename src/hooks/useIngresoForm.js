@@ -21,15 +21,11 @@ const useIngresoForm = (initialState = {}) => {
     fecha_ingreso: '',
     contrato: '',
     jefe_inmediato: '',
-    extension_3cx: '',
-    cola: '',
-    adminfo: '',
-    asignacion: '',
     
-    // Step 3 - Credenciales Renovar
-    correo_renovar: '',
-    password_renovar: '',
-    password_renovar_confirm: '',
+    // Step 3 - Credenciales Renovar (Gestionado en Tecnología)
+    // correo_renovar: '',
+    // password_renovar: '',
+    // password_renovar_confirm: '',
     
     // Datos adicionales personales (nuevos)
     // estado: Se determina automáticamente según tipo de contrato
@@ -97,9 +93,9 @@ const useIngresoForm = (initialState = {}) => {
     fecha_ingreso: validators.date,
     contrato: (value) => validators.required(value, 'Tipo de Contrato'),
     jefe_inmediato: validators.jefeInmediato,
-    correo_renovar: (value) => validators.email(value, 'correo Renovar'),
-    password_renovar: validators.password,
-    password_renovar_confirm: () => null, // Se valida con lógica especial en validateField
+    // correo_renovar: (value) => validators.email(value, 'correo Renovar'),
+    // password_renovar: validators.password,
+    // password_renovar_confirm: () => null, // Se valida con lógica especial en validateField
     fecha_nacimiento: validators.fechaNacimiento,
     contacto_emergencia_nombre: validators.nombreContactoEmergencia,
     contacto_emergencia_telefono: validators.telefonoEmergencia,
@@ -172,15 +168,6 @@ const useIngresoForm = (initialState = {}) => {
    * Validar un campo individual
    */
   const validateField = useCallback((fieldName, value) => {
-    // Manejo especial para password_renovar_confirm
-    if (fieldName === 'password_renovar_confirm') {
-      // Solo validar si ambas contraseñas están llenas
-      if (!formData.password_renovar || !value) {
-        return 'Este campo es requerido';
-      }
-      return validators.passwordMatch(formData.password_renovar, value);
-    }
-
     // Manejo especial para jefe_inmediato
     if (fieldName === 'jefe_inmediato') {
       const error = validators.jefeInmediato(value, formData.cargo);
@@ -198,7 +185,7 @@ const useIngresoForm = (initialState = {}) => {
     }
 
     return null;
-  }, [formData.password_renovar, formData.cargo]);
+  }, [formData.cargo]);
 
   /**
    * Manejar cambios en los campos
@@ -283,19 +270,6 @@ const useIngresoForm = (initialState = {}) => {
       delete newErrors.localidad;
     }
 
-    // 3. Validar coincidencia de contraseñas especialmente
-    if (formData.password_renovar && formData.password_renovar_confirm) {
-      const passwordMatchError = validators.passwordMatch(formData.password_renovar, formData.password_renovar_confirm);
-      if (passwordMatchError) {
-        newErrors.password_renovar_confirm = passwordMatchError;
-      }
-    } else if (formData.password_renovar || formData.password_renovar_confirm) {
-      // Si uno está lleno pero el otro no
-      if (!formData.password_renovar_confirm) {
-        newErrors.password_renovar_confirm = 'Debe confirmar la contraseña';
-      }
-    }
-
     // 4. Marcar todos los campos como tocados
     const allFieldNames = [
       'cedula', 'nombre', 'celular', 'correo_personal',
@@ -304,7 +278,6 @@ const useIngresoForm = (initialState = {}) => {
       'fecha_nacimiento', 'genero', 'lugar', 'direccion_residencia',
       'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos',
       'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
-      'correo_renovar', 'password_renovar', 'password_renovar_confirm',
     ];
     
     // Agregar localidad a los campos tocados SOLO si es Bogotá
@@ -333,7 +306,7 @@ const useIngresoForm = (initialState = {}) => {
    * IMPORTANTE: El backend NO soporta 'localidad', solo 'ciudad'
    */
   const getCleanData = useCallback(() => {
-    const { password_renovar_confirm, localidad, extension_3cx, cola, asignacion, ...cleanData } = formData;
+    const { localidad, ...cleanData } = formData;
     
     // Mapear campos que tienen nombres diferentes en el backend
     // El backend espera 'nombre_completo' no 'nombre'
@@ -351,11 +324,12 @@ const useIngresoForm = (initialState = {}) => {
     if (!payloadData.adminfo || payloadData.adminfo.trim() === '') {
       delete payloadData.adminfo;
     }
-
-    // Si correo_renovar está vacío, no enviarlo
-    if (!payloadData.correo_renovar || payloadData.correo_renovar.trim() === '') {
-      delete payloadData.correo_renovar;
-    }
+    
+    // Limpiar otros campos opcionales si están vacíos
+    if (!payloadData.extension_3cx || payloadData.extension_3cx.trim() === '') delete payloadData.extension_3cx;
+    if (!payloadData.cola || payloadData.cola.trim() === '') delete payloadData.cola;
+    if (!payloadData.asignacion || payloadData.asignacion.trim() === '') delete payloadData.asignacion;
+    if (!payloadData.correo_renovar || payloadData.correo_renovar.trim() === '') delete payloadData.correo_renovar;
     
     return payloadData;
   }, [formData]);

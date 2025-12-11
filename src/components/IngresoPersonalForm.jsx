@@ -467,28 +467,10 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       formData.cantidad_hijos &&
       formData.contacto_emergencia_nombre &&
       formData.contacto_emergencia_telefono
-      // extension_3cx, cola, adminfo, asignacion son OPCIONALES - no validar
       // estado se determina automáticamente según tipo de contrato
     );
 
     return baseValidation;
-  };
-
-  const isStep3Valid = () => {
-    return (
-      formData.correo_renovar &&
-      formData.password_renovar &&
-      formData.password_renovar_confirm &&
-      !getFieldError('correo_renovar') &&
-      !getFieldError('password_renovar') &&
-      !getFieldError('password_renovar_confirm')
-    );
-  };
-
-  const isStep4Valid = () => {
-    // En step 4 (resumen), todos los datos ya están validados
-    // Solo retornamos true para permitir la acción de envío
-    return true;
   };
 
   const handleSubmit = async (e) => {
@@ -523,9 +505,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         cantidad_hijos: formData.cantidad_hijos,
         contacto_emergencia_nombre: formData.contacto_emergencia_nombre,
         contacto_emergencia_telefono: formData.contacto_emergencia_telefono,
-        correo_renovar: formData.correo_renovar,
-        password_renovar: '[OCULTO]',
-        password_renovar_confirm: '[OCULTO]',
       });
       console.groupEnd();
       
@@ -713,52 +692,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         </div>
       </div>
 
-      <div className="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-sm text-amber-800">
-        <p className="font-semibold mb-1">Datos de Sistemas (Opcionales)</p>
-        <p>Si aún no tienes esta información, puedes actualizarla después.</p>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          label="Extensión 3CX"
-          name="extension_3cx"
-          type="text"
-          placeholder="Ej: 1001"
-          value={formData.extension_3cx}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
-
-        <FormField
-          label="Cola"
-          name="cola"
-          type="text"
-          placeholder="Ej: COBRANZA_01"
-          value={formData.cola}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
-
-        <FormField
-          label="Código Adminfo"
-          name="adminfo"
-          type="text"
-          placeholder="Ej: ADM123"
-          value={formData.adminfo}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
-
-        <FormField
-          label="Asignación"
-          name="asignacion"
-          type="text"
-          placeholder="Código o descripción de asignación"
-          value={formData.asignacion}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
-
         <SelectJefeInmediato
           cargo={formData.cargo}
           value={formData.jefe_inmediato}
@@ -1037,119 +971,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     </div>
   );
 
-  const renderStep3 = () => (
-    <div className="space-y-4">
-      <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
-        <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-purple-600" />
-          <div>
-            <h4 className="font-semibold text-purple-900">Credenciales Renovar</h4>
-            <p className="text-sm text-purple-700 mt-0.5">Acceso al sistema Renovar</p>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <FormField
-          label="Correo Renovar"
-          name="correo_renovar"
-          type="email"
-          placeholder="Ej: juan.perez@renovar.com"
-          value={formData.correo_renovar}
-          onChange={handleEmailChange}
-          onBlur={handleEmailBlur}
-          required
-          disabled={isSubmitting}
-        />
-        {getFieldError('correo_renovar') && (
-          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-            <AlertCircle className="h-4 w-4" /> {getFieldError('correo_renovar')}
-          </p>
-        )}
-      </div>
-
-      <div className="relative">
-        <FormField
-          label="Contraseña Renovar"
-          name="password_renovar"
-          type={showPassword ? "text" : "password"}
-          placeholder="Crea una contraseña segura"
-          value={formData.password_renovar}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          required
-          disabled={isSubmitting}
-        />
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
-          tabIndex={-1}
-        >
-          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-        {getFieldError('password_renovar') && (
-          <p className="text-sm text-red-600 mt-1 flex items-start gap-1">
-            <AlertCircle className="h-4 w-4 mt-0.5" /> {getFieldError('password_renovar')}
-          </p>
-        )}
-      </div>
-
-      {formData.password_renovar && (
-        <div className="bg-gray-50 p-3 rounded">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Requisitos de contraseña:</p>
-          <div className="space-y-1 text-xs">
-            <div className={`flex items-center gap-2 ${formData.password_renovar.length >= 8 ? 'text-green-600' : 'text-gray-400'}`}>
-              <CheckCircle2 className="h-3 w-3" /> Mínimo 8 caracteres
-            </div>
-            <div className={`flex items-center gap-2 ${/(?=.*[a-z])/.test(formData.password_renovar) ? 'text-green-600' : 'text-gray-400'}`}>
-              <CheckCircle2 className="h-3 w-3" /> Letras minúsculas
-            </div>
-            <div className={`flex items-center gap-2 ${/(?=.*[A-Z])/.test(formData.password_renovar) ? 'text-green-600' : 'text-gray-400'}`}>
-              <CheckCircle2 className="h-3 w-3" /> Letras mayúsculas
-            </div>
-            <div className={`flex items-center gap-2 ${/(?=.*\d)/.test(formData.password_renovar) ? 'text-green-600' : 'text-gray-400'}`}>
-              <CheckCircle2 className="h-3 w-3" /> Números
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="relative">
-        <FormField
-          label="Confirmar Contraseña"
-          name="password_renovar_confirm"
-          type={showConfirmPassword ? "text" : "password"}
-          placeholder="Repite tu contraseña"
-          value={formData.password_renovar_confirm}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          required
-          disabled={isSubmitting}
-        />
-        <button
-          type="button"
-          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-          className="absolute right-3 top-9 text-gray-500 hover:text-gray-700"
-          tabIndex={-1}
-        >
-          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-        {getFieldError('password_renovar_confirm') && (
-          <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-            <AlertCircle className="h-4 w-4" /> {getFieldError('password_renovar_confirm')}
-          </p>
-        )}
-      </div>
-
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded text-sm text-blue-800">
-        <p className="font-semibold mb-1">⚠️ Importante</p>
-        <p>El empleado deberá cambiar esta contraseña en su primer acceso al sistema.</p>
-      </div>
-    </div>
-  );
-
-  const renderStep4 = () => {
+  const renderStep3 = () => {
     // Mapeo de valores formateados
     const formatValue = (field, value) => {
       if (!value) return '—';
@@ -1346,33 +1168,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           </div>
         </div>
 
-        {/* Sección: Credenciales Renovar (Step 3) */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h5 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Lock className="h-4 w-4 text-purple-600" />
-              Credenciales Renovar
-            </h5>
-            <button
-              type="button"
-              onClick={() => setStep(3)}
-              className="text-xs px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded transition-colors"
-            >
-              Editar
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-3 rounded">
-              <p className="text-xs text-gray-500 font-semibold uppercase">Correo Renovar</p>
-              <p className="text-sm text-gray-800 mt-1">{formatValue('correo_renovar', formData.correo_renovar)}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded">
-              <p className="text-xs text-gray-500 font-semibold uppercase">Contraseña</p>
-              <p className="text-sm text-gray-800 mt-1">••••••••</p>
-            </div>
-          </div>
-        </div>
-
         <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded text-sm text-blue-800">
           <p className="font-semibold mb-1">✓ Información completa</p>
           <p>Todos los datos han sido validados. Puedes confirmar para crear el empleado o editar cualquier sección.</p>
@@ -1396,14 +1191,10 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
           3
         </div>
-        <div className={`flex-1 h-1 rounded transition-all ${step > 3 ? 'bg-blue-600' : 'bg-gray-200'}`} />
-        <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all ${step >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-          4
-        </div>
       </div>
 
       <div className="text-sm text-gray-600 font-medium">
-        Paso {step} de 4: {step === 1 ? 'Datos Personales' : step === 2 ? 'Datos Laborales' : step === 3 ? 'Credenciales Renovar' : 'Resumen'}
+        Paso {step} de 3: {step === 1 ? 'Datos Personales' : step === 2 ? 'Datos Laborales' : 'Resumen'}
       </div>
 
       {/* Contenido de pasos */}
@@ -1411,7 +1202,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
-        {step === 4 && renderStep4()}
       </div>
 
       {/* Error general */}
@@ -1450,7 +1240,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
             Cancelar
           </button>
 
-          {step < 4 ? (
+          {step < 3 ? (
             <div className="relative group">
               <button
                 type="button"
@@ -1459,13 +1249,11 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
                     handleProceedToStep2();
                   } else if (step === 2) {
                     handleProceedToStep3();
-                  } else if (step === 3) {
-                    setStep(4);
                   } else {
                     setStep(step + 1);
                   }
                 }}
-                disabled={cedulaValidating || !((step === 1 && isStep1Valid()) || (step === 2 && isStep2Valid()) || (step === 3 && isStep3Valid()) || (step === 4 && isStep4Valid()))}
+                disabled={cedulaValidating || !((step === 1 && isStep1Valid()) || (step === 2 && isStep2Valid()))}
                 className="px-6 py-2 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {cedulaValidating && step === 1 ? (
@@ -1481,7 +1269,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           ) : (
             <button
               type="submit"
-              disabled={isSubmitting || !isStep4Valid()}
+              disabled={isSubmitting}
               className="px-6 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {isSubmitting ? (
