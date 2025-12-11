@@ -4,7 +4,7 @@ import { ArrowLeft, Upload, FileText, Settings, Save, Plus, Trash2, CheckCircle2
 import * as mammoth from 'mammoth';
 import { toast } from 'sonner';
 import FormField from '../components/FormField';
-import { createCommunicationTemplate, uploadCommunicationTemplateFile } from '../services/api';
+import { createCommunicationTemplate, uploadCommunicationTemplateFile, getCommunicationTemplateFields, updateCommunicationTemplateField } from '../services/api';
 
 const CommunicationBuilderPage = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const CommunicationBuilderPage = () => {
   // Datos de la comunicación
   const [commName, setCommName] = useState('');
   const [commDescription, setCommDescription] = useState('');
+  const [commType, setCommType] = useState('AUTOMATIC'); // AUTOMATIC, FORM, LEGAL
   const [file, setFile] = useState(null);
   const [variables, setVariables] = useState([]);
 
@@ -141,38 +142,63 @@ const CommunicationBuilderPage = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // 1. Subir el archivo
+      // 1. Subir el archivo (Obtiene file_identifier)
       const uploadResponse = await uploadCommunicationTemplateFile(file);
-      // Asumimos que el backend devuelve { file_path: "..." } o similar
-      const filePath = uploadResponse.file_path || uploadResponse.url || uploadResponse.id; 
+      const filePath = uploadResponse.file_path; 
 
       if (!filePath) {
-        throw new Error('No se pudo obtener la ruta del archivo subido');
+        throw new Error('No se pudo obtener el identificador del archivo subido');
       }
 
-      // 2. Preparar variables según el esquema del backend
-      const formattedVariables = variables.map(v => ({
-        name: v.name,
-        field_type: v.source === 'SYSTEM' ? 'SYSTEM_DATA' : v.inputType,
-        label: v.source === 'USER' ? v.label : null,
-        system_field: v.source === 'SYSTEM' ? v.systemField : null,
-        required: v.required
-      }));
-
-      // 3. Crear payload
+      // 2. Crear la plantilla
       const payload = {
         name: commName,
         description: commDescription,
-        file_path: filePath,
-        variables: formattedVariables,
-        channel_type: 'DOCUMENT' // O el tipo que corresponda para documentos Word
+        type: commType,
+        template_file_path: filePath,
       };
       
-      console.log('Guardando comunicación:', payload);
+      console.log('Creando plantilla:', payload);
+      const createdTemplate = await createCommunicationTemplate(payload);
       
-      await createCommunicationTemplate(payload);
+      if (!createdTemplate || !createdTemplate.id) {
+        throw new Error('La plantilla se creó pero no se recibió su ID');
+      }
+
+      console.log('Plantilla creada:', createdTemplate);
+
+      // 3. Actualizar configuración de campos (Variables)
+      // Primero obtenemos los campos que el backend extrajo automáticamente
+      const templateFields = await getCommunicationTemplateFields(createdTemplate.id);
       
-      toast.success('Comunicación creada exitosamente');
+      if (templateFields && templateFields.length > 0) {
+        // Mapeamos nuestras variables configuradas a los campos del backend
+        const updatePromises = templateFields.map(async (field) => {
+          const configuredVar = variables.find(v => v.name === field.field_name);
+          
+          if (configuredVar) {
+            const updateData = {
+              field_label: configuredVar.source === 'USER' ? configuredVar.label : configuredVar.name,
+              field_type: configuredVar.source === 'SYSTEM' ? 'SYSTEM_DATA' : configuredVar.inputType,
+              is_required: configuredVar.required
+            };
+
+            // Si es SYSTEM_DATA, intentamos enviar el system_field aunque no esté en el esquema estándar
+            // (Dependerá de si el backend lo acepta o lo ignora)
+            if (configuredVar.source === 'SYSTEM' && configuredVar.systemField) {
+              updateData.system_field = configuredVar.systemField;
+            }
+
+            console.log(`Actualizando campo ${field.field_name}:`, updateData);
+            return updateCommunicationTemplateField(field.id, updateData);
+          }
+          return Promise.resolve();
+        });
+
+        await Promise.all(updatePromises);
+      }
+      
+      toast.success('Comunicación creada y configurada exitosamente');
       navigate('/comunicaciones'); 
     } catch (error) {
       console.error('Error saving:', error);
@@ -229,6 +255,22 @@ const CommunicationBuilderPage = () => {
                 value={commDescription}
                 onChange={(e) => setCommDescription(e.target.value)}
               />
+
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">Tipo de Comunicación</label>
+                <select
+                  value={commType}
+                  onChange={(e) => setCommType(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="AUTOMATIC">Automática (AUTOMATIC)</option>
+                  <option value="FORM">Formulario (FORM)</option>
+                  <option value="LEGAL">Legal (LEGAL)</option>
+                </select>
+                <p className="text-xs text-gray-500">
+                  Define cómo se comportará esta plantilla en el sistema.
+                </p>
+              </div>
 
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer"
                    onClick={() => fileInputRef.current?.click()}>

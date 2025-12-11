@@ -423,7 +423,45 @@ export const getCommunicationTemplateFile = async (filePath) => {
   }
 };
 export const createCommunicationTemplate = (templateData) => apiRequest('/communications/templates', 'POST', templateData);
-export const uploadCommunicationTemplateFile = (file) => apiRequestWithFile('/communications/templates/upload', 'POST', file);
+
+export const uploadCommunicationTemplateFile = async (file) => {
+  try {
+    // 1. Obtener URL firmada
+    const filename = file.name;
+    const contentType = file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    
+    const response = await apiRequest(
+      `/communications/templates/upload-url?filename=${encodeURIComponent(filename)}&content_type=${encodeURIComponent(contentType)}`, 
+      'POST'
+    );
+    
+    const { upload_url, file_identifier } = response;
+    
+    if (!upload_url || !file_identifier) {
+      console.error('Respuesta inesperada del servidor:', response);
+      throw new Error('Respuesta inválida del servidor al solicitar URL de carga');
+    }
+
+    // 2. Subir archivo a GCS/S3
+    const uploadResponse = await fetch(upload_url, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': contentType,
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Error al subir archivo a almacenamiento: ${uploadResponse.statusText}`);
+    }
+
+    return { file_path: file_identifier };
+  } catch (error) {
+    console.error('Error en uploadCommunicationTemplateFile:', error);
+    throw error;
+  }
+};
+
 export const updateCommunicationTemplate = (templateId, templateData) => apiRequest(`/communications/templates/${templateId}`, 'PUT', templateData);
 export const generateCommunication = (communicationData) => apiRequest('/communications/generate', 'POST', communicationData);
 export const sendCommunication = (commId, channel, sendData) => {
