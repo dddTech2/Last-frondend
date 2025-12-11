@@ -122,6 +122,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
   const [sendSuccess, setSendSuccess] = useState('');
+  const [previewsCache, setPreviewsCache] = useState({});
   const runIdRef = useRef(runId);
 
   useEffect(() => {
@@ -142,6 +143,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setSending(false);
     setSendError(null);
     setSendSuccess('');
+    setPreviewsCache({});
   }, [runId, campaignConfig]);
 
   useEffect(() => {
@@ -160,7 +162,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   // Cargar preview cuando se obtiene comm_id
   useEffect(() => {
     if (commId) {
-      loadPreview();
+      if (previewsCache[commId]) {
+        setPreviewFile(previewsCache[commId]);
+      } else {
+        loadPreview();
+      }
     }
   }, [commId]);
 
@@ -303,6 +309,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
         console.log('fileObj final:', fileObj);
         if (runIdRef.current === currentRunId) {
           setPreviewFile(fileObj);
+          setPreviewsCache(prev => ({ ...prev, [commId]: fileObj }));
         }
       }
     } catch (err) {
