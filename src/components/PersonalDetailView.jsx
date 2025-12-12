@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, User, Mail, Phone, CreditCard, Briefcase, Building2, Calendar, Shield, Home, MapPin, Users, Clock, FileText, UserCheck } from 'lucide-react';
+import { Loader2, User, Mail, Phone, CreditCard, Briefcase, Building2, Calendar, Shield, Home, MapPin, Users, Clock, FileText, UserCheck, Wifi, Hash } from 'lucide-react';
 
 // Helpers
 const toTitle = (str) => {
@@ -42,7 +42,9 @@ const InfoPill = ({ children, color = 'slate' }) => {
 };
 
 const Row = ({ icon: Icon, label, value }) => {
-  if (value === null || value === undefined || value === '') return null;
+  // Mostrar siempre la fila, incluso si está vacía
+  const displayValue = (value === null || value === undefined || value === '') ? '---' : value;
+
   return (
     <div className="flex items-start gap-3">
       <div className="mt-0.5 rounded-md bg-slate-100 p-1.5 text-slate-600">
@@ -50,7 +52,7 @@ const Row = ({ icon: Icon, label, value }) => {
       </div>
       <div className="min-w-0">
         <p className="text-xs font-medium text-slate-500">{label}</p>
-        <p className="text-sm font-semibold text-slate-800 break-words">{String(value)}</p>
+        <p className="text-sm font-semibold text-slate-800 break-words">{String(displayValue)}</p>
       </div>
     </div>
   );
@@ -102,8 +104,10 @@ const PersonalDetailView = ({ personal, isLoading }) => {
     hijos_cantidad,
     temporal,
     fecha_fin_contrato_temporal,
-    adminfo,
     cola_3cx,
+    usuario_red,
+    adminfo,
+    asignacion,
   } = personal;
 
   const estadoColor = estado === 'ACTIVO' ? 'emerald' : 'rose';
@@ -150,10 +154,13 @@ const PersonalDetailView = ({ personal, isLoading }) => {
         </Section>
 
         <Section title="Información de Contacto y Sistemas">
+          <Row icon={Mail} label="Correo Renovar (Corporativo)" value={correo_renovar} />
           <Row icon={Mail} label="Correo Personal" value={correo_personal} />
           <Row icon={Phone} label="Extensión 3CX" value={extension_3cx} />
-          <Row icon={FileText} label="Código Adminfo" value={adminfo} />
           <Row icon={Phone} label="Cola 3CX" value={cola_3cx} />
+          <Row icon={Wifi} label="Usuario de Red" value={usuario_red} />
+          <Row icon={UserCheck} label="Asignación" value={asignacion} />
+          <Row icon={Hash} label="Código Adminfo" value={adminfo} />
         </Section>
 
         <Section title="Información Personal">

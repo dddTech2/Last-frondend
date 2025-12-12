@@ -1,37 +1,39 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Save, Loader2, Monitor, Wifi, Mail, Phone, Hash, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Search, Save, Loader2, UserCog, Hash, Wifi, Users, ArrowLeft, AlertCircle } from 'lucide-react';
 import FormField from './FormField';
 
-const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = false }) => {
+const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   
   // Form state
   const [formData, setFormData] = useState({
-    correo_renovar: '',
-    extension_3cx: '',
-    cola: '',
-    usuario_red: '',
+    adminfo: '',
+    asignacion: '', // Se envía como "asignacion" al backend
+    jefe_inmediato: '',
   });
+
+  // Obtener lista única de jefes inmediatos para el dropdown
+  const jefesInmediatos = useMemo(() => {
+    const jefesSet = new Set();
+    employees.forEach(emp => {
+      if (emp.jefe_inmediato && typeof emp.jefe_inmediato === 'string' && emp.jefe_inmediato.trim()) {
+        jefesSet.add(emp.jefe_inmediato.trim());
+      }
+    });
+    return Array.from(jefesSet).sort();
+  }, [employees]);
 
   // Filter employees based on search term and pending status
   const filteredEmployees = useMemo(() => {
-    // If no search term and not filtering by pending, show nothing (or could show all)
     if (!searchTerm && !showPendingOnly) return [];
     
     let result = employees;
 
-    // Filter by pending data if toggle is on
-    // We consider "pending" if any of the tech fields are missing/empty
-    // Backend returns: cola_3cx (not cola), usuario_red
+    // Filter by pending data - sin adminfo asignado
     if (showPendingOnly) {
-      result = result.filter(emp => 
-        !emp.correo_renovar || 
-        !emp.extension_3cx || 
-        !emp.cola_3cx || 
-        !emp.usuario_red
-      );
+      result = result.filter(emp => !emp.adminfo);
     }
 
     // Filter by search term (Name or Cedula)
@@ -52,29 +54,21 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
     // Función para convertir cualquier valor a string seguro
     const safeString = (val) => {
       if (val === null || val === undefined) return '';
-      if (typeof val === 'object') return ''; // Si es objeto, retornar vacío
+      if (typeof val === 'object') return '';
       return String(val);
     };
 
-    // Backend devuelve: cola_3cx (no "cola"), usuario_red
+    // Leer de los campos existentes
+    // Backend devuelve: adminfo, usuario_red (pero PUT acepta "asignacion")
     setFormData({
-      correo_renovar: safeString(emp.correo_renovar),
-      extension_3cx: safeString(emp.extension_3cx),
-      cola: safeString(emp.cola_3cx), // Leer de cola_3cx, enviar como cola
-      usuario_red: safeString(emp.usuario_red),
+      adminfo: safeString(emp.adminfo),
+      asignacion: safeString(emp.usuario_red), // Leer de usuario_red
+      jefe_inmediato: safeString(emp.jefe_inmediato),
     });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Validación para Cola: solo números
-    if (name === 'cola') {
-      if (value && !/^\d+$/.test(value)) {
-        return; // No permitir caracteres no numéricos
-      }
-    }
-
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -82,15 +76,12 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
     e.preventDefault();
     if (!selectedEmployee) return;
     
-    // Transformar los nombres de campo para el backend:
-    // - La BD usa 'cola_3cx' (no 'cola')
-    // - La BD usa 'usuario_red' o necesita 'asignacion' (probar ambos)
+    // Payload para el PUT - usar nombres que acepta el backend
     const payload = {
       cedula: selectedEmployee.cedula,
-      correo_renovar: formData.correo_renovar,
-      extension_3cx: formData.extension_3cx,
-      cola_3cx: formData.cola, // BD usa cola_3cx
-      usuario_red: formData.usuario_red, // Probar con usuario_red
+      adminfo: formData.adminfo,
+      asignacion: formData.asignacion, // Backend acepta "asignacion"
+      jefe_inmediato: formData.jefe_inmediato,
     };
     
     onSubmit(payload);
@@ -115,40 +106,57 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <FormField
-            label="Correo Renovar"
-            name="correo_renovar"
-            type="email"
-            value={formData.correo_renovar}
-            onChange={handleChange}
-            icon={<Mail className="h-4 w-4 text-gray-400" />}
-            placeholder="usuario@renovar.com"
-          />
-          <FormField
-            label="Extensión 3CX"
-            name="extension_3cx"
-            value={formData.extension_3cx}
-            onChange={handleChange}
-            icon={<Phone className="h-4 w-4 text-gray-400" />}
-            placeholder="Ej: 101"
-          />
-          <FormField
-            label="Cola"
-            name="cola"
-            value={formData.cola}
+            label="Código Adminfo"
+            name="adminfo"
+            value={formData.adminfo}
             onChange={handleChange}
             icon={<Hash className="h-4 w-4 text-gray-400" />}
-            placeholder="Ej: 101 (Solo números)"
+            placeholder="Ej: ADM001"
           />
+          
           <FormField
-            label="Usuario de Red"
-            name="usuario_red"
-            value={formData.usuario_red}
+            label="Asignación"
+            name="asignacion"
+            value={formData.asignacion}
             onChange={handleChange}
             icon={<Wifi className="h-4 w-4 text-gray-400" />}
-            placeholder="Usuario de Red / Equipo"
+            placeholder="Usuario de red / equipo asignado"
           />
+
+          {/* Dropdown de Jefe Inmediato */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-400" />
+              Jefe Inmediato / Coordinador
+            </label>
+            <select
+              name="jefe_inmediato"
+              value={formData.jefe_inmediato}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            >
+              <option value="">Seleccionar jefe inmediato...</option>
+              {jefesInmediatos.map(jefe => (
+                <option key={jefe} value={jefe}>
+                  {jefe}
+                </option>
+              ))}
+            </select>
+            {/* Opción para escribir manualmente si no está en la lista */}
+            <p className="text-xs text-gray-500 mt-1">
+              ¿No está en la lista? Escríbelo manualmente:
+            </p>
+            <input
+              type="text"
+              name="jefe_inmediato"
+              value={formData.jefe_inmediato}
+              onChange={handleChange}
+              placeholder="Escribir nombre del jefe inmediato..."
+              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
@@ -162,7 +170,7 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2 disabled:opacity-50"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
@@ -173,7 +181,7 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Guardar Cambios
+                Guardar Asignación
               </>
             )}
           </button>
@@ -185,10 +193,10 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
   // --- VIEW: SEARCH & LIST ---
   return (
     <div className="space-y-4 min-h-[400px]">
-      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-        <p className="text-sm text-blue-800 flex items-start gap-2">
+      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-4">
+        <p className="text-sm text-indigo-800 flex items-start gap-2">
           <AlertCircle className="h-5 w-5 shrink-0" />
-          Busca un empleado por nombre o cédula para actualizar su información tecnológica.
+          Busca un empleado para asignar código Adminfo, usuario de red y coordinador.
         </p>
       </div>
 
@@ -200,7 +208,7 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
             placeholder="Buscar por nombre o cédula..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             autoFocus
           />
         </div>
@@ -209,13 +217,13 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
       <div className="flex items-center gap-2 pb-2">
         <input
           type="checkbox"
-          id="pendingOnly"
+          id="pendingOnlyAsig"
           checked={showPendingOnly}
           onChange={(e) => setShowPendingOnly(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
         />
-        <label htmlFor="pendingOnly" className="text-sm text-gray-700 cursor-pointer select-none">
-          Mostrar solo empleados con datos pendientes
+        <label htmlFor="pendingOnlyAsig" className="text-sm text-gray-700 cursor-pointer select-none">
+          Mostrar solo empleados sin código Adminfo
         </label>
       </div>
 
@@ -232,10 +240,15 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
                 <div className="flex gap-2 text-xs text-gray-500 mt-1">
                   <span className="bg-gray-100 px-2 py-0.5 rounded">{emp.cedula}</span>
                   <span>{emp.cargo}</span>
+                  {emp.adminfo && (
+                    <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">
+                      {emp.adminfo}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-medium">
                   Seleccionar
                 </span>
               </div>
@@ -263,4 +276,4 @@ const TecnologiaForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
   );
 };
 
-export default TecnologiaForm;
+export default AsignacionForm;

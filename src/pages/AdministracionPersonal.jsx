@@ -4,12 +4,13 @@ import IngresoPersonalForm from '../components/IngresoPersonalForm';
 import RetiroPersonalForm from '../components/RetiroPersonalForm';
 import ProveedoresForm from '../components/ProveedoresForm';
 import TecnologiaForm from '../components/TecnologiaForm';
+import AsignacionForm from '../components/AsignacionForm';
 import AprobacionRetiroJuricoModal from '../components/AprobacionRetiroJuricoModal';
 import RechazoJuricoModal from '../components/RechazoJuricoModal';
 import RetiroJuricoModal from '../components/RetiroJuricoModal';
 import FormField from '../components/FormField';
 import PersonalDetailView from '../components/PersonalDetailView';
-import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck, LogOut, Monitor } from 'lucide-react';
+import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck, LogOut, Monitor, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToCSV, exportToXLSX } from '../utils/exportToCSV';
 import usePersonalAPI from '../hooks/usePersonalAPI';
@@ -66,6 +67,7 @@ const AdministracionPersonal = () => {
   const [rechazoRetiroModal, setRechazoRetiroModal] = useState({ isOpen: false, empleado: null });
   const [retiroJuridicoModal, setRetiroJuridicoModal] = useState({ isOpen: false, empleado: null });
   const [tecnologiaModal, setTecnologiaModal] = useState(false);
+  const [asignacionModal, setAsignacionModal] = useState(false);
 
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
@@ -270,7 +272,20 @@ const AdministracionPersonal = () => {
 
   const handleEdit = (personal) => {
     setSelectedPersonal(personal);
-    setEditFormData(personal);
+    
+    // Función para convertir cualquier valor a string seguro
+    const safeString = (val) => {
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'object') return ''; // Si es objeto, retornar vacío
+      return String(val);
+    };
+
+    // Backend devuelve: cola_3cx (no "cola"), usuario_red
+    setEditFormData({
+      ...personal,
+      cola: safeString(personal.cola_3cx), // Leer de cola_3cx
+      usuario_red: safeString(personal.usuario_red),
+    });
     setEditModal(true);
   };
 
@@ -282,12 +297,12 @@ const AdministracionPersonal = () => {
   const handleSaveEdit = async () => {
     if (!editFormData || !selectedPersonal) return;
 
+    // La BD usa 'cola_3cx' y 'usuario_red' (no 'cola' ni 'asignacion')
     const payload = {
       correo_renovar: editFormData.correo_renovar,
       extension_3cx: editFormData.extension_3cx,
-      cola: editFormData.cola,
-      adminfo: editFormData.adminfo,
-      asignacion: editFormData.asignacion,
+      cola_3cx: editFormData.cola, // BD usa cola_3cx
+      usuario_red: editFormData.usuario_red,
       jefe_inmediato: editFormData.jefe_inmediato,
     };
 
@@ -388,9 +403,26 @@ const AdministracionPersonal = () => {
   const handleUpdateTechnology = async (data) => {
     setIsFormSubmitting(true);
     try {
-      await updateEmployee(data.cedula, data);
+      // Extraer cedula y enviar solo los campos que acepta el backend
+      const { cedula, ...updateData } = data;
+      await updateEmployee(cedula, updateData);
       setTecnologiaModal(false);
       toast.success('Información tecnológica actualizada correctamente');
+      reloadAllEmployees();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
+  const handleUpdateAsignacion = async (data) => {
+    setIsFormSubmitting(true);
+    try {
+      const { cedula, ...updateData } = data;
+      await updateEmployee(cedula, updateData);
+      setAsignacionModal(false);
+      toast.success('Asignación actualizada correctamente');
       reloadAllEmployees();
     } catch (error) {
       console.error(error);
@@ -553,7 +585,17 @@ const AdministracionPersonal = () => {
                 <p className="text-gray-500 mt-2">Actualizar correos, extensiones y usuarios.</p>
               </button>
 
-              {/* Tarjeta 5: Creación de Usuarios para Proveedores */}
+              {/* Tarjeta 5: Asignaciones Operaciones */}
+              <button
+                onClick={() => setAsignacionModal(true)}
+                className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out text-center flex flex-col items-center"
+              >
+                <UserCog className="h-10 w-10 text-indigo-600 mb-4" />
+                <h2 className="text-xl font-semibold text-gray-800">Asignaciones Operaciones</h2>
+                <p className="text-gray-500 mt-2">Asignar Adminfo, usuario de red y coordinador.</p>
+              </button>
+
+              {/* Tarjeta 6: Creación de Usuarios para Proveedores */}
               <div className="bg-gray-100 p-8 rounded-lg shadow-inner text-center flex flex-col items-center cursor-not-allowed">
                 <BriefcaseIcon />
                 <h2 className="text-xl font-semibold text-gray-500">Usuarios para Proveedores</h2>
@@ -867,14 +909,9 @@ const AdministracionPersonal = () => {
                 onChange={(v) => setEditFormData({ ...editFormData, cola: v })}
               />
               <FormField
-                label="Código Adminfo"
-                value={editFormData.adminfo || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, adminfo: v })}
-              />
-              <FormField
-                label="Asignación"
-                value={editFormData.asignacion || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, asignacion: v })}
+                label="Usuario de Red"
+                value={editFormData.usuario_red || ''}
+                onChange={(v) => setEditFormData({ ...editFormData, usuario_red: v })}
               />
             </div>
           </div>
@@ -975,6 +1012,24 @@ const AdministracionPersonal = () => {
             employees={allEmployees}
             onSubmit={handleUpdateTechnology}
             onCancel={() => setTecnologiaModal(false)}
+            isSubmitting={isFormSubmitting}
+          />
+        </ModernModal>
+      )}
+
+      {/* MODAL: Asignaciones Operaciones */}
+      {asignacionModal && (
+        <ModernModal
+          isOpen={true}
+          onClose={() => setAsignacionModal(false)}
+          title="Asignaciones Operaciones"
+          icon={<UserCog className="h-6 w-6 text-indigo-600" />}
+          size="lg"
+        >
+          <AsignacionForm
+            employees={allEmployees}
+            onSubmit={handleUpdateAsignacion}
+            onCancel={() => setAsignacionModal(false)}
             isSubmitting={isFormSubmitting}
           />
         </ModernModal>
