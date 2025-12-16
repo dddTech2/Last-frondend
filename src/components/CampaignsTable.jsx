@@ -47,7 +47,12 @@ export default function CampaignsTable({ channelFilter }) {
       setCampaigns(data);
       setError(null);
     } catch (err) {
-      setError("Error al cargar las estadísticas. Por favor, intente de nuevo.");
+      // Si es error 403, el usuario no tiene permisos
+      if (err.response?.status === 403) {
+        setError("No tienes permisos para ver las estadísticas de campañas. Contacta al administrador.");
+      } else {
+        setError("Error al cargar las estadísticas. Por favor, intente de nuevo.");
+      }
       console.error(err);
     } finally {
       setLoading(false);

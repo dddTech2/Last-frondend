@@ -66,7 +66,7 @@ const Header = ({ onOpenChangePassword }) => {
   const allNavLinks = [
     { to: "/", text: "Dashboard", icon: <DashboardIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Jurídico", "Directora de Operaciones"] },
     { to: "/clients", text: "Clientes", icon: <ClientsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor"] },
-    { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, roles: ["Admin", "Super Administrador", "Coordinador"] },
+    { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { to: "/comunicaciones", text: "Comunicaciones", icon: <CommunicationsNavIcon />, roles: ["Admin", "Coordinador", "Gestor"] },
     {
       to: resolvedRoles.some(r => ["Admin", "Super Administrador", "Jurídico", "Directora de Operaciones"].includes(r)) ? "/templates/approval" : "/templates",

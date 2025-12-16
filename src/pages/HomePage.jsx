@@ -37,10 +37,11 @@ const HomePage = () => {
   // Definimos todos los accesos rápidos posibles y los roles que pueden verlos
   const allQuickAccessItems = [
     { title: "Gestionar Clientes", description: "Administra y consulta información de clientes", icon: <ManageClientsIcon />, path: "/clients", roles: ["Admin", "Coordinador", "Gestor"] },
-    { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", roles: ["Admin", "Coordinador"] },
+    { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", roles: ["Admin", "Coordinador", "Directora de Operaciones"] },
     { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", roles: ["Admin", "Coordinador", "Gestor"] },
     { title: "Constructor de Comunicaciones", description: "Crea y configura plantillas de documentos", icon: <BuilderIcon />, path: "/communications/builder", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { title: "Aprobación de Plantillas", description: "Revisa y aprueba plantillas de mensajes", icon: <TemplateApprovalIcon />, path: "/templates/approval", roles: ["Admin", "Jurídico", "Directora de Operaciones"] },
+    { title: "Crear Plantilla", description: "Crea nuevas plantillas de SMS, WhatsApp o Email", icon: <BuilderIcon />, path: "/templates/new", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { title: "Aprobación Jurídica", description: "Revisa comunicaciones pendientes de Jurídico", icon: <LegalApprovalIcon />, path: "/communications/legal-approval", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico"], strictForRoles: true },
     { title: "Workflow Builder", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", roles: ["Admin"] },
     { title: "Gestión de Usuarios", description: "Administra usuarios del sistema", icon: <UserManagementIcon />, path: "/users", roles: ["Admin"] },
