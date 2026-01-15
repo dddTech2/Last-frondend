@@ -56,7 +56,7 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
       if (isNotif) {
         console.error('[API][Notifications][HTTP_ERROR]', { traceId, endpoint, status: response.status, errorMessage, errorData });
       }
-      
+
       // Crear error con status code incluido para identificarlo después
       const error = new Error(errorMessage);
       error.status = response.status;
@@ -122,7 +122,7 @@ const apiRequestWithFile = async (endpoint, method = 'POST', file) => {
       } else {
         errorMessage = `Error ${response.status}: ${response.statusText}`;
       }
-      
+
       throw new Error(errorMessage);
     }
     return await response.json();
@@ -138,7 +138,7 @@ export const loginWithPassword = (username, password) => {
   const formData = new URLSearchParams();
   formData.append('username', username);
   formData.append('password', password);
-  
+
   return fetch(`${BASE_URL}/auth/login/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -341,6 +341,16 @@ export const calculateCondonation = (obligation_ids) => apiRequest('/condonation
 export const getClientActiveNumbersByCedula = (cedula) => apiRequest('/whatsapp/initiate', 'POST', { cedula });
 export const sendTemplatedMessage = (data) => apiRequest('/whatsapp/send_from_template', 'POST', data);
 
+// --- Endpoints de Historial de Comunicaciones ---
+export const getClientCommunicationHistory = (cedula, page = 1, limit = 20, communicationType = 'DOCUMENTO') => {
+  const queryParams = new URLSearchParams({
+    page,
+    limit,
+    communication_type: communicationType
+  }).toString();
+  return apiRequest(`/communications/history/${cedula}?${queryParams}`);
+};
+
 // --- Endpoints de Administración de Personal ---
 export const getEmployees = (params) => {
   // Filtra los parámetros para excluir claves con valor `undefined`
@@ -400,7 +410,7 @@ export const getCommunicationTemplateFile = async (filePath) => {
   try {
     const response = await fetch(`${BASE_URL}/communications/templates/file/${encodeURIComponent(filePath)}`, {
       method: 'GET',
-      headers,  
+      headers,
     });
 
     if (!response.ok) {
@@ -410,7 +420,7 @@ export const getCommunicationTemplateFile = async (filePath) => {
     // Obtener el tipo MIME de la respuesta
     const mimeType = response.headers.get('content-type') || 'text/plain';
     const blob = await response.blob();
-    
+
     // Retornar blob con tipo MIME
     return {
       blob,
@@ -429,14 +439,14 @@ export const uploadCommunicationTemplateFile = async (file) => {
     // 1. Obtener URL firmada
     const filename = file.name;
     const contentType = file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    
+
     const response = await apiRequest(
-      `/communications/templates/upload-url?filename=${encodeURIComponent(filename)}&content_type=${encodeURIComponent(contentType)}`, 
+      `/communications/templates/upload-url?filename=${encodeURIComponent(filename)}&content_type=${encodeURIComponent(contentType)}`,
       'POST'
     );
-    
+
     const { upload_url, file_identifier } = response;
-    
+
     if (!upload_url || !file_identifier) {
       console.error('Respuesta inesperada del servidor:', response);
       throw new Error('Respuesta inválida del servidor al solicitar URL de carga');

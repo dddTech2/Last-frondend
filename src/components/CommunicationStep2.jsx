@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, FileText, Eye, Download, Maximize2, X, Search } from 'lucide-react';
-import { getCommunicationTemplates, getCommunicationTemplate, getCommunicationTemplateFile } from '../services/api';
+import { AlertCircle, FileText, Eye, Download, Maximize2, X, Search, History, Clock, ArrowRight, CheckCircle, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { getCommunicationTemplates, getCommunicationTemplate, getCommunicationTemplateFile, getClientCommunicationHistory } from '../services/api';
 import * as mammoth from 'mammoth';
 import JoditEditor from 'jodit-react';
 
@@ -71,7 +71,7 @@ const DocxPreview = ({ blob }) => {
         value={htmlContent}
         config={config}
         tabIndex={-1}
-        onChange={() => {}}
+        onChange={() => { }}
       />
     </div>
   );
@@ -161,13 +161,153 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile, templateName }) => {
   );
 };
 
-const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) => {
+const HistoryModal = ({ isOpen, onClose, historyData, onResume }) => {
+  if (!isOpen) return null;
+
+  const [expandedDrafts, setExpandedDrafts] = useState(true);
+  const [expandedSent, setExpandedSent] = useState(true);
+
+  const drafts = historyData.filter(item => item.status === 'DRAFT');
+  const sent = historyData.filter(item => item.status === 'SENT');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <History className="h-6 w-6" />
+            <div>
+              <h3 className="font-bold text-lg">Historial de Comunicaciones</h3>
+              <p className="text-blue-100 text-xs">Se encontraron comunicaciones previas para este cliente</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+
+          {/* Section: Enviados (SENT) - MOSTRAR PRIMERO */}
+          {sent.length > 0 && (
+            <div className="bg-white rounded-lg border border-green-200 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setExpandedSent(!expandedSent)}
+                className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 transition-colors"
+              >
+                <h4 className="flex items-center gap-2 text-sm font-bold text-green-700 uppercase tracking-wider">
+                  <CheckCircle className="h-4 w-4" /> Historial Enviados ({sent.length})
+                </h4>
+                {expandedSent ? <ChevronDown className="h-4 w-4 text-green-600" /> : <ChevronRight className="h-4 w-4 text-green-600" />}
+              </button>
+
+              {expandedSent && (
+                <div className="p-3 space-y-2 border-t border-green-100">
+                  {sent.map((comm) => (
+                    <div key={comm.id} className="bg-white border-l-4 border-green-500 rounded-md border border-gray-100 shadow-sm p-3 opacity-90 hover:opacity-100 transition-opacity">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold">SENT</span>
+                            <span className="text-xs text-gray-500">
+                              {comm.sent_at ? new Date(comm.sent_at).toLocaleString() : 'Fecha desconocida'}
+                            </span>
+                          </div>
+                          <p className="font-semibold text-gray-800 text-sm">{comm.details || 'Comunicación enviada'}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-gray-600">
+                              {comm.channel === 'WHATSAPP' && <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> WhatsApp</span>}
+                              {comm.channel === 'EMAIL' && <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> Email</span>}
+                              {comm.channel === 'SMS' && <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> SMS</span>}
+                              {!comm.channel && 'Canal desconocido'}
+                            </p>
+                            {comm.recipient_contact && (
+                              <span className="text-xs text-gray-500">• {comm.recipient_contact}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Section: Borradores (DRAFT) - MOSTRAR SEGUNDO */}
+          {drafts.length > 0 && (
+            <div className="bg-white rounded-lg border border-orange-200 shadow-sm overflow-hidden">
+              <button
+                onClick={() => setExpandedDrafts(!expandedDrafts)}
+                className="w-full flex items-center justify-between p-3 bg-orange-50 hover:bg-orange-100 transition-colors"
+              >
+                <h4 className="flex items-center gap-2 text-sm font-bold text-orange-700 uppercase tracking-wider">
+                  <Clock className="h-4 w-4" /> Borradores Pendientes ({drafts.length})
+                </h4>
+                {expandedDrafts ? <ChevronDown className="h-4 w-4 text-orange-600" /> : <ChevronRight className="h-4 w-4 text-orange-600" />}
+              </button>
+
+              {expandedDrafts && (
+                <div className="p-3 space-y-2 border-t border-orange-100">
+                  {drafts.map((draft) => (
+                    <div key={draft.id} className="bg-white border-l-4 border-orange-400 rounded-md border border-gray-100 shadow-sm p-3 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-full font-bold">DRAFT</span>
+                            <span className="text-xs text-gray-500 font-mono">ID: {draft.id.slice(0, 8)}...</span>
+                          </div>
+                          <p className="font-semibold text-gray-800 text-sm mb-0.5">{draft.details || 'Sin detalles'}</p>
+                          <p className="text-xs text-gray-600">
+                            {draft.channel ? `Canal: ${draft.channel}` : 'Sin canal definido'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => onResume(draft)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold rounded-md border border-orange-200 transition-colors"
+                        >
+                          Retomar <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {drafts.length === 0 && sent.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No hay historial para mostrar.
+            </div>
+          )}
+
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-white text-gray-700 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Cerrar y Nueva Comunicación
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data, initialData }) => {
   const [formData, setFormData] = useState({
-    selectedTemplateId: '',
+    selectedTemplateId: initialData?.selectedTemplateId || initialData?.selectedTemplate?.id || '',
   });
 
   const [templates, setTemplates] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(initialData?.selectedTemplate || initialData?.template || null);
   const [previewContent, setPreviewContent] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
   const [errors, setErrors] = useState({});
@@ -175,6 +315,54 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [showFullModal, setShowFullModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // History Modal State
+  const [historyData, setHistoryData] = useState([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Cargar historial al montar
+  useEffect(() => {
+    // Si ya tenemos datos iniciales (ej: volviendo del paso 3 o 4), no mostrar modal automáticamente
+    if (initialData?.selectedTemplate?.id || initialData?.selectedTemplateId) {
+      if (initialData.selectedTemplate) {
+        // Opcional: Fetch preview logic here if needed, but we might just trust the passed object
+        // But usually we need to fetch the file blob again if it's not in memory.
+        // Let's at least ensure we don't open the modal.
+        // Calling fetchTemplatePreview might be needed to view the content.
+        if (initialData.selectedTemplate.id) {
+          // We can trigger preview fetch if we have the ID
+          // But let's avoid side-effects inside this check for now, just skip modal.
+        }
+      }
+      return;
+    }
+
+    const checkHistory = async () => {
+      if (step1Data?.cedula) {
+        try {
+          const res = await getClientCommunicationHistory(step1Data.cedula);
+          if (res?.pagination?.total_items > 0) {
+            setHistoryData(res.data);
+            setShowHistoryModal(true);
+          }
+        } catch (error) {
+          console.error('Error fetching communication history:', error);
+        }
+      }
+    };
+    checkHistory();
+  }, [step1Data?.cedula, initialData]);
+
+  const handleResumeDraft = (draft) => {
+    setShowHistoryModal(false);
+    // Trigger parent Resume logic
+    onNext({
+      isResume: true,
+      commId: draft.id,
+      selectedTemplate: { type: 'DRAFT_RESUME' }, // Placeholder 
+      resumeData: draft
+    });
+  };
 
   // Cargar plantillas desde el endpoint
   useEffect(() => {
@@ -252,11 +440,11 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.selectedTemplateId) {
       newErrors.selectedTemplateId = 'Debes seleccionar una plantilla';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -279,7 +467,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
     }
   };
 
-  const filteredTemplates = templates.filter(template => 
+  const filteredTemplates = templates.filter(template =>
     template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (template.description && template.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -307,7 +495,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
 
           {/* Buscador */}
           <div className="mb-3 relative">
-            <input 
+            <input
               type="text"
               placeholder="Buscar plantilla..."
               value={searchQuery}
@@ -316,7 +504,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
             />
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-2.5 text-emerald-400 hover:text-emerald-600"
               >
@@ -336,11 +524,10 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                   <div
                     key={template.id}
                     onClick={() => handleSelectTemplate(template)}
-                    className={`p-2.5 rounded-lg border-2 transition-all cursor-pointer ${
-                      selectedTemplate?.id === template.id
-                        ? 'border-emerald-600 bg-emerald-100 shadow-md shadow-emerald-200'
-                        : 'border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50'
-                    }`}
+                    className={`p-2.5 rounded-lg border-2 transition-all cursor-pointer ${selectedTemplate?.id === template.id
+                      ? 'border-emerald-600 bg-emerald-100 shadow-md shadow-emerald-200'
+                      : 'border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50'
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
@@ -415,7 +602,7 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
                             <FileText className="h-12 w-12 text-gray-500" />
                           )}
                         </div>
-                        
+
                         <p className="text-purple-900 font-medium mb-1">Documento de Plantilla</p>
                         <p className="text-purple-600 text-xs mb-6">{previewFile.mimeType}</p>
 
@@ -489,6 +676,14 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data }) =>
         onClose={() => setShowFullModal(false)}
         previewFile={previewFile}
         templateName={selectedTemplate?.name || 'Documento'}
+      />
+
+      {/* Modal de Historial */}
+      <HistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        historyData={historyData}
+        onResume={handleResumeDraft}
       />
     </div>
   );

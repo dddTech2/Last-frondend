@@ -54,6 +54,31 @@ const CommunicationsWizard = () => {
   };
 
   const handleStep2Submit = (config) => {
+    // Manejo de "Retomar Borrador"
+    if (config.isResume) {
+      const resumeData = { ...step1Data, ...config };
+      setCompletedData(resumeData);
+
+      // Set campaign config to support "Back" navigation
+      // We assume resumeData might not have the full template structure, 
+      // but we try to supply what we can or rely on CommunicationStep2 
+      // to handle partial data if it fetches the template details.
+      setCampaignConfig({
+        selectedTemplate: config.resumeData.template || {
+          // Fallback if template object isn't fully in resumeData
+          // This allows Step 2 to at least try to select it if it has the ID
+          id: config.resumeData.template_id || (config.resumeData.details && config.resumeData.details.id),
+          name: config.resumeData.details
+        },
+        communicationType: 'DOCUMENTO',
+        ...resumeData
+      });
+
+      setStep4RunId((prev) => prev + 1);
+      goToStep(4);
+      return;
+    }
+
     const fullConfig = { ...config, ...step1Data };
     setCampaignConfig(fullConfig);
 
@@ -156,6 +181,7 @@ const CommunicationsWizard = () => {
               onNext={handleStep2Submit}
               onBack={() => goToStep(1)}
               step1Data={step1Data}
+              initialData={campaignConfig}
             />
           )}
         </div>
