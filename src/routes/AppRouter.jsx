@@ -12,6 +12,7 @@ import WhatsAppChatPage from '../pages/WhatsAppChatPage';
 import AdministracionPersonal from '../pages/AdministracionPersonal';
 import ComunicacionesPage from '../pages/ComunicacionesPage';
 import CommunicationBuilderPage from '../pages/CommunicationBuilderPage';
+import DemographicsPage from '../pages/DemographicsPage';
 import ProtectedRoute from './ProtectedRoute';
 export const AppRouter = () => {
   return (
@@ -34,6 +35,7 @@ export const AppRouter = () => {
         <Route path="chat" element={<WhatsAppChatPage />} />
         <Route path="administracion-personal" element={<AdministracionPersonal />} />
         <Route path="comunicaciones" element={<ComunicacionesPage />} />
+        <Route path="workflows" element={<DemographicsPage />} />
         {/* Aquí se pueden añadir más rutas protegidas */}
       </Route>
     </Routes>

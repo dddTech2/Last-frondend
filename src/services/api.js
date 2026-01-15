@@ -334,6 +334,69 @@ export const getObligaciones = (cedula) => apiRequest(`/client-info/obligaciones
 export const getObligacionesByCedula = (cedula) => apiRequest(`/client-info/obligaciones/${cedula}`);
 export const getClientChannelsByCedula = (cedula) => apiRequest(`/client-info/channels/${cedula}`);
 
+// --- Endpoints de Demográficos ---
+export const getClientProfile = (cedula, includeParams = null) => {
+  let endpoint = `/client-info/profile/${cedula}`;
+  if (includeParams) {
+    const queryParams = new URLSearchParams();
+    if (includeParams.include) queryParams.append('include', includeParams.include);
+    if (includeParams.messages_limit) queryParams.append('messages_limit', includeParams.messages_limit);
+    if (includeParams.messages_offset) queryParams.append('messages_offset', includeParams.messages_offset);
+    const queryString = queryParams.toString();
+    if (queryString) endpoint += `?${queryString}`;
+  }
+  return apiRequest(endpoint);
+};
+
+export const reverseSearchContact = (contactValue) => apiRequest(`/client-info/contact/${contactValue}`);
+
+export const updateContactStatus = (contactValue, channel, status, detail = null) => 
+  apiRequest('/client-info/contact/status', 'PATCH', { contact_value: contactValue, channel, status, detail });
+
+export const bulkSearchContacts = async (file) => {
+  const token = getAuthToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${BASE_URL}/client-info/contacts/bulk`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Error en la búsqueda masiva' }));
+    throw new Error(errorData.detail || errorData.message || 'Error en la búsqueda masiva');
+  }
+
+  return response.blob();
+};
+
+export const bulkGetActiveChannels = async (file, channelType) => {
+  const token = getAuthToken();
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${BASE_URL}/client-info/channels/bulk?channel_type=${channelType}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Error en la búsqueda de canales' }));
+    throw new Error(errorData.detail || errorData.message || 'Error en la búsqueda de canales');
+  }
+
+  return response.blob();
+};
+
 // --- Endpoints de Políticas de Condonación ---
 export const calculateCondonation = (obligation_ids) => apiRequest('/condonation-policies/calculate', 'POST', { obligation_ids });
 
