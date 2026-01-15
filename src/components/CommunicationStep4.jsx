@@ -35,7 +35,7 @@ const DocxPreview = ({ blob }) => {
   }
 
   return (
-    <div 
+    <div
       className="prose prose-sm max-w-none p-4 bg-white rounded-lg"
       dangerouslySetInnerHTML={{ __html: htmlContent }}
     />
@@ -106,8 +106,37 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile }) => {
   );
 };
 
+// Modal de Error Específico
+const ErrorModal = ({ isOpen, onClose, error }) => {
+  if (!isOpen || !error) return null;
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border-2 border-red-100">
+        <div className="flex flex-col items-center text-center">
+          <div className="bg-red-50 p-4 rounded-full mb-4 ring-4 ring-red-100">
+            <AlertCircle className="h-10 w-10 text-red-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Error de Generación</h3>
+          <div className="w-full bg-red-50 rounded-lg p-4 mb-6 border border-red-100">
+            <p className="text-red-800 font-medium text-sm break-words">{error}</p>
+          </div>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const [generating, setGenerating] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [generatedDocs, setGeneratedDocs] = useState([]);
   const [selectedDocIndex, setSelectedDocIndex] = useState(0);
   const commId = generatedDocs[selectedDocIndex]?.id;
@@ -219,8 +248,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       }
       setShowPasswordPrompt(false);
       setSenderPassword('');
-      setSendSuccess(generatedDocs.length > 1 
-        ? '¡Comunicaciones enviadas con éxito!' 
+      setSendSuccess(generatedDocs.length > 1
+        ? '¡Comunicaciones enviadas con éxito!'
         : '¡Comunicación enviada con éxito!');
     } catch (err) {
       setSendError(err.message || 'No se pudo enviar la comunicación');
@@ -245,7 +274,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       console.log('Preview response:', response);
       console.log('Is Blob?', response instanceof Blob);
       console.log('Is File?', response instanceof File);
-      
+
       setPreviewData(response);
 
       // Procesar el preview según el tipo de respuesta
@@ -275,7 +304,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
         // Si es un objeto con propiedades (JSON)
         else if (typeof response === 'object') {
           console.log('Procesando como objeto');
-          
+
           // Si tiene una propiedad 'data' que es un Blob/ArrayBuffer
           if (response.data instanceof Blob) {
             fileObj = {
@@ -337,11 +366,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       // Construir el body para la API
       // El form_data debe contener EXACTAMENTE los campos esperados por el API
       const form_data = { ...campaignConfig.templateFields };
-      
+
       // Asegurar que los campos están presentes (de lo contrario el API rechaza)
       console.log('form_data a enviar:', form_data);
       console.log('form_data keys:', Object.keys(form_data));
-      
+
       const communicationData = {
         template_id: campaignConfig.selectedTemplateId,
         client_id: campaignConfig.cedula,
@@ -372,6 +401,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     } catch (err) {
       console.error('Error generating communication:', err);
       setError(err.message || 'Error al generar el documento');
+      setShowErrorModal(true);
     } finally {
       setGenerating(false);
     }
@@ -383,12 +413,23 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       <div className="h-full flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-lg p-3 mb-3">
-          <h3 className="font-semibold text-purple-900 mb-2 text-base flex items-center gap-2">
-            <span className="text-lg">✓</span> Resumen Final
-          </h3>
-          <p className="text-purple-700 text-sm font-medium">
-            Revisa la información y genera el documento
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-purple-900 mb-1 text-base flex items-center gap-2">
+                <span className="text-lg">✓</span> Resumen Final
+              </h3>
+              <p className="text-purple-700 text-sm font-medium ml-7">
+                Revisa la información y genera el documento
+              </p>
+            </div>
+
+            {error && (
+              <div className="flex-1 max-w-[50%] flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg animate-pulse min-h-[3.5rem]">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span className="break-words leading-tight">Error: {error}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Contenido Principal - 2 Columnas */}
@@ -427,32 +468,24 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
                 </div>
               </div>
 
-            {/* Campos rellenados (si hay) */}
-            {campaignConfig.templateFields && Object.keys(campaignConfig.templateFields).length > 0 && (
-              <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <h5 className="text-sm font-bold text-blue-900 mb-1.5">📝 Campos Completados</h5>
-                <div className="space-y-1 text-sm text-blue-800 max-h-32 overflow-y-auto">
-                  {Object.entries(campaignConfig.templateFields).map(([key, value]) => {
-                    const metadata = campaignConfig.fieldMetadata?.[key];
-                    const label = metadata?.label || key;
-                    return (
-                      <p key={key}>
-                        <strong>{label}:</strong> {String(value || '(vacío)').substring(0, 50)}
-                      </p>
-                    );
-                  })}
-                </div>
-              </div>
-            )}              {/* Mensaje de error */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-red-900">Error</p>
-                    <p className="text-sm text-red-700">{error}</p>
+              {/* Campos rellenados (si hay) */}
+              {campaignConfig.templateFields && Object.keys(campaignConfig.templateFields).length > 0 && (
+                <div className="bg-white border border-blue-200 rounded-lg p-2">
+                  <h5 className="text-sm font-bold text-blue-900 mb-1.5">📝 Campos Completados</h5>
+                  <div className="space-y-1 text-sm text-blue-800 max-h-32 overflow-y-auto">
+                    {Object.entries(campaignConfig.templateFields).map(([key, value]) => {
+                      const metadata = campaignConfig.fieldMetadata?.[key];
+                      const label = metadata?.label || key;
+                      return (
+                        <p key={key}>
+                          <strong>{label}:</strong> {String(value || '(vacío)').substring(0, 50)}
+                        </p>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
+              )}              {/* Mensaje de error */}
+
             </div>
           </div>
 
@@ -505,6 +538,12 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
             Atrás
           </button>
         </div>
+
+        <ErrorModal
+          isOpen={showErrorModal}
+          onClose={() => setShowErrorModal(false)}
+          error={error}
+        />
       </div>
     );
   }
@@ -578,18 +617,17 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
               ID: <code className="bg-white px-1.5 rounded">{commId}</code>
             </p>
           </div>
-          
+
           {generatedDocs.length > 1 && (
             <div className="flex gap-2">
               {generatedDocs.map((doc, index) => (
                 <button
                   key={doc.id}
                   onClick={() => setSelectedDocIndex(index)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-                    selectedDocIndex === index
-                      ? 'bg-green-600 text-white shadow-md'
-                      : 'bg-white text-green-700 border border-green-200 hover:bg-green-50'
-                  }`}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${selectedDocIndex === index
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'bg-white text-green-700 border border-green-200 hover:bg-green-50'
+                    }`}
                 >
                   Doc {index + 1}
                 </button>

@@ -31,6 +31,33 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   };
 
   // Funciones de validación específicas por tipo de campo
+
+  // Detectar si un campo de texto debe ser tratado como numérico
+  const isNumericTextField = (field) => {
+    if (field.field_type !== 'TEXT') return false;
+    const name = (field.field_name || '').toLowerCase();
+    const label = (field.field_label || '').toLowerCase();
+    const numericKeywords = ['numero', 'number', 'radicado', 'telefono', 'celular', 'nit', 'cedula', 'documento', 'oferta', 'cuota'];
+    // Excluir si ya es detectado por otras lógicas
+    return numericKeywords.some(kw => name.includes(kw) || label.includes(kw));
+  };
+
+  // Helper para detectar campos de moneda
+  const isCurrencyField = (field) => {
+    if (field.field_type !== 'NUMBER') return false;
+    const label = (field.field_label || '').toLowerCase();
+    // Excluimos 'cuota' para diferenciar de "Total de cuotas" (cantidad). 
+    // Solo si dice explícitamente Valor, Precio, Monto, Saldo es dinero.
+    return ['valor', 'precio', 'monto', 'saldo', 'ingreso', 'deuda'].some(term => label.includes(term));
+  };
+
+  // Helper para formatear moneda para visualización
+  const formatCurrency = (value) => {
+    if (!value) return '';
+    // Formato: $ 1.234.567
+    return `$ ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+  };
+
   const validateFieldValue = (field, index) => {
     const key = field.__fieldKey || getFieldKey(field, index);
     const value = fieldValues[key];
@@ -46,13 +73,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
     }
 
     // Validar según tipo de campo
-    if (field.field_type === 'NUMBER') {
+    if (field.field_type === 'NUMBER' || isNumericTextField(field)) {
       // Solo números, sin caracteres especiales
       if (!/^\d+$/.test(value)) {
         return `${field.field_label} solo puede contener números`;
-      }
-      if (value.length < 8 || value.length > 12) {
-        return `${field.field_label} debe tener entre 8 y 12 dígitos`;
       }
     }
 
@@ -66,10 +90,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
       if (isNaN(date.getTime())) {
         return `${field.field_label} no es una fecha válida`;
       }
-      // No permitir fechas futuras
-      if (date > new Date()) {
-        return `${field.field_label} no puede ser una fecha futura`;
-      }
+
     }
 
     // TEXT o cualquier otro tipo
@@ -78,12 +99,15 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
 
   // Handler para campos de número (solo dígitos)
   const handleNumberChange = (fieldId, value) => {
-    const onlyNumbers = value.replace(/\D/g, '').substring(0, 12);
+    // Permitir hasta 50 caracteres para cubrir radicados largos, pero solo números
+    const onlyNumbers = value.replace(/\D/g, '').substring(0, 50);
     setFieldValues(prev => ({
       ...prev,
       [fieldId]: onlyNumbers
     }));
   };
+
+
 
   // Handler para campos de fecha (readonly)
   const handleDateChange = (fieldId, value) => {
@@ -104,14 +128,14 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   const isNameField = (field) => {
     const fieldNameLower = (field.field_name || '').toLowerCase();
     const fieldLabelLower = (field.field_label || '').toLowerCase();
-    
+
     return (
       (fieldNameLower.includes('nombre') || fieldNameLower.includes('name')) &&
       !fieldNameLower.includes('empresa')
     ) || (
-      (fieldLabelLower.includes('nombre') || fieldLabelLower.includes('name')) &&
-      !fieldLabelLower.includes('empresa')
-    );
+        (fieldLabelLower.includes('nombre') || fieldLabelLower.includes('name')) &&
+        !fieldLabelLower.includes('empresa')
+      );
   };
 
   // Partir nombre en 4 partes
@@ -149,7 +173,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
       console.log('campaignConfig:', campaignConfig);
       console.log('selectedTemplate:', campaignConfig?.selectedTemplate);
       console.log('selectedTemplate.type:', campaignConfig?.selectedTemplate?.type);
-      
+
       // El type viene de selectedTemplate, no de communicationType
       const templateType = campaignConfig?.selectedTemplate?.type;
       const isFormOrLegal = templateType === 'FORM' || templateType === 'LEGAL';
@@ -170,12 +194,12 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
       try {
         const response = await getCommunicationTemplateFields(templateId);
         console.log('API Response:', response);
-        
+
         // La API devuelve un array directo
         let fields = Array.isArray(response) ? response : response?.fields || [];
-        
+
         console.log('All fields received:', fields.length);
-        
+
         if (Array.isArray(fields)) {
           // Filtrar campos que NO son SYSTEM_DATA
           const usedKeys = new Set();
@@ -185,15 +209,15 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
               const fieldKey = getFieldKey(field, index, usedKeys);
               return { ...field, __fieldKey: fieldKey, __index: index };
             });
-            const filteredEditableFields = editableFields.filter(Boolean);
-          
+          const filteredEditableFields = editableFields.filter(Boolean);
+
           console.log('Editable fields found:', filteredEditableFields.length);
           filteredEditableFields.forEach((f, idx) => {
             console.log(`[${idx}] ${f.field_label} (${f.field_type}) -> key: ${f.__fieldKey}`);
           });
-          
+
           setTemplateFields(filteredEditableFields);
-          
+
           // Inicializar valores vacíos usando __fieldKey como clave
           const initialValues = {};
           filteredEditableFields.forEach(field => {
@@ -217,7 +241,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
 
   const validateFormFields = () => {
     const newFieldErrors = {};
-    
+
     templateFields.forEach((field, index) => {
       const error = validateFieldValue(field, index);
       if (error) {
@@ -232,7 +256,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   const handleSubmit = () => {
     if (validateFormFields()) {
       const finalFieldValues = { ...fieldValues };
-      
+
       Object.entries(nameFieldParts).forEach(([fieldName, parts]) => {
         finalFieldValues[fieldName] = joinNameFrom4Parts(parts);
       });
@@ -242,15 +266,15 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
       // 2. fieldMetadata: Usa field_name como claves con metadata
       const templateFieldsForAPI = {};
       const fieldMetadata = {};
-      
+
       templateFields.forEach(field => {
         const fieldKey = field.__fieldKey; // UUID o field_name (depende de API)
         const fieldName = field.field_name; // Siempre el nombre legible
         const value = finalFieldValues[fieldKey];
-        
+
         // Para API: usar field_name como clave
         templateFieldsForAPI[fieldName] = value;
-        
+
         // Para metadata: también usar field_name como clave
         fieldMetadata[fieldName] = {
           label: field.field_label,
@@ -291,7 +315,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
             Esta plantilla no requiere campos adicionales.
           </p>
         </div>
-        
+
         <div className="flex gap-3 pt-4 border-t border-gray-300">
           <button
             onClick={onBack}
@@ -360,30 +384,28 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                 </label>
 
                 {/* Renderizar input según el tipo de campo */}
-                {field.field_type === 'NUMBER' ? (
+                {field.field_type === 'NUMBER' || isNumericTextField(field) ? (
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={fieldValues[field.__fieldKey] || ''}
+                    value={isCurrencyField(field) ? formatCurrency(fieldValues[field.__fieldKey]) : (fieldValues[field.__fieldKey] || '')}
                     onChange={(e) => handleNumberChange(field.__fieldKey, e.target.value)}
-                    placeholder="Ej: 12345678"
-                    maxLength="12"
-                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all font-mono ${
-                      fieldErrors[field.__fieldKey] 
-                        ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                        : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                    }`}
+                    placeholder={isCurrencyField(field) ? "$ 0" : `Ingresa ${field.field_label.toLowerCase()}`}
+                    maxLength={isCurrencyField(field) ? 25 : 50}
+                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all font-mono ${fieldErrors[field.__fieldKey]
+                      ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                      : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                   />
                 ) : field.field_type === 'DATE' ? (
                   <input
                     type="date"
                     value={fieldValues[field.__fieldKey] || ''}
                     onChange={(e) => handleDateChange(field.__fieldKey, e.target.value)}
-                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer ${
-                      fieldErrors[field.__fieldKey] 
-                        ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                        : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                    }`}
+                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all cursor-pointer ${fieldErrors[field.__fieldKey]
+                      ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                      : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                   />
                 ) : isNameField(field) ? (
                   <div className="space-y-2">
@@ -403,11 +425,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                             }));
                           }}
                           placeholder="Ej: Juan"
-                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.__fieldKey] 
-                              ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                              : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${fieldErrors[field.__fieldKey]
+                            ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                            : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                            }`}
                         />
                       </div>
 
@@ -426,11 +447,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                             }));
                           }}
                           placeholder="Ej: García"
-                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.__fieldKey] 
-                              ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                              : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${fieldErrors[field.__fieldKey]
+                            ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                            : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                            }`}
                         />
                       </div>
 
@@ -449,11 +469,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                             }));
                           }}
                           placeholder="Ej: Martínez"
-                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.__fieldKey] 
-                              ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                              : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${fieldErrors[field.__fieldKey]
+                            ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                            : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                            }`}
                         />
                       </div>
 
@@ -472,11 +491,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                             }));
                           }}
                           placeholder="Ej: Carlos"
-                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                            fieldErrors[field.__fieldKey] 
-                              ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                              : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${fieldErrors[field.__fieldKey]
+                            ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                            : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                            }`}
                         />
                       </div>
                     </div>
@@ -490,11 +508,10 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                     value={fieldValues[field.__fieldKey] || ''}
                     onChange={(e) => handleTextChange(field.__fieldKey, e.target.value)}
                     placeholder={`Ingresa ${field.field_label.toLowerCase()}`}
-                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                      fieldErrors[field.__fieldKey] 
-                        ? 'border-red-500 bg-red-50 focus:ring-red-500' 
-                        : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
-                    }`}
+                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${fieldErrors[field.__fieldKey]
+                      ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                      : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                   />
                 )}
 
