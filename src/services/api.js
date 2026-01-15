@@ -597,7 +597,10 @@ export const getCommunicationPreview = async (commId) => {
 
 // --- Endpoints para campos de plantillas de comunicación ---
 export const getCommunicationTemplateFields = (templateId) => apiRequest(`/communications/templates/${templateId}/fields`);
+export const addCommunicationTemplateField = (templateId, fieldData) => apiRequest(`/communications/templates/${templateId}/fields`, 'POST', fieldData);
 export const updateCommunicationTemplateField = (fieldId, fieldData) => apiRequest(`/communications/templates/fields/${fieldId}`, 'PUT', fieldData);
+export const deleteCommunicationTemplateField = (fieldId) => apiRequest(`/communications/templates/fields/${fieldId}`, 'DELETE');
+export const getAvailableVariables = () => apiRequest('/communications/available-variables');
 
 // --- Endpoints de Comunicaciones Jurídicas ---
 export const getLegalBatches = () => apiRequest('/communications/legal/batches');
