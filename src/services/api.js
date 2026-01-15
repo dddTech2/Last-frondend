@@ -154,6 +154,7 @@ export const loginWithPassword = (username, password) => {
 export const firstTimeLogin = (identifier, password) => apiRequest('/auth/login/first-time', 'POST', { identifier, password });
 
 // --- Endpoints de Usuario ---
+export const getUserProfile = () => apiRequest('/users/me');
 export const changePassword = (current_password, new_password) => apiRequest('/users/me/change-password', 'PUT', { current_password, new_password });
 
 
@@ -453,6 +454,10 @@ export const rejectContract = (cedula, motivo) => apiRequest(`/employees/${cedul
 export const approveRetirement = (cedula) => apiRequest(`/employees/${cedula}/retire/approve`, 'POST', {});
 export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${cedula}/retire/reject`, 'POST', { motivo_rechazo_juridico: motivo });
 
+// --- Endpoints de Credenciales de Empleados ---
+export const checkEmployeeCredential = (adminfo) => apiRequest(`/employee-credentials/${adminfo}`);
+export const checkMyEmployeeCredentials = () => apiRequest('/employee-credentials/me/check');
+
 // --- Endpoints de Comunicaciones (Documents) ---
 export const getCommunicationTemplates = (statusFilter = 'APPROVED', templateType = null) => {
   let endpoint = `/communications/templates?status_filter=${statusFilter}`;
@@ -541,6 +546,15 @@ export const sendCommunication = (commId, channel, sendData) => {
   const query = channel ? `?channel=${encodeURIComponent(channel)}` : '';
   return apiRequest(`/communications/${commId}/send${query}`, 'PATCH', sendData);
 };
+
+export const sendBatchCommunication = (communication_ids, recipient_contact, sender_password = null) => {
+  return apiRequest('/communications/send-batch', 'POST', {
+    communication_ids,
+    recipient_contact,
+    sender_password
+  });
+};
+
 export const getCommunicationPreview = async (commId) => {
   const token = getAuthToken();
   const headers = {
