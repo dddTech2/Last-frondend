@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Mail, Send, MessageCircle } from 'lucide-react';
+import { AlertCircle, Mail, Send, MessageCircle, MessageSquare } from 'lucide-react';
 import { getObligacionesByCedula, getClientChannelsByCedula } from '../services/api';
 import { debounce } from 'lodash';
 
@@ -109,7 +109,9 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     ? 'EMAIL'
     : selectedChannelValue === 'whatsapp'
       ? 'WHATSAPP'
-      : null;
+      : selectedChannelValue === 'sms'
+        ? 'SMS'
+        : null;
 
   const availableContacts = selectedChannelKey ? (contactsByChannel[selectedChannelKey] || []) : [];
 
@@ -162,35 +164,35 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.cedula.trim()) {
       newErrors.cedula = 'La cédula es requerida';
     } else if (!/^\d+$/.test(formData.cedula)) {
       newErrors.cedula = 'Solo se permiten números';
     }
-    
+
     if (formData.obligaciones.length === 0) {
       newErrors.obligaciones = 'Debes seleccionar al menos una obligación';
     }
-    
+
     if (!formData.tipoDeudor) {
       newErrors.tipoDeudor = 'Debes especificar si eres deudor o codeudor';
     }
-    
+
     if (!formData.canalComunicacion) {
       newErrors.canalComunicacion = 'Debes seleccionar un canal de comunicación';
     }
 
-    if ((formData.canalComunicacion === 'email' || formData.canalComunicacion === 'whatsapp') && !formData.contactValue.trim()) {
+    if ((formData.canalComunicacion === 'email' || formData.canalComunicacion === 'whatsapp' || formData.canalComunicacion === 'sms') && !formData.contactValue.trim()) {
       newErrors.contactValue = formData.canalComunicacion === 'email'
         ? 'Debes seleccionar o ingresar un correo de destino'
-        : 'Debes seleccionar o ingresar un número de WhatsApp';
+        : 'Debes seleccionar o ingresar un número de celular/WhatsApp';
     }
 
     if (!formData.tipoAprobacion) {
       newErrors.tipoAprobacion = 'Debes seleccionar el tipo de comunicación';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -212,9 +214,14 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
     {
       id: 'whatsapp',
       title: 'WhatsApp',
-      icon: <Send className="h-12 w-12" />,
+      icon: <MessageCircle className="h-12 w-12" />,
       color: 'from-emerald-500 to-green-600',
-      disabled: true,
+    },
+    {
+      id: 'sms',
+      title: 'SMS',
+      icon: <MessageSquare className="h-12 w-12" />,
+      color: 'from-orange-500 to-amber-600',
     }
   ];
 
@@ -246,9 +253,8 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                 value={formData.cedula}
                 onChange={handleChange}
                 placeholder="1023456789"
-                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                  errors.cedula ? 'border-red-500 bg-red-50' : 'border-blue-300 bg-white'
-                }`}
+                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${errors.cedula ? 'border-red-500 bg-red-50' : 'border-blue-300 bg-white'
+                  }`}
               />
               {errors.cedula && (
                 <p className="text-xs text-red-600 mt-0.5 flex items-center gap-1">
@@ -265,8 +271,8 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
               {obligacionesOptions.length > 0 ? (
                 <div className="space-y-2 bg-white p-2 rounded-lg border-2 border-blue-300 max-h-40 overflow-y-auto">
                   {obligacionesOptions.map((obligacion) => (
-                    <label 
-                      key={obligacion.obligacion} 
+                    <label
+                      key={obligacion.obligacion}
                       className={`flex items-center gap-2 ${obligacionesOptions.length === 1 ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <input
@@ -313,17 +319,15 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                   onChange={handleChange}
                   className="sr-only"
                 />
-                <div className={`p-2.5 rounded-lg border-2 transition-all ${
-                  formData.tipoDeudor === 'deudor'
-                    ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-200'
-                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
-                }`}>
+                <div className={`p-2.5 rounded-lg border-2 transition-all ${formData.tipoDeudor === 'deudor'
+                  ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-200'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                  }`}>
                   <div className="flex items-start gap-2">
-                    <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${
-                      formData.tipoDeudor === 'deudor'
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-gray-300 group-hover:border-blue-400'
-                    }`}>
+                    <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${formData.tipoDeudor === 'deudor'
+                      ? 'border-blue-500 bg-blue-500'
+                      : 'border-gray-300 group-hover:border-blue-400'
+                      }`}>
                       {formData.tipoDeudor === 'deudor' && (
                         <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -348,17 +352,15 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                   onChange={handleChange}
                   className="sr-only"
                 />
-                <div className={`p-2.5 rounded-lg border-2 transition-all ${
-                  formData.tipoDeudor === 'codeudor'
-                    ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-200'
-                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
-                }`}>
+                <div className={`p-2.5 rounded-lg border-2 transition-all ${formData.tipoDeudor === 'codeudor'
+                  ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-200'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                  }`}>
                   <div className="flex items-start gap-2">
-                    <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${
-                      formData.tipoDeudor === 'codeudor'
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-gray-300 group-hover:border-blue-400'
-                    }`}>
+                    <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${formData.tipoDeudor === 'codeudor'
+                      ? 'border-blue-500 bg-blue-500'
+                      : 'border-gray-300 group-hover:border-blue-400'
+                      }`}>
                       {formData.tipoDeudor === 'codeudor' && (
                         <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -388,7 +390,7 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
           <span className="text-lg">📢</span> Canal de Comunicación
         </h3>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {communicationChannels.map((channel) => (
             <label
               key={channel.id}
@@ -403,17 +405,15 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                 className="sr-only"
                 disabled={channel.disabled}
               />
-              <div className={`p-3 rounded-lg border-2 transition-all ${
-                formData.canalComunicacion === channel.id
-                  ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-200'
-                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
-              }`}>
+              <div className={`p-3 rounded-lg border-2 transition-all ${formData.canalComunicacion === channel.id
+                ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-200'
+                : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                }`}>
                 <div className="flex items-start gap-2">
-                  <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                    formData.canalComunicacion === channel.id
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-gray-300 group-hover:border-blue-400'
-                  }`}>
+                  <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.canalComunicacion === channel.id
+                    ? 'border-blue-500 bg-blue-500'
+                    : 'border-gray-300 group-hover:border-blue-400'
+                    }`}>
                     {formData.canalComunicacion === channel.id && (
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -428,9 +428,9 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                     <p className="text-xs text-gray-600 mt-0.5">
                       {channel.id === 'email'
                         ? 'Correo electrónico'
-                        : channel.disabled
-                          ? 'Temporalmente inhabilitado'
-                          : 'WhatsApp Business'
+                        : channel.id === 'whatsapp'
+                          ? 'WhatsApp Business'
+                          : 'Mensaje de Texto'
                       }
                     </p>
                   </div>
@@ -448,7 +448,7 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
         {formData.canalComunicacion && (
           <div className="mt-4">
             <label className="block text-xs font-semibold text-green-900 mb-1.5">
-              {formData.canalComunicacion === 'email' ? 'Correo de destino *' : 'Número de WhatsApp *'}
+              {formData.canalComunicacion === 'email' ? 'Correo de destino *' : 'Número de Celular *'}
               {loadingContacts && <span className="text-green-700 text-xs ml-2">(Cargando...)</span>}
             </label>
             {availableContacts.length > 0 ? (
@@ -478,9 +478,8 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
                 value={formData.contactValue}
                 onChange={handleChange}
                 placeholder="3001234567"
-                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                  errors.contactValue ? 'border-red-500 bg-red-50' : 'border-green-200 bg-white'
-                }`}
+                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.contactValue ? 'border-red-500 bg-red-50' : 'border-green-200 bg-white'
+                  }`}
               />
             )}
             {errors.contactValue && (availableContacts.length > 0 || formData.canalComunicacion !== 'email') && (
@@ -514,17 +513,15 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
               onChange={handleChange}
               className="sr-only"
             />
-            <div className={`p-3 rounded-lg border-2 transition-all ${
-              formData.tipoAprobacion === 'sin_aprobacion'
-                ? 'border-green-500 bg-green-50 shadow-lg shadow-green-200'
-                : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-md'
-            }`}>
+            <div className={`p-3 rounded-lg border-2 transition-all ${formData.tipoAprobacion === 'sin_aprobacion'
+              ? 'border-green-500 bg-green-50 shadow-lg shadow-green-200'
+              : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-md'
+              }`}>
               <div className="flex items-start gap-2">
-                <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                  formData.tipoAprobacion === 'sin_aprobacion'
-                    ? 'border-green-500 bg-green-500'
-                    : 'border-gray-300 group-hover:border-green-400'
-                }`}>
+                <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.tipoAprobacion === 'sin_aprobacion'
+                  ? 'border-green-500 bg-green-500'
+                  : 'border-gray-300 group-hover:border-green-400'
+                  }`}>
                   {formData.tipoAprobacion === 'sin_aprobacion' && (
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -552,17 +549,15 @@ const CommunicationStep1 = ({ onNext, onCancel }) => {
               onChange={handleChange}
               className="sr-only"
             />
-            <div className={`p-3 rounded-lg border-2 transition-all ${
-              formData.tipoAprobacion === 'con_aprobacion'
-                ? 'border-amber-500 bg-amber-50 shadow-lg shadow-amber-200'
-                : 'border-gray-200 bg-white hover:border-amber-300 hover:shadow-md'
-            }`}>
+            <div className={`p-3 rounded-lg border-2 transition-all ${formData.tipoAprobacion === 'con_aprobacion'
+              ? 'border-amber-500 bg-amber-50 shadow-lg shadow-amber-200'
+              : 'border-gray-200 bg-white hover:border-amber-300 hover:shadow-md'
+              }`}>
               <div className="flex items-start gap-2">
-                <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                  formData.tipoAprobacion === 'con_aprobacion'
-                    ? 'border-amber-500 bg-amber-500'
-                    : 'border-gray-300 group-hover:border-amber-400'
-                }`}>
+                <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${formData.tipoAprobacion === 'con_aprobacion'
+                  ? 'border-amber-500 bg-amber-500'
+                  : 'border-gray-300 group-hover:border-amber-400'
+                  }`}>
                   {formData.tipoAprobacion === 'con_aprobacion' && (
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
