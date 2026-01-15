@@ -13,17 +13,21 @@ import AdministracionPersonal from '../pages/AdministracionPersonal';
 import ComunicacionesPage from '../pages/ComunicacionesPage';
 import CommunicationBuilderPage from '../pages/CommunicationBuilderPage';
 import DemographicsPage from '../pages/DemographicsPage';
+import ClientSearchPage from '../pages/ClientSearchPage';
+import Vision360Page from '../pages/Vision360Page';
 import ProtectedRoute from './ProtectedRoute';
+
 export const AppRouter = () => {
   return (
     <Routes>
       {/* Ruta de Login (Pública) */}
-
-  <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage />} />
 
       {/* Rutas Protegidas */}
       <Route path="/" element={<ProtectedRoute />}>
         <Route index element={<HomePage />} />
+        <Route path="clients" element={<ClientSearchPage />} />
+        <Route path="vision360/:cedula" element={<Vision360Page />} />
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="campaigns/new" element={<CreateCampaignPage />} />
         <Route path="templates" element={<TemplateManagerPage />} />
