@@ -43,7 +43,7 @@ const HomePage = () => {
     { title: "Aprobación de Plantillas", description: "Revisa y aprueba plantillas de mensajes", icon: <TemplateApprovalIcon />, path: "/templates/approval", roles: ["Admin", "Jurídico", "Directora de Operaciones"] },
     { title: "Crear Plantilla", description: "Crea nuevas plantillas de SMS, WhatsApp o Email", icon: <BuilderIcon />, path: "/templates/new", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { title: "Aprobación Jurídica", description: "Revisa comunicaciones pendientes de Jurídico", icon: <LegalApprovalIcon />, path: "/communications/legal-approval", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico"], strictForRoles: true },
-    { title: "Workflow Builder", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", roles: ["Admin"] },
+    { title: "Demográficos", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Directora de Operaciones", "Jurídico", "Juridico"] },
     { title: "Gestión de Usuarios", description: "Administra usuarios del sistema", icon: <UserManagementIcon />, path: "/users", roles: ["Admin"] },
     { title: "Reportes y Analítica", description: "Visualiza métricas y genera reportes", icon: <ReportsIcon />, path: "/reports", roles: ["Admin", "Coordinador"] },
     { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", roles: ["Admin", "Coordinador", "Gestor"] },
