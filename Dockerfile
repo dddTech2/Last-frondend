@@ -4,11 +4,14 @@ FROM node:20-alpine AS builder
 # Set the working directory
 WORKDIR /app
 
+# Set Node.js memory limit for build
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Copy package.json and package-lock.json
 COPY package.json package-lock.json ./
 
 # Install dependencies (clean, reproducible)
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --prefer-offline
 
 # Copy the rest of the application source code
 COPY . .
