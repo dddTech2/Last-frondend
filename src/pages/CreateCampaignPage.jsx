@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import Step1_ChannelConfig from '../components/wizards/Step1_ChannelConfig';
 import Step2_Segmentation from '../components/wizards/Step2_Segmentation';
 import Step3_Template from '../components/wizards/Step3_Template';
 import Step4_Scheduling from '../components/wizards/Step4_Scheduling';
 import Step5_Confirmation from '../components/wizards/Step5_Confirmation';
-import { createAndLaunchCampaign, createSchedule, createSimpleFilter, refreshCampaignStats } from '../services/api';
+import { createAndLaunchCampaign, updateCampaign, createSchedule, createSimpleFilter, refreshCampaignStats } from '../services/api';
 import CampaignScheduleCreate from '../schemas/CampaignScheduleCreate';
 import CampaignCreate from '../schemas/CampaignCreate';
+import CampaignUpdate from '../schemas/CampaignUpdate';
 import AudienceFilterSimpleCreate from '../schemas/AudienceFilterSimpleCreate';
 import FilterSavePromptModal from '../components/wizards/FilterSavePromptModal';
 
@@ -56,19 +57,65 @@ const Stepper = ({ currentStep }) => {
 
 const CreateCampaignPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
-  const [campaignData, setCampaignData] = useState({
-    name: '',
-    channel: '',
-    templateName: '',
-    previewSubject: '',
-    previewContent: '',
-    selectedTemplateDetails: null,
-    special_variable_value: '',
-  });
+  
+  // Detectar modo (edit, duplicate, o create)
+  const mode = location.state?.mode || 'create';
+  const campaignId = location.state?.campaignId;
+  const existingCampaign = location.state?.campaignData;
+  
+  // Precargar datos si es modo edición o duplicación
+  const getInitialCampaignData = () => {
+    try {
+      if (existingCampaign && (mode === 'edit' || mode === 'duplicate')) {
+        console.log('Precargando datos de campaña:', existingCampaign);
+        const baseName = mode === 'duplicate' ? `${existingCampaign.name} - Copia` : existingCampaign.name;
+        return {
+          name: baseName || '',
+          channel: existingCampaign.channel_type?.toLowerCase() || '',
+          templateName: existingCampaign.template_name || '',
+          previewSubject: '',
+          previewContent: '',
+          selectedTemplateDetails: null,
+          message_template_id: existingCampaign.message_template_id || null,
+          audience_filter_id: existingCampaign.audience_filter_id || null,
+          target_role: existingCampaign.target_role || '',
+          codebtor_strategy: existingCampaign.codebtor_strategy || null,
+          scheduled_at: mode === 'edit' ? existingCampaign.scheduled_at : null,
+          special_variable_value: existingCampaign.special_variable_value || '',
+          schedule_type: existingCampaign.scheduled_at ? 'scheduled' : 'immediate',
+        };
+      }
+    } catch (error) {
+      console.error('Error al precargar datos de campaña:', error);
+      toast.error('Error al cargar los datos de la campaña');
+    }
+    
+    return {
+      name: '',
+      channel: '',
+      templateName: '',
+      previewSubject: '',
+      previewContent: '',
+      selectedTemplateDetails: null,
+      special_variable_value: '',
+    };
+  };
+  
+  const [campaignData, setCampaignData] = useState(getInitialCampaignData);
   // Estado para el modal de decisión de guardado de filtro
   const [showFilterPrompt, setShowFilterPrompt] = useState(false);
   const [launchLoading, setLaunchLoading] = useState(false); // evita doble envío
+
+  // Mostrar mensaje informativo cuando se carga en modo edición o duplicación
+  useEffect(() => {
+    if (mode === 'edit') {
+      toast.info('Editando campaña existente');
+    } else if (mode === 'duplicate') {
+      toast.info('Duplicando campaña');
+    }
+  }, [mode]);
 
   // Determina si hay un filtro construido pero no guardado (definition sin audience_filter_id)
   const hasUnsavedDefinition = !campaignData.audience_filter_id && (
@@ -195,22 +242,39 @@ const CreateCampaignPage = () => {
           console.error('Error al actualizar estadísticas:', err);
         }
       } else {
-        const campaignPayload = new CampaignCreate({
-          name: campaignData.name,
-          channel_type: campaignData.channel.toUpperCase(), // Convert to uppercase
-          message_template_id: campaignData.message_template_id,
-          audience_filter_id: filterIdToUse,
-          target_role: campaignData.target_role,
-          codebtor_strategy: (campaignData.target_role === 'CODEUDOR' || campaignData.target_role === 'AMBAS') ? campaignData.codebtor_strategy : null,
-          scheduled_at: campaignData.scheduled_at || null,
-          special_variable_value: campaignData.special_variable_value?.trim() || '',
-        });
-        console.log('Enviando campaña única:', campaignPayload);
-        console.log('Valor de special_variable_value:', campaignData.special_variable_value);
-        console.log('Valor trimmed:', campaignData.special_variable_value?.trim());
-        console.log('Valor final a enviar:', campaignData.special_variable_value?.trim() || '');
-        await createAndLaunchCampaign(campaignPayload);
-        alert('¡Campaña creada y lanzada con éxito!');
+        // Modo edición vs creación
+        if (mode === 'edit' && campaignId) {
+          const campaignUpdatePayload = new CampaignUpdate({
+            name: campaignData.name,
+            channel_type: campaignData.channel.toUpperCase(),
+            message_template_id: campaignData.message_template_id,
+            audience_filter_id: filterIdToUse,
+            target_role: campaignData.target_role,
+            codebtor_strategy: (campaignData.target_role === 'CODEUDOR' || campaignData.target_role === 'AMBAS') ? campaignData.codebtor_strategy : null,
+            scheduled_at: campaignData.scheduled_at || null,
+            special_variable_value: campaignData.special_variable_value?.trim() || '',
+          });
+          console.log('Actualizando campaña:', campaignUpdatePayload);
+          await updateCampaign(campaignId, campaignUpdatePayload);
+          alert('¡Campaña actualizada con éxito!');
+        } else {
+          const campaignPayload = new CampaignCreate({
+            name: campaignData.name,
+            channel_type: campaignData.channel.toUpperCase(), // Convert to uppercase
+            message_template_id: campaignData.message_template_id,
+            audience_filter_id: filterIdToUse,
+            target_role: campaignData.target_role,
+            codebtor_strategy: (campaignData.target_role === 'CODEUDOR' || campaignData.target_role === 'AMBAS') ? campaignData.codebtor_strategy : null,
+            scheduled_at: campaignData.scheduled_at || null,
+            special_variable_value: campaignData.special_variable_value?.trim() || '',
+          });
+          console.log('Enviando campaña única:', campaignPayload);
+          console.log('Valor de special_variable_value:', campaignData.special_variable_value);
+          console.log('Valor trimmed:', campaignData.special_variable_value?.trim());
+          console.log('Valor final a enviar:', campaignData.special_variable_value?.trim() || '');
+          await createAndLaunchCampaign(campaignPayload);
+          alert(mode === 'duplicate' ? '¡Campaña duplicada y lanzada con éxito!' : '¡Campaña creada y lanzada con éxito!');
+        }
         // Actualizar estadísticas de campañas
         try {
           await refreshCampaignStats();
@@ -278,9 +342,10 @@ const CreateCampaignPage = () => {
             }`}
           >
             {currentStep < 4 ? 'Siguiente' : 
+             mode === 'edit' ? (launchLoading ? 'Actualizando...' : 'Actualizar Campaña') :
              campaignData.schedule_type === 'recurrent' ? 'Crear Campaña Recurrente' :
-             campaignData.schedule_type === 'scheduled' ? 'Programar Campaña' :
-             (launchLoading ? 'Procesando...' : 'Lanzar Campaña')}
+             campaignData.schedule_type === 'scheduled' ? (mode === 'duplicate' ? 'Duplicar y Programar' : 'Programar Campaña') :
+             (launchLoading ? 'Procesando...' : (mode === 'duplicate' ? 'Duplicar y Lanzar' : 'Lanzar Campaña'))}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
-export const BASE_URL = "https://backend-475190189080.us-central1.run.app/api/v1";
-//export const BASE_URL = "http://localhost:8000/api/v1";
+// La URL se toma de la variable de entorno VITE_API_URL si existe,
+// de lo contrario usa la URL de producción por defecto.
+export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
 
 
 // Función para obtener el token de autenticación
@@ -174,6 +175,8 @@ export const createSimpleFilter = (filterData) => apiRequest('/audience/filters/
 // --- Endpoints de Campañas ---
 export const getCampaignStats = () => apiRequest('/campaigns/stats');
 export const refreshCampaignStats = () => apiRequest('/campaigns/stats/refresh', 'POST');
+export const getCampaignById = (campaignId) => apiRequest(`/campaigns/${campaignId}`);
+export const updateCampaign = (campaignId, campaignData) => apiRequest(`/campaigns/${campaignId}`, 'PUT', campaignData);
 export const createAndLaunchCampaign = (campaignData) => apiRequest('/campaigns/', 'POST', campaignData);
 export const activateCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}/activate`, 'POST');
 export const inactivateCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}/inactivate`, 'POST');
