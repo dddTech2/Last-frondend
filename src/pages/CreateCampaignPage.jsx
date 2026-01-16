@@ -84,6 +84,7 @@ const CreateCampaignPage = () => {
         return {
           name: baseName || '',
           channel: existingCampaign.channel_type?.toLowerCase() || '',
+          campaignType: 'normal', // Tipo de campaña por defecto
           templateName: existingCampaign.template_name || '',
           previewSubject: '',
           previewContent: '',
