@@ -359,6 +359,51 @@ export const addTagToConversation = (conversationId, tagName) => apiRequest(`/co
 
 export const getObligationUrlByCedula = (cedula) => apiRequest(`/obligation-urls/by-cedula/${cedula}`);
 
+export const getCampaignHistory = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      if (Array.isArray(value)) {
+        value.forEach(v => queryParams.append(key, v));
+      } else if (key === 'status' && value) {
+        // Status debe ser un array, convertir si es string
+        queryParams.append(key, value);
+      } else {
+        queryParams.append(key, value);
+      }
+    }
+  });
+  return apiRequest(`/reports/campaign-history?${queryParams.toString()}`);
+};
+
+export const exportCampaignHistory = (filters, email) => {
+  const queryParams = new URLSearchParams();
+  queryParams.append('email', email);
+  
+  // Normalizar filtros para que coincidan con el schema del backend
+  const normalizedFilters = {
+    start_date: filters.start_date || null,
+    end_date: filters.end_date || null,
+    channel: filters.channel || null,
+    status: filters.status ? [filters.status] : null, // Convertir a lista
+    client_cedula: filters.client_cedula || null,
+    recipient_contact: filters.recipient_contact || null,
+    skip: 0,
+    limit: 50
+  };
+  
+  // Eliminar campos null para no enviarlos
+  const cleanFilters = Object.fromEntries(
+    Object.entries(normalizedFilters).filter(([_, v]) => v !== null && v !== '')
+  );
+  
+  return apiRequest(`/reports/campaign-history/export?${queryParams.toString()}`, 'POST', cleanFilters);
+};
+
+export const getClientNamesLookup = async (file) => {
+  return apiRequestWithFile('/reports/client-names-lookup', 'POST', file);
+};
+
 // --- Endpoints de Información del Cliente ---
 export const getResultadoGestor = (cedula) => apiRequest(`/client-info/resultado-gestor/${cedula}`);
 export const getCompromisos = (cedula) => apiRequest(`/client-info/compromisos/${cedula}`);
