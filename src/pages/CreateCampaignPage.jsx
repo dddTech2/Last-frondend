@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import Step1_ChannelConfig from '../components/wizards/Step1_ChannelConfig';
 import Step2_Segmentation from '../components/wizards/Step2_Segmentation';
 import Step3_Template from '../components/wizards/Step3_Template';
 import Step4_Scheduling from '../components/wizards/Step4_Scheduling';
 import Step5_Confirmation from '../components/wizards/Step5_Confirmation';
-import { createAndLaunchCampaign, createSchedule, createSimpleFilter } from '../services/api';
+import { createAndLaunchCampaign, createSchedule, createSimpleFilter, refreshCampaignStats } from '../services/api';
 import CampaignScheduleCreate from '../schemas/CampaignScheduleCreate';
 import CampaignCreate from '../schemas/CampaignCreate';
 import AudienceFilterSimpleCreate from '../schemas/AudienceFilterSimpleCreate';
@@ -186,6 +187,13 @@ const CreateCampaignPage = () => {
         console.log('Valor final a enviar (schedule):', campaignData.special_variable_value?.trim() || '');
         await createSchedule(schedulePayload);
         alert('¡Campaña recurrente creada con éxito!');
+        // Actualizar estadísticas de campañas
+        try {
+          await refreshCampaignStats();
+          toast.success("Actualizando estadísticas de campañas...");
+        } catch (err) {
+          console.error('Error al actualizar estadísticas:', err);
+        }
       } else {
         const campaignPayload = new CampaignCreate({
           name: campaignData.name,
@@ -203,8 +211,15 @@ const CreateCampaignPage = () => {
         console.log('Valor final a enviar:', campaignData.special_variable_value?.trim() || '');
         await createAndLaunchCampaign(campaignPayload);
         alert('¡Campaña creada y lanzada con éxito!');
+        // Actualizar estadísticas de campañas
+        try {
+          await refreshCampaignStats();
+          toast.success("Actualizando estadísticas de campañas...");
+        } catch (err) {
+          console.error('Error al actualizar estadísticas:', err);
+        }
       }
-      navigate('/campaigns');
+      navigate('/campaigns', { state: { refreshNeeded: true } });
     } catch (error) {
       console.error('Error al crear la campaña:', error);
       alert(`Error al crear la campaña: ${error.message}`);

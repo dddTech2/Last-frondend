@@ -62,6 +62,12 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
       error.status = response.status;
       throw error;
     }
+    
+    // Si es 204 No Content, no hay body para parsear
+    if (response.status === 204) {
+      return null;
+    }
+    
     const json = await response.json();
     if (isNotif) {
       const dur = (performance.now() - start).toFixed(1);
@@ -169,6 +175,8 @@ export const createSimpleFilter = (filterData) => apiRequest('/audience/filters/
 export const getCampaignStats = () => apiRequest('/campaigns/stats');
 export const refreshCampaignStats = () => apiRequest('/campaigns/stats/refresh', 'POST');
 export const createAndLaunchCampaign = (campaignData) => apiRequest('/campaigns/', 'POST', campaignData);
+export const activateCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}/activate`, 'POST');
+export const inactivateCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}/inactivate`, 'POST');
 export const getAllCampaigns = () => apiRequest('/campaigns/');
 export const deleteCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}`, 'DELETE');
 
