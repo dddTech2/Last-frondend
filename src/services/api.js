@@ -174,6 +174,7 @@ export const createSimpleFilter = (filterData) => apiRequest('/audience/filters/
 
 // --- Endpoints de Campañas ---
 export const getCampaignStats = () => apiRequest('/campaigns/stats');
+export const getDashboardStats = () => apiRequest('/campaigns/dashboard-stats');
 export const refreshCampaignStats = () => apiRequest('/campaigns/stats/refresh', 'POST');
 export const getCampaignById = (campaignId) => apiRequest(`/campaigns/${campaignId}`);
 export const updateCampaign = (campaignId, campaignData) => apiRequest(`/campaigns/${campaignId}`, 'PUT', campaignData);
