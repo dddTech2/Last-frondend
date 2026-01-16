@@ -206,6 +206,25 @@ export const getCampaignPreviewCSV = async (payload) => {
   return res;
 };
 
+export const downloadCampaignLogReport = async (campaignId) => {
+  const token = getAuthToken();
+  const headers = {
+    'Accept': 'text/csv,application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}/reports/send-log-report?campaign_id=${campaignId}&action=download`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || `Error ${response.status}`);
+  }
+  return response;
+};
+
 // --- Endpoints de Campañas Recurrentes (Schedules) ---
 export const createSchedule = (scheduleData) => apiRequest('/schedules/', 'POST', scheduleData);
 export const getSchedules = () => apiRequest('/schedules/');
