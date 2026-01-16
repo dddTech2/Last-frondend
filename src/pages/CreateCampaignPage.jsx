@@ -6,7 +6,9 @@ import Step2_Segmentation from '../components/wizards/Step2_Segmentation';
 import Step3_Template from '../components/wizards/Step3_Template';
 import Step4_Scheduling from '../components/wizards/Step4_Scheduling';
 import Step5_Confirmation from '../components/wizards/Step5_Confirmation';
-import { createAndLaunchCampaign, updateCampaign, createSchedule, createSimpleFilter, refreshCampaignStats } from '../services/api';
+import Step2_CSV_Upload from '../components/wizards/Step2_CSV_Upload';
+import Step3_CSV_Confirmation from '../components/wizards/Step3_CSV_Confirmation';
+import { createAndLaunchCampaign, updateCampaign, createSchedule, createSimpleFilter, refreshCampaignStats, uploadCampaignCSV } from '../services/api';
 import CampaignScheduleCreate from '../schemas/CampaignScheduleCreate';
 import CampaignCreate from '../schemas/CampaignCreate';
 import CampaignUpdate from '../schemas/CampaignUpdate';
@@ -23,14 +25,22 @@ const ConfirmIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6
 const CheckIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>;
 // -----------------------------
 
-const Stepper = ({ currentStep }) => {
-  const steps = [
+const Stepper = ({ currentStep, campaignType = 'normal' }) => {
+  const normalSteps = [
     { name: "Canal y Configuración", icon: <ChannelIcon /> },
     { name: "Segmentación", icon: <SegmentIcon /> },
     { name: "Plantilla", icon: <TemplateIcon /> },
     { name: "Programación", icon: <ScheduleIcon /> },
     { name: "Confirmación", icon: <ConfirmIcon /> },
   ];
+
+  const csvSteps = [
+    { name: "Canal y Configuración", icon: <ChannelIcon /> },
+    { name: "Plantilla y CSV", icon: <TemplateIcon /> },
+    { name: "Confirmación", icon: <ConfirmIcon /> },
+  ];
+
+  const steps = campaignType === 'csv' ? csvSteps : normalSteps;
 
   return (
     <div className="flex items-center justify-between">
@@ -95,6 +105,7 @@ const CreateCampaignPage = () => {
     return {
       name: '',
       channel: '',
+      campaignType: 'normal',
       templateName: '',
       previewSubject: '',
       previewContent: '',
@@ -138,15 +149,40 @@ const CreateCampaignPage = () => {
   // Desde paso 1 en adelante: siempre debe mantenerse un filtro (guardado o reglas) seleccionado.
   // Si el rol es CODEUDOR, se debe seleccionar una estrategia.
   // Si la plantilla tiene variable especial, se debe ingresar el valor.
-  const isNextDisabled = (
-    (currentStep === 0 && (!campaignData.channel || campaignData.name.trim().length < 7)) ||
-    (currentStep >= 1 && !hasAudienceFilter) ||
-    (currentStep === 1 && isCodebtorStrategyMissing) ||
-    (currentStep === 2 && isSpecialVariableValueMissing) ||
-    (currentStep === 1 && campaignData.client_count === 0)
-  );
+  
+  // Validaciones para CSV
+  const isCSVValid = campaignData.csvValidation?.isValid && campaignData.message_template_id && campaignData.csvFile;
+  
+  const isNextDisabled = campaignData.campaignType === 'csv' 
+    ? (
+        // Validaciones para flujo CSV
+        (currentStep === 0 && (!campaignData.channel || campaignData.name.trim().length < 7)) ||
+        (currentStep === 1 && !isCSVValid) ||
+        (currentStep === 2 && false) // No hay validación en confirmación
+      )
+    : (
+        // Validaciones para flujo normal (existente)
+        (currentStep === 0 && (!campaignData.channel || campaignData.name.trim().length < 7)) ||
+        (currentStep >= 1 && !hasAudienceFilter) ||
+        (currentStep === 1 && isCodebtorStrategyMissing) ||
+        (currentStep === 2 && isSpecialVariableValueMissing) ||
+        (currentStep === 1 && campaignData.client_count === 0)
+      );
   
   const handleNext = async () => {
+    // Si es campaña CSV, manejar por separado
+    if (campaignData.campaignType === 'csv') {
+      if (currentStep < 2) {
+        setCurrentStep(currentStep + 1);
+        return;
+      }
+      
+      // Paso final del CSV
+      await handleCSVLaunch();
+      return;
+    }
+
+    // Flujo normal (existente)
     if (currentStep < 4) {
       // Bloqueo preventivo si por alguna razón se pierde el filtro después del paso 1
       if (currentStep >= 1 && !hasAudienceFilter) return;
@@ -183,6 +219,52 @@ const CreateCampaignPage = () => {
     } catch (error) {
       console.error("Error al crear la campaña:", error);
       alert(`Error al crear la campaña: ${error.message}`);
+    }
+  };
+
+  /**
+   * Handler para lanzar campaña por CSV
+   */
+  const handleCSVLaunch = async () => {
+    try {
+      setLaunchLoading(true);
+      
+      // Preparar FormData
+      const formData = new FormData();
+      formData.append('file', campaignData.csvFile);
+      formData.append('template_id', campaignData.message_template_id);
+      formData.append('channel', campaignData.channel.toUpperCase());
+      formData.append('campaign_name', campaignData.name);
+      formData.append('send_now', 'true');
+      formData.append('dedupe', 'true');
+      formData.append('fail_on_row_error', 'false');
+      
+      // Batch size según canal
+      const batchSize = 
+        campaignData.channel.toUpperCase() === 'WHATSAPP' ? 1000 :
+        campaignData.channel.toUpperCase() === 'SMS' ? 10000 :
+        campaignData.channel.toUpperCase() === 'EMAIL' ? 10000 : 1000;
+      formData.append('batch_size', batchSize.toString());
+      
+      // Enviar
+      const result = await uploadCampaignCSV(formData);
+      
+      toast.success(`¡Campaña creada! ${result.valid_count || campaignData.csvRowCount} destinatarios encolados`);
+      
+      // Actualizar estadísticas de campañas
+      try {
+        await refreshCampaignStats();
+      } catch (err) {
+        console.error('Error al actualizar estadísticas:', err);
+      }
+      
+      navigate('/campaigns', { state: { refreshNeeded: true } });
+      
+    } catch (error) {
+      console.error('Error al crear campaña CSV:', error);
+      toast.error(`Error al crear la campaña: ${error.message}`);
+    } finally {
+      setLaunchLoading(false);
     }
   };
 
@@ -298,26 +380,56 @@ const CreateCampaignPage = () => {
   };
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 0:
-        return <Step1_ChannelConfig campaignData={campaignData} setCampaignData={setCampaignData} />;
-      case 1:
-        return <Step2_Segmentation campaignData={campaignData} setCampaignData={setCampaignData} />;
-      case 2:
-        return <Step3_Template campaignData={campaignData} setCampaignData={setCampaignData} />;
-      case 3:
-        return <Step4_Scheduling campaignData={campaignData} setCampaignData={setCampaignData} />;
-      case 4:
-        return <Step5_Confirmation campaignData={campaignData} />;
-      default:
-        return <div className="text-center py-12">Paso {currentStep + 1} no implementado</div>;
+    // Flujo normal (5 pasos)
+    if (campaignData.campaignType === 'normal') {
+      switch (currentStep) {
+        case 0:
+          return <Step1_ChannelConfig campaignData={campaignData} setCampaignData={setCampaignData} />;
+        case 1:
+          return <Step2_Segmentation campaignData={campaignData} setCampaignData={setCampaignData} />;
+        case 2:
+          return <Step3_Template campaignData={campaignData} setCampaignData={setCampaignData} />;
+        case 3:
+          return <Step4_Scheduling campaignData={campaignData} setCampaignData={setCampaignData} />;
+        case 4:
+          return <Step5_Confirmation campaignData={campaignData} />;
+        default:
+          return <div className="text-center py-12">Paso {currentStep + 1} no implementado</div>;
+      }
     }
+    
+    // Flujo CSV (3 pasos)
+    if (campaignData.campaignType === 'csv') {
+      switch (currentStep) {
+        case 0:
+          return <Step1_ChannelConfig campaignData={campaignData} setCampaignData={setCampaignData} />;
+        case 1:
+          return <Step2_CSV_Upload campaignData={campaignData} setCampaignData={setCampaignData} />;
+        case 2:
+          return <Step3_CSV_Confirmation campaignData={campaignData} />;
+        default:
+          return <div className="text-center py-12">Paso {currentStep + 1} no implementado</div>;
+      }
+    }
+  };
+
+  const getButtonText = () => {
+    if (campaignData.campaignType === 'csv') {
+      if (currentStep < 2) return 'Siguiente';
+      return launchLoading ? 'Procesando...' : 'Lanzar Campaña';
+    }
+
+    if (currentStep < 4) return 'Siguiente';
+    if (mode === 'edit') return launchLoading ? 'Actualizando...' : 'Actualizar Campaña';
+    if (campaignData.schedule_type === 'recurrent') return 'Crear Campaña Recurrente';
+    if (campaignData.schedule_type === 'scheduled') return mode === 'duplicate' ? 'Duplicar y Programar' : 'Programar Campaña';
+    return launchLoading ? 'Procesando...' : (mode === 'duplicate' ? 'Duplicar y Lanzar' : 'Lanzar Campaña');
   };
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-5xl mx-auto">
-        <Stepper currentStep={currentStep} />
+        <Stepper currentStep={currentStep} campaignType={campaignData.campaignType} />
         <div className="my-10">
           {renderStep()}
         </div>
@@ -334,18 +446,14 @@ const CreateCampaignPage = () => {
             className={`px-6 py-2 text-white rounded-md font-semibold transition-colors duration-300 ${
               isNextDisabled
                 ? 'bg-gray-400 cursor-not-allowed'
-                : currentStep === 4
+                : (campaignData.campaignType === 'csv' && currentStep === 2) || (campaignData.campaignType === 'normal' && currentStep === 4)
                 ? (campaignData.schedule_type === 'recurrent' ? 'bg-purple-600 hover:bg-purple-700' : 
                    campaignData.schedule_type === 'scheduled' ? 'bg-green-600 hover:bg-green-700' : 
                    'bg-blue-600 hover:bg-blue-700')
                 : 'bg-gray-800 hover:bg-gray-700'
             }`}
           >
-            {currentStep < 4 ? 'Siguiente' : 
-             mode === 'edit' ? (launchLoading ? 'Actualizando...' : 'Actualizar Campaña') :
-             campaignData.schedule_type === 'recurrent' ? 'Crear Campaña Recurrente' :
-             campaignData.schedule_type === 'scheduled' ? (mode === 'duplicate' ? 'Duplicar y Programar' : 'Programar Campaña') :
-             (launchLoading ? 'Procesando...' : (mode === 'duplicate' ? 'Duplicar y Lanzar' : 'Lanzar Campaña'))}
+            {getButtonText()}
           </button>
         </div>
       </div>

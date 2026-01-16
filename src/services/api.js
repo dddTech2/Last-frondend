@@ -639,3 +639,33 @@ export const getLegalBatchCommunications = (batchId) => apiRequest(`/communicati
 export const uploadLegalBatchReview = (batchId, file) => apiRequestWithFile(`/communications/legal/batches/${batchId}/upload-review`, 'POST', file);
 export const generateLegalBatchCorrespondence = (batchId) => apiRequest(`/communications/legal/batches/${batchId}/generate-correspondence`, 'POST');
 export const sendLegalBatchCorrespondence = (batchId, credentials) => apiRequest(`/communications/legal/batches/${batchId}/send`, 'POST', credentials);
+
+// --- Endpoints para Campañas por CSV ---
+export const getTemplateVariablesDetail = (templateId) => apiRequest(`/templates/${templateId}/variables-detail`);
+
+export const uploadCampaignCSV = async (formData) => {
+  const token = getAuthToken();
+  const headers = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/whatsapp/upload_campaign_csv`, {
+      method: 'POST',
+      headers,
+      body: formData, // No establecer Content-Type, el navegador lo hace automáticamente con boundary
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Error al cargar el CSV');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error en uploadCampaignCSV:', error);
+    throw error;
+  }
+};
