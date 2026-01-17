@@ -4,7 +4,8 @@ import {
   sendMessage,
   getConversation,
   BASE_URL,
-  getSignedUploadForMedia,
+  getSignedUploadUrl,
+  uploadMediaFromGCS,
   sendImageFromGCS,
   sendVideoFromGCS,
   sendAudioFromGCS,
@@ -157,7 +158,7 @@ const WhatsAppChatPage = () => {
     // Mostrar/ocultar botón de scroll
     const shouldShowButton = scrollTop + clientHeight < scrollHeight - 200;
     setShowScrollButton(shouldShowButton);
-    
+
     // La detección de scroll hacia arriba ahora es manejada por WppMessageList
   }, []);
 
@@ -420,7 +421,7 @@ const WhatsAppChatPage = () => {
               });
 
               const mergedMessages = Array.from(messageMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-              
+
               // Update the active messages state
               setMessages(mergedMessages);
 
@@ -656,9 +657,18 @@ const WhatsAppChatPage = () => {
   const handleMediaFileSelect = (event, type) => {
     const file = event.target.files[0];
     if (file) {
+      let detectedType = type;
+      if (type === 'image' && file.type.startsWith('video/')) {
+        detectedType = 'video';
+      }
       setSelectedMediaFile(file);
-      setMediaType(type);
+      setMediaType(detectedType);
     }
+  };
+
+  const handleCancelMedia = () => {
+    setSelectedMediaFile(null);
+    setMediaType('');
   };
 
 
@@ -687,6 +697,7 @@ const WhatsAppChatPage = () => {
     setTimeout(scrollToBottom, 100);
 
     setIsUploadingMedia(true);
+    let temporaryUrl = localMediaUrl;
 
     try {
       // Determinar el tipo MIME correcto
@@ -697,29 +708,35 @@ const WhatsAppChatPage = () => {
         mimeType = 'application/octet-stream';
       }
 
-      // Paso 1: Obtener URL firmada para subida directa a GCS
-      const signedUploadResponse = await getSignedUploadForMedia(
-        selectedConversation.id,
+      // Paso 1: Obtener URL firmada para subida directa a GCS (Usando el nuevo endpoint de WhatsApp)
+      // El backend espera: conversation_id, mime_type, kind
+      const signedUploadResponse = await getSignedUploadUrl(
+        parseInt(selectedConversation.id),
         mimeType,
-        mediaType,
-        selectedMediaFile.name
+        mediaType === 'audio' ? 'audio' : 'media'
       );
 
-      // Paso 2: Subir archivo directamente a GCS
-      const uploadResponse = await fetch(signedUploadResponse.upload_url, {
+      // Paso 2: Subir archivo directamente a GCS usando la URL firmada
+      // Nota: El backend devuelve 'signed_url' y 'gcs_object_name'
+      const uploadResponse = await fetch(signedUploadResponse.signed_url, {
         method: 'PUT',
         body: selectedMediaFile,
         headers: {
-          'Content-Type': signedUploadResponse.content_type,
+          'Content-Type': mimeType,
         },
       });
 
       if (!uploadResponse.ok) {
-        throw new Error('Error al subir el archivo a Google Cloud Storage');
+        throw new Error('Error al subir el archivo a Google Cloud Storage. Verifique la configuración de CORS en el bucket.');
       }
 
-      // Paso 3: Enviar mensaje usando el objeto de GCS
-      const storageObject = signedUploadResponse.storage_object;
+      // Paso 3: Registrar el archivo en Meta para obtener el media_id (Paso requerido según el API)
+      // Endpoint: /api/v1/whatsapp/media/upload_from_gcs
+      const storageObject = signedUploadResponse.gcs_object_name;
+
+      // Intentar subir a Meta (esto devuelve el media_id si es necesario, 
+      // o el backend se encarga de procesar el storage_object en los reply endpoints)
+      // Según Untitled-1.json, los endpoints de reply esperan el storage_object
 
       let response;
       switch (mediaType) {
@@ -768,7 +785,7 @@ const WhatsAppChatPage = () => {
     }
   };
   return (
-    <div className="flex h-full min-h-0 bg-transparent overflow-hidden" style={{background: 'transparent'}}>
+    <div className="flex h-full min-h-0 bg-transparent overflow-hidden" style={{ background: 'transparent' }}>
       <WppConversationSidebar
         conversations={visibleConversations}
         isLoading={isLoadingConversations}
@@ -793,6 +810,7 @@ const WhatsAppChatPage = () => {
         handleMediaFileSelect={handleMediaFileSelect}
         selectedMediaFile={selectedMediaFile}
         handleSendMedia={handleSendMedia}
+        handleCancelMedia={handleCancelMedia}
         isUploadingMedia={isUploadingMedia}
         onDocumentClick={setPreviewFileUrl}
         messagesEndRef={messagesEndRef}

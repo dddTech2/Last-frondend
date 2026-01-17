@@ -244,8 +244,11 @@ export const reviewTemplate = (templateId, reviewData) => apiRequest(`/templates
 export const uploadContactsCSV = (file) => apiRequestWithFile('/staff-contacts/bulk', 'POST', file);
 
 // --- Endpoints de WhatsApp Media ---
-export const getSignedUploadUrl = (conversation_id, mime_type, original_filename) =>
-  apiRequest('/whatsapp/media/generate_signed_upload_url', 'POST', { conversation_id, mime_type, original_filename });
+export const getSignedUploadUrl = (conversation_id, mime_type, kind = 'media') =>
+  apiRequest('/whatsapp/media/generate_signed_upload_url', 'POST', { conversation_id, mime_type, kind });
+
+export const uploadMediaFromGCS = (storage_object, mime_type = null) =>
+  apiRequest('/whatsapp/media/upload_from_gcs', 'POST', { storage_object, mime_type });
 
 export const getSignedUploadForMedia = (conversation_id, content_type, kind, original_filename) =>
   apiRequest('/conversations/signed-upload', 'POST', { conversation_id, content_type, kind, original_filename });
@@ -299,7 +302,7 @@ export const getLastMessageForConversation = async (conversationId) => {
 };
 // --- Endpoints de Respuesta Multimedia desde GCS ---
 export const sendAudioFromGCS = (conversationId, gcsUrl) => apiRequest(`/conversations/${conversationId}/reply/audio-from-gcs`, 'POST', { storage_object: gcsUrl });
-export const sendDocumentFromGCS = (conversationId, gcsUrl, filename) => apiRequest(`/conversations/${conversationId}/reply/document-from-gcs`, 'POST', { storage_object: gcsUrl, filename });
+export const sendDocumentFromGCS = (conversationId, gcsUrl) => apiRequest(`/conversations/${conversationId}/reply/document-from-gcs`, 'POST', { storage_object: gcsUrl });
 export const sendImageFromGCS = (conversationId, gcsUrl) => apiRequest(`/conversations/${conversationId}/reply/image-from-gcs`, 'POST', { storage_object: gcsUrl });
 export const sendVideoFromGCS = (conversationId, gcsUrl) => apiRequest(`/conversations/${conversationId}/reply/video-from-gcs`, 'POST', { storage_object: gcsUrl });
 export const sendStickerFromGCS = (conversationId, gcsUrl) => apiRequest(`/conversations/${conversationId}/reply/sticker-from-gcs`, 'POST', { storage_object: gcsUrl });
@@ -350,7 +353,7 @@ export const getClientProfile = (cedula, includeParams = null) => {
 
 export const reverseSearchContact = (contactValue) => apiRequest(`/client-info/contact/${contactValue}`);
 
-export const updateContactStatus = (contactValue, channel, status, detail = null) => 
+export const updateContactStatus = (contactValue, channel, status, detail = null) =>
   apiRequest('/client-info/contact/status', 'PATCH', { contact_value: contactValue, channel, status, detail });
 
 export const bulkSearchContacts = async (file) => {

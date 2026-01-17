@@ -1,6 +1,15 @@
-import React, { useRef, useEffect } from 'react';
-
-const wppPattern = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f3f4f6' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`;
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  Paperclip,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  Music,
+  Smile,
+  Send,
+  X,
+  Sticker
+} from 'lucide-react';
 
 const WppMessageInput = ({
   newMessage,
@@ -15,15 +24,62 @@ const WppMessageInput = ({
   onOpenExpiredSessionModal,
   selectedTemplate,
   selectedObligation,
-  onCancelTemplate
+  handleCancelMedia // Nueva prop para cancelar selección
 }) => {
-  const inputBarClass = 'max-w-3xl mx-auto flex items-end gap-2 bg-white rounded-3xl shadow-lg border border-gray-200 px-4 py-1.5 relative transition-all focus-within:ring-2 focus-within:ring-green-400';
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState(null);
   const textareaRef = useRef(null);
+  const menuRef = useRef(null);
 
+  // Referencias a los inputs ocultos
+  const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const documentInputRef = useRef(null);
+  const audioInputRef = useRef(null);
+  const stickerInputRef = useRef(null);
+
+  // Generar URL de previsualización cuando cambia el archivo seleccionado
+  useEffect(() => {
+    if (selectedMediaFile) {
+      // Solo generar preview para imágenes y videos
+      if (selectedMediaFile.type.startsWith('image/') || selectedMediaFile.type.startsWith('video/')) {
+        const url = URL.createObjectURL(selectedMediaFile);
+        setMediaPreviewUrl(url);
+      } else {
+        setMediaPreviewUrl(null);
+      }
+    } else {
+      setMediaPreviewUrl(null);
+    }
+
+    // Cleanup
+    return () => {
+      if (mediaPreviewUrl) {
+        URL.revokeObjectURL(mediaPreviewUrl);
+      }
+    };
+  }, [selectedMediaFile]);
+
+  // Cerrar menú si se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowAttachMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Ajuste automático de altura del textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 120)}px`;
     }
   }, [newMessage]);
 
@@ -34,136 +90,221 @@ const WppMessageInput = ({
     }
   };
 
+  const handleFileClick = () => {
+    setShowAttachMenu(false);
+  };
+
+  const triggerFileInput = (ref) => {
+    if (ref.current) {
+      ref.current.value = null; // Resetear valor para permitir seleccionar el mismo archivo
+      ref.current.click();
+    }
+    handleFileClick();
+  };
+
+  // Renderizado del panel de previsualización
+  const renderMediaPreview = () => {
+    if (!selectedMediaFile) return null;
+
+    const isImage = selectedMediaFile.type.startsWith('image/');
+    const isVideo = selectedMediaFile.type.startsWith('video/');
+    const isAudio = selectedMediaFile.type.startsWith('audio/');
+
+    // Formatear tamaño del archivo
+    const formatSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    return (
+      <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 bg-[#f0f2f5] rounded-lg shadow-lg border border-gray-200 p-3 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 z-40">
+        {/* Contenedor de la miniatura/icono */}
+        <div className="w-16 h-16 bg-white rounded-md flex items-center justify-center overflow-hidden border border-gray-300 flex-shrink-0 relative">
+          {(isImage || isVideo) && mediaPreviewUrl ? (
+            isImage ? (
+              <img src={mediaPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+            ) : (
+              <video src={mediaPreviewUrl} className="w-full h-full object-cover" />
+            )
+          ) : (
+            <div className="text-gray-500">
+              {isAudio ? <Music className="w-8 h-8" /> : <FileText className="w-8 h-8" />}
+            </div>
+          )}
+        </div>
+
+        {/* Información del archivo */}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-gray-800 text-sm truncate" title={selectedMediaFile.name}>
+            {selectedMediaFile.name}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {formatSize(selectedMediaFile.size)} • {selectedMediaFile.type.split('/')[1]?.toUpperCase() || 'ARCHIVO'}
+          </p>
+        </div>
+
+        {/* Botón de Cancelar */}
+        <button
+          onClick={handleCancelMedia}
+          className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+          title="Cancelar envío"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    );
+  };
+
   const renderContent = () => {
+    // Caso 1: Sesión expirada y plantilla seleccionada
     if (isSessionExpired && selectedTemplate) {
       return (
-        <>
-          <div className="flex-1 px-4 py-2 text-center">
+        <div className="flex items-center justify-between w-full gap-4 px-2">
+          <div className="flex-1 px-4 py-3 bg-gray-50 rounded-lg text-center border border-gray-200">
             <p className="text-sm text-gray-600">
-              Plantilla seleccionada: <strong>{selectedTemplate.name}</strong>
+              Plantilla seleccionada: <span className="font-semibold text-gray-800">{selectedTemplate.name}</span>
             </p>
           </div>
           <button
-            className={`ml-2 px-5 py-2 rounded-full font-semibold text-base shadow transition-colors ${selectedObligation ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+            className={`px-6 py-3 rounded-full font-semibold text-sm shadow-md transition-all transform active:scale-95 flex items-center gap-2
+              ${selectedObligation
+                ? 'bg-[#00a884] text-white hover:bg-[#008f6f]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             onClick={handleSendMessage}
             disabled={!selectedObligation}
           >
-            ENVIAR PLANTILLA
+            <span>ENVIAR PLANTILLA</span>
+            <Send className="w-4 h-4" />
           </button>
-        </>
+        </div>
       );
     }
 
+    // Caso 2: Sesión expirada
     if (isSessionExpired) {
       return (
-        <div className="flex-1 px-4 py-2 text-center">
+        <div className="flex-1 flex items-center justify-center p-2">
           <button
             onClick={onOpenExpiredSessionModal}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium shadow-md hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
-            Enviar Plantilla
+            <span>Continuar Conversación (24h excedidas)</span>
           </button>
         </div>
       );
     }
 
+    // Caso 3: Chat normal activo
     return (
-      <>
-        <div className="flex items-center gap-1">
-          <div className="relative group">
-            <label className="p-2 text-gray-500 hover:text-green-600 cursor-pointer transition flex items-center">
-              <input type="file" accept="image/*" onChange={(e) => handleMediaFileSelect(e, 'image')} className="hidden" disabled={!selectedConversation} />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h2l2-3h4l2 3h2a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /><circle cx="12" cy="13" r="4" /></svg>
-            </label>
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-10 opacity-0 group-hover:opacity-100 pointer-events-none bg-gray-900 text-white text-xs rounded px-2 py-1 shadow transition-all z-20 whitespace-nowrap">Imagen</span>
-          </div>
-          <div className="relative group">
-            <label className="p-2 text-gray-500 hover:text-green-600 cursor-pointer transition flex items-center">
-              <input type="file" accept="video/*" onChange={(e) => handleMediaFileSelect(e, 'video')} className="hidden" disabled={!selectedConversation} />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M4 6h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" /></svg>
-            </label>
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-10 opacity-0 group-hover:opacity-100 pointer-events-none bg-gray-900 text-white text-xs rounded px-2 py-1 shadow transition-all z-20 whitespace-nowrap">Video</span>
-          </div>
-          <div className="relative group">
-            <label className="p-2 text-gray-500 hover:text-green-600 cursor-pointer transition flex items-center">
-              <input type="file" accept="audio/*" onChange={(e) => handleMediaFileSelect(e, 'audio')} className="hidden" disabled={!selectedConversation} />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-2v13" /><circle cx="6" cy="18" r="3" /></svg>
-            </label>
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-10 opacity-0 group-hover:opacity-100 pointer-events-none bg-gray-900 text-white text-xs rounded px-2 py-1 shadow transition-all z-20 whitespace-nowrap">Audio</span>
-          </div>
-          <div className="relative group">
-            <label className="p-2 text-gray-500 hover:text-green-600 cursor-pointer transition flex items-center">
-              <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => handleMediaFileSelect(e, 'document')} className="hidden" disabled={!selectedConversation} />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7V3a1 1 0 011-1h6a1 1 0 011 1v4m-8 0h8m-8 0v12a1 1 0 001 1h6a1 1 0 001-1V7m-8 0h8" /></svg>
-            </label>
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-10 opacity-0 group-hover:opacity-100 pointer-events-none bg-gray-900 text-white text-xs rounded px-2 py-1 shadow transition-all z-20 whitespace-nowrap">Documento</span>
-          </div>
-          <div className="relative group">
-            <label className="p-2 text-gray-500 hover:text-green-600 cursor-pointer transition flex items-center">
-              <input type="file" accept="image/*" onChange={(e) => handleMediaFileSelect(e, 'sticker')} className="hidden" disabled={!selectedConversation} />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></svg>
-            </label>
-            <span className="absolute left-1/2 -translate-x-1/2 bottom-10 opacity-0 group-hover:opacity-100 pointer-events-none bg-gray-900 text-white text-xs rounded px-2 py-1 shadow transition-all z-20 whitespace-nowrap">Sticker</span>
-          </div>
-        </div>
-        <textarea
-          ref={textareaRef}
-          placeholder="Escribe un mensaje..."
-          className="flex-1 px-4 py-2 border-none outline-none bg-transparent text-gray-800 placeholder-gray-400 rounded-full focus:ring-0 resize-none overflow-y-hidden"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={!selectedConversation}
-          rows={1}
-          style={{ maxHeight: '120px' }}
-        />
-        <button
-          className={`ml-2 px-5 py-2 rounded-full font-semibold text-base shadow transition-colors ${selectedConversation && newMessage.trim() ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-          onClick={handleSendMessage}
-          disabled={!selectedConversation || !newMessage.trim()}
-        >
-          Enviar
-        </button>
-        {selectedMediaFile && (
-          <button
-            className={`ml-2 px-4 py-2 rounded-full font-medium transition-colors ${isUploadingMedia ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-            onClick={handleSendMedia}
-            disabled={isUploadingMedia}
-            title={isUploadingMedia ? 'Subiendo archivo...' : `Enviar ${selectedMediaFile.name}`}
+      <div className="flex items-end gap-2 w-full relative">
+        {/* Renderizado de Previsualización */}
+        {renderMediaPreview()}
+
+        {/* Inputs ocultos */}
+        <input type="file" accept="image/*,video/*" ref={imageInputRef} onChange={(e) => handleMediaFileSelect(e, 'image')} className="hidden" />
+        <input type="file" accept="image/webp,image/png" ref={stickerInputRef} onChange={(e) => handleMediaFileSelect(e, 'sticker')} className="hidden" />
+        <input type="file" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv" ref={documentInputRef} onChange={(e) => handleMediaFileSelect(e, 'document')} className="hidden" />
+        <input type="file" accept="audio/*" ref={audioInputRef} onChange={(e) => handleMediaFileSelect(e, 'audio')} className="hidden" />
+
+        {/* Menú de Adjuntos */}
+        {showAttachMenu && (
+          <div
+            ref={menuRef}
+            className="absolute bottom-14 left-0 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 flex flex-col gap-1 min-w-[180px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
-            {isUploadingMedia ? '⏳' : '📤'}
-          </button>
+            <AttachmentOption icon={<ImageIcon className="w-5 h-5 text-purple-500" />} label="Fotos y videos" onClick={() => triggerFileInput(imageInputRef)} />
+            <AttachmentOption icon={<Sticker className="w-5 h-5 text-blue-500" />} label="Sticker" onClick={() => triggerFileInput(stickerInputRef)} />
+            <AttachmentOption icon={<FileText className="w-5 h-5 text-indigo-500" />} label="Documento" onClick={() => triggerFileInput(documentInputRef)} />
+            <AttachmentOption icon={<Music className="w-5 h-5 text-red-500" />} label="Audio" onClick={() => triggerFileInput(audioInputRef)} />
+          </div>
         )}
-      </>
+
+        {/* Botón de Adjuntar */}
+        <div className="pb-2">
+          <button
+            onClick={() => setShowAttachMenu(!showAttachMenu)}
+            className={`p-2 rounded-full transition-colors ${showAttachMenu ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+            title="Adjuntar"
+            disabled={!selectedConversation}
+          >
+            {showAttachMenu ? <X className="w-6 h-6" /> : <Paperclip className="w-6 h-6" />}
+          </button>
+        </div>
+
+        {/* Input de Texto */}
+        <div className="flex-1 bg-white rounded-2xl border border-gray-300 focus-within:border-white focus-within:ring-2 focus-within:ring-[#00a884] transition-all py-2 px-4 min-h-[44px] flex items-center">
+          <textarea
+            ref={textareaRef}
+            placeholder="Escribe un mensaje"
+            className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-500 resize-none max-h-[120px] leading-relaxed py-1"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={!selectedConversation}
+            rows={1}
+          />
+        </div>
+
+        {/* Botón de Enviar */}
+        <div className="pb-1">
+          {selectedMediaFile ? (
+            <button
+              className={`p-3 rounded-full shadow-md transition-all transform active:scale-95 flex items-center justify-center
+                ${isUploadingMedia
+                  ? 'bg-gray-100 text-gray-400 cursor-wait'
+                  : 'bg-[#00a884] text-white hover:bg-[#008f6f]'}`}
+              onClick={handleSendMedia}
+              disabled={isUploadingMedia}
+              title={isUploadingMedia ? 'Subiendo...' : `Enviar ${selectedMediaFile.name}`}
+            >
+              {isUploadingMedia ? (
+                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send className="w-5 h-5 ml-0.5" />
+              )}
+            </button>
+          ) : (
+            <button
+              className={`p-3 rounded-full shadow-sm transition-all transform active:scale-95 flex items-center justify-center
+                ${!selectedConversation || !newMessage.trim()
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-[#00a884] text-white hover:bg-[#008f6f] shadow-md'}`}
+              onClick={handleSendMessage}
+              disabled={!selectedConversation || !newMessage.trim()}
+            >
+              <Send className="w-5 h-5 ml-0.5" />
+            </button>
+          )}
+        </div>
+      </div>
     );
   };
 
   return (
-    <div
-      className="w-full bg-transparent px-0 py-2 flex-shrink-0 flex items-end justify-center"
-      style={{
-        backgroundImage: wppPattern,
-        backgroundColor: '#e5ddd5',
-        backgroundRepeat: 'repeat',
-        backgroundPosition: 'left bottom',
-        backgroundSize: '60px 60px',
-        minHeight: '0',
-        zIndex: 1
-      }}
+    <footer
+      className="w-full bg-[#f0f2f5] px-4 py-2 flex-shrink-0 border-t border-gray-200"
+      style={{ zIndex: 20 }}
     >
-      <div
-        className={inputBarClass}
-        style={{
-          minHeight: '44px',
-          background: 'white',
-          boxShadow: '0 2px 16px 0 rgba(0,0,0,0.08)',
-          border: '1px solid #e5e7eb'
-        }}
-      >
+      <div className="max-w-4xl mx-auto w-full">
         {renderContent()}
       </div>
-    </div>
+    </footer>
   );
 };
+
+const AttachmentOption = ({ icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer rounded-lg transition-colors group w-full text-left"
+  >
+    <div className="group-hover:scale-110 transition-transform duration-200">
+      {icon}
+    </div>
+    <span className="text-gray-700 text-sm font-medium">{label}</span>
+  </button>
+);
 
 export default WppMessageInput;

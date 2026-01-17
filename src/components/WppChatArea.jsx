@@ -12,6 +12,7 @@ const WppChatArea = ({
   handleMediaFileSelect,
   selectedMediaFile,
   handleSendMedia,
+  handleCancelMedia,
   isUploadingMedia,
   onDocumentClick,
   messagesEndRef,
@@ -31,7 +32,7 @@ const WppChatArea = ({
   handleViewInAdminfo
 }) => {
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-transparent" style={{background: 'transparent'}}>
+    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-transparent" style={{ background: 'transparent' }}>
       <WppChatHeader
         selectedConversation={selectedConversation}
         adminfoData={adminfoData}
@@ -60,6 +61,7 @@ const WppChatArea = ({
         handleMediaFileSelect={handleMediaFileSelect}
         selectedMediaFile={selectedMediaFile}
         handleSendMedia={handleSendMedia}
+        handleCancelMedia={handleCancelMedia}
         isUploadingMedia={isUploadingMedia}
         selectedConversation={selectedConversation}
         isSessionExpired={isSessionExpired}
