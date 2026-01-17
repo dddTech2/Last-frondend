@@ -57,20 +57,17 @@ const CommunicationsWizard = () => {
     // Manejo de "Retomar Borrador"
     if (config.isResume) {
       const resumeData = { ...step1Data, ...config };
-      setCompletedData(resumeData);
+      setCompletedData({
+        ...resumeData,
+        resumeCommId: config.commId  // Pass the existing comm_id to skip generation
+      });
 
       // Set campaign config to support "Back" navigation
-      // We assume resumeData might not have the full template structure, 
-      // but we try to supply what we can or rely on CommunicationStep2 
-      // to handle partial data if it fetches the template details.
+      // Use the selectedTemplate from config (already properly set in handleResumeDraft)
       setCampaignConfig({
-        selectedTemplate: config.resumeData.template || {
-          // Fallback if template object isn't fully in resumeData
-          // This allows Step 2 to at least try to select it if it has the ID
-          id: config.resumeData.template_id || (config.resumeData.details && config.resumeData.details.id),
-          name: config.resumeData.details
-        },
+        selectedTemplate: config.selectedTemplate,
         communicationType: 'DOCUMENTO',
+        resumeCommId: config.commId,  // Pass the existing comm_id
         ...resumeData
       });
 
@@ -109,6 +106,22 @@ const CommunicationsWizard = () => {
     // After document generation and preview confirmation
     // Reset wizard for next campaign
     handleReset();
+  };
+
+  const handleStep4Back = () => {
+    // Clear resumeCommId when user goes back from Step 4
+    // This forces regeneration if they make changes
+    if (completedData?.resumeCommId) {
+      setCompletedData(prev => {
+        const { resumeCommId, ...rest } = prev;
+        return rest;
+      });
+      setCampaignConfig(prev => {
+        const { resumeCommId, ...rest } = prev;
+        return rest;
+      });
+    }
+    goToStep(3);
   };
 
   const goToStep = (stepNumber) => {
@@ -151,6 +164,7 @@ const CommunicationsWizard = () => {
           ref={(el) => (stepRefs.current['content-1'] = el)}
         >
           <CommunicationStep1
+            initialData={step1Data}
             onNext={handleStep1Submit}
             onCancel={handleReset}
           />
@@ -239,7 +253,7 @@ const CommunicationsWizard = () => {
               key={step4RunId}
               runId={step4RunId}
               campaignConfig={completedData}
-              onBack={() => goToStep(3)}
+              onBack={handleStep4Back}
               onComplete={handleStep4Complete}
             />
           )}

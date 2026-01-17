@@ -3,14 +3,14 @@ import { AlertCircle, Mail, Send, MessageCircle, MessageSquare } from 'lucide-re
 import { getObligacionesByCedula, getClientChannelsByCedula } from '../services/api';
 import { debounce } from 'lodash';
 
-const CommunicationStep1 = ({ onNext, onCancel }) => {
+const CommunicationStep1 = ({ onNext, onCancel, initialData }) => {
   const [formData, setFormData] = useState({
-    cedula: '',
-    obligaciones: [],
-    tipoDeudor: '',
-    canalComunicacion: '',
-    tipoAprobacion: '',
-    contactValue: ''
+    cedula: initialData?.cedula || '',
+    obligaciones: initialData?.obligaciones || [],
+    tipoDeudor: initialData?.tipoDeudor || '',
+    canalComunicacion: initialData?.canalComunicacion || '',
+    tipoAprobacion: initialData?.tipoAprobacion || '',
+    contactValue: initialData?.contactValue || ''
   });
 
   const [errors, setErrors] = useState({});

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import CampaignActionMenu from "./CampaignActionMenu";
 import CampaignReportDrawer from "./CampaignReportDrawer";
 import { getCampaignStats, refreshCampaignStats } from "../services/api";
@@ -31,6 +32,7 @@ const getStatusColor = (status) => {
 };
 
 export default function CampaignsTable({ channelFilter }) {
+  const location = useLocation();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,6 +65,31 @@ export default function CampaignsTable({ channelFilter }) {
     fetchCampaignStats();
   }, [fetchCampaignStats]);
 
+  // Detectar si se acaba de crear una campaña y ejecutar fetch automático
+  useEffect(() => {
+    if (location.state?.refreshNeeded) {
+      // Mostrar notificación de que se actualizará en 5 segundos
+      toast.info("Actualizando tabla en 5 segundos...", {
+        description: "Los cambios se reflejarán pronto.",
+        duration: 5000,
+      });
+      
+      // Esperar 5 segundos para que la vista materializada se actualice
+      const timer = setTimeout(async () => {
+        toast.promise(fetchCampaignStats(), {
+          loading: 'Actualizando tabla...',
+          success: 'Tabla actualizada correctamente',
+          error: 'Error al actualizar la tabla',
+        });
+      }, 5000);
+      
+      // Limpiar el estado de navegación para evitar refrescos repetidos
+      window.history.replaceState({}, document.title);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, fetchCampaignStats]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     toast.info("Solicitando actualización de estadísticas...");
@@ -78,6 +105,21 @@ export default function CampaignsTable({ channelFilter }) {
       console.error(err);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  // Función para actualizar automáticamente después de acciones (activar/desactivar/eliminar)
+  const handleCampaignAction = async () => {
+    try {
+      await refreshCampaignStats();
+      toast.success("Actualizando estadísticas...", {
+        description: "Los cambios se reflejarán en breve.",
+      });
+      // Re-fetch después de un delay para dar tiempo a la actualización
+      setTimeout(fetchCampaignStats, 5000);
+    } catch (err) {
+      console.error("Error al actualizar estadísticas:", err);
+      toast.error("Error al actualizar estadísticas");
     }
   };
 
@@ -173,7 +215,7 @@ export default function CampaignsTable({ channelFilter }) {
                       <CampaignActionMenu 
                         campaign={c} 
                         onViewReport={(camp) => { setSelectedCampaign(camp); setReportOpen(true); }}
-                        onCampaignDeleted={fetchCampaignStats}
+                        onCampaignDeleted={handleCampaignAction}
                       />
                     </td>
                   </tr>

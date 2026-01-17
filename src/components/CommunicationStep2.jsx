@@ -359,7 +359,11 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data, init
     onNext({
       isResume: true,
       commId: draft.id,
-      selectedTemplate: { type: 'DRAFT_RESUME' }, // Placeholder 
+      selectedTemplate: {
+        id: draft.template_id,
+        name: draft.details || 'Plantilla de borrador',
+        type: draft.template_type || 'DRAFT_RESUME'
+      },
       resumeData: draft
     });
   };

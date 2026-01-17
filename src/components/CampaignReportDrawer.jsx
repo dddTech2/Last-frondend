@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import EmailPreview from './wizards/EmailPreview';
 import WhatsAppPreview from './WhatsAppPreview';
-import { getAllCampaigns, getTemplateById, getSimpleFilters, BASE_URL } from '../services/api';
+import { getAllCampaigns, getTemplateById, getSimpleFilters, BASE_URL, downloadCampaignLogReport } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import SimpleFilterRulesPreview from './wizards/SimpleFilterRulesPreview';
@@ -172,39 +172,25 @@ const CampaignReportDrawer = ({ open, onClose, campaign }) => {
     setIsDownloading(true);
     toast.info("Preparando la descarga del CSV...");
     try {
-      const token = getAccessToken();
-      const response = await fetch(`${BASE_URL}/campaigns/${fullCampaign.id}/download_report`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/csv,application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await downloadCampaignLogReport(fullCampaign.id);
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const disposition = response.headers.get('Content-Disposition') || '';
-        const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
-        const serverFileName = decodeURIComponent(match?.[1] || match?.[2] || '');
-        a.download = serverFileName || `reporte_${fullCampaign.id}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        toast.success("Archivo CSV descargado con éxito.");
-      } else {
-        let errorMessage = `Error al descargar (${response.status})`;
-        try {
-          const data = await response.json();
-          errorMessage = data.detail || data.message || errorMessage;
-        } catch {}
-        toast.error(errorMessage);
-      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+      const serverFileName = decodeURIComponent(match?.[1] || match?.[2] || '');
+      a.download = serverFileName || `reporte_${fullCampaign.id}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Archivo CSV descargado con éxito.");
+
     } catch (error) {
-      toast.error("Error de red al intentar descargar el reporte.");
+      console.error(error);
+      toast.error(error.message || "Error al descargar el reporte.");
     } finally {
       setIsDownloading(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Loader, CheckCircle2, ArrowLeft, Maximize2, X, Send } from 'lucide-react';
-import { generateCommunication, getCommunicationPreview, sendCommunication } from '../services/api';
+import { generateCommunication, getCommunicationPreview, sendCommunication, sendBatchCommunication, checkMyEmployeeCredentials } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import * as mammoth from 'mammoth';
 
 // Componente para renderizar documentos DOCX
@@ -135,6 +136,7 @@ const ErrorModal = ({ isOpen, onClose, error }) => {
 };
 
 const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
+  const { user } = useAuth();
   const [generating, setGenerating] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [generatedDocs, setGeneratedDocs] = useState([]);
@@ -152,6 +154,8 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const [sendError, setSendError] = useState(null);
   const [sendSuccess, setSendSuccess] = useState('');
   const [previewsCache, setPreviewsCache] = useState({});
+  const [hasCredentials, setHasCredentials] = useState(false);
+  const [checkingCredentials, setCheckingCredentials] = useState(true);
   const runIdRef = useRef(runId);
 
   useEffect(() => {
@@ -173,7 +177,48 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setSendError(null);
     setSendSuccess('');
     setPreviewsCache({});
+    setCheckingCredentials(true);
+    setHasCredentials(false);
   }, [runId, campaignConfig]);
+
+  // Check if user has SMTP credentials stored (using optimized endpoint)
+  useEffect(() => {
+    const checkCredentials = async () => {
+      try {
+        setCheckingCredentials(true);
+        console.log('Checking user credentials via /me/check...');
+        
+        const status = await checkMyEmployeeCredentials();
+        console.log('Credential status:', status);
+
+        // Check both has_credentials AND is_active
+        if (status && status.has_credentials && status.is_active) {
+          console.log('User has active stored credentials, password prompt will be skipped');
+          setHasCredentials(true);
+        } else {
+          console.log('User has NO active credentials or credentials inactive');
+          setHasCredentials(false);
+        }
+      } catch (error) {
+        console.error('Error checking credentials:', error);
+        // Fallback to safety: ask for password
+        setHasCredentials(false);
+      } finally {
+        setCheckingCredentials(false);
+      }
+    };
+
+    checkCredentials();
+  }, []); // Only run once on mount, backend handles 'me' context
+
+  // Initialize generatedDocs from resumeCommId if present (for draft resume)
+  useEffect(() => {
+    if (campaignConfig.resumeCommId && generatedDocs.length === 0) {
+      console.log('Resuming draft with commId:', campaignConfig.resumeCommId);
+      setGeneratedDocs([{ id: campaignConfig.resumeCommId }]);
+      setSelectedDocIndex(0);
+    }
+  }, [campaignConfig.resumeCommId]);
 
   useEffect(() => {
     setPreviewData(null);
@@ -204,7 +249,9 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     ? 'Correo electrónico'
     : campaignConfig.canalComunicacion === 'whatsapp'
       ? 'WhatsApp'
-      : campaignConfig.canalComunicacion || 'Canal';
+      : campaignConfig.canalComunicacion === 'sms'
+        ? 'SMS'
+        : campaignConfig.canalComunicacion || 'Canal';
   const recipientContact = campaignConfig.contactValue || '';
   const contactLabel = campaignConfig.canalComunicacion === 'email'
     ? 'Correo de salida'
@@ -219,6 +266,16 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setShowPasswordPrompt(true);
   };
 
+  const handleSendClick = () => {
+    // If user has credentials, send directly without password prompt
+    if (hasCredentials) {
+      handleConfirmSend();
+    } else {
+      // Otherwise, show password prompt
+      handleOpenPasswordPrompt();
+    }
+  };
+
   const handleClosePasswordPrompt = () => {
     if (sending) return;
     setShowPasswordPrompt(false);
@@ -227,7 +284,9 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   };
 
   const handleConfirmSend = async () => {
-    if (!senderPassword.trim()) {
+    // If user has credentials, we don't need password
+    // Otherwise, validate password was entered
+    if (!hasCredentials && !senderPassword.trim()) {
       setSendError('Debes ingresar la contraseña de envío.');
       return;
     }
@@ -239,18 +298,36 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setSending(true);
     setSendError(null);
     try {
-      // Enviar todas las comunicaciones generadas
-      for (const doc of generatedDocs) {
-        await sendCommunication(doc.id, channelParam, {
-          recipient_contact: recipientContact,
-          sender_password: senderPassword.trim(),
-        });
+      const passwordToUse = hasCredentials ? null : senderPassword.trim();
+
+      // Use batch sending for multiple email documents
+      if (generatedDocs.length > 1 && channelParam === 'EMAIL') {
+        console.log('Using batch send for multiple email documents');
+        const communication_ids = generatedDocs.map(doc => doc.id);
+        const response = await sendBatchCommunication(
+          communication_ids,
+          recipientContact,
+          passwordToUse
+        );
+        
+        setShowPasswordPrompt(false);
+        setSenderPassword('');
+        setSendSuccess(response.message || `¡${response.sent_count} comunicaciones enviadas con éxito!`);
+      } else {
+        // Use individual sending for single documents or non-email channels
+        console.log('Using individual send');
+        for (const doc of generatedDocs) {
+          await sendCommunication(doc.id, channelParam, {
+            recipient_contact: recipientContact,
+            sender_password: passwordToUse,
+          });
+        }
+        setShowPasswordPrompt(false);
+        setSenderPassword('');
+        setSendSuccess(generatedDocs.length > 1
+          ? '¡Comunicaciones enviadas con éxito!'
+          : '¡Comunicación enviada con éxito!');
       }
-      setShowPasswordPrompt(false);
-      setSenderPassword('');
-      setSendSuccess(generatedDocs.length > 1
-        ? '¡Comunicaciones enviadas con éxito!'
-        : '¡Comunicación enviada con éxito!');
     } catch (err) {
       setSendError(err.message || 'No se pudo enviar la comunicación');
     } finally {
@@ -344,7 +421,10 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     } catch (err) {
       console.error('Error loading preview:', err);
       if (runIdRef.current === currentRunId) {
-        setError(`No se pudo cargar el preview: ${err.message}`);
+        const errorMessage = campaignConfig.resumeCommId 
+          ? `No se pudo cargar el borrador. Es posible que haya sido eliminado. Presiona "Atrás" y vuelve a generarlo.`
+          : `No se pudo cargar el preview: ${err.message}`;
+        setError(errorMessage);
       }
     } finally {
       if (runIdRef.current === currentRunId) {
@@ -354,6 +434,13 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   };
 
   const handleGenerateCommunication = async () => {
+    // Prevent regenerating resumed drafts
+    if (campaignConfig.resumeCommId) {
+      setError('Este borrador ya ha sido generado. Usa "Atrás" para modificarlo o eliminar el borrador.');
+      setShowErrorModal(true);
+      return;
+    }
+
     setGenerating(true);
     setError(null);
 
@@ -372,7 +459,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
       console.log('form_data keys:', Object.keys(form_data));
 
       const communicationData = {
-        template_id: campaignConfig.selectedTemplateId,
+        template_id: campaignConfig.selectedTemplateId || campaignConfig.selectedTemplate?.id || campaignConfig.template_id,
         client_id: campaignConfig.cedula,
         client_role: campaignConfig.tipoDeudor?.toUpperCase() || 'DEUDOR',
         form_data: form_data
@@ -454,7 +541,13 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
               <div className="bg-white border border-blue-200 rounded-lg p-2">
                 <h5 className="text-sm font-bold text-blue-900 mb-1.5">📧 Comunicación</h5>
                 <div className="space-y-1 text-sm text-blue-800">
-                  <p><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo Electrónico' : 'WhatsApp'}</p>
+                  <p><strong>Canal:</strong> {
+                    campaignConfig.canalComunicacion === 'email' 
+                      ? 'Correo Electrónico' 
+                      : campaignConfig.canalComunicacion === 'sms'
+                        ? 'SMS'
+                        : 'WhatsApp'
+                  }</p>
                   <p><strong>Tipo:</strong> {campaignConfig.tipoAprobacion === 'sin_aprobacion' ? 'Sin Aprobación' : 'Con Aprobación'}</p>
                 </div>
               </div>
@@ -570,11 +663,23 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
             <h4 className="font-semibold text-blue-900 text-base mb-2">📋 Resumen de Datos</h4>
             <div className="space-y-2">
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <p className="text-sm"><strong>Cédula:</strong> {campaignConfig.cedula}</p>
-                <p className="text-sm"><strong>Deudor:</strong> {campaignConfig.tipoDeudor === 'deudor' ? 'Deudor' : 'Codeudor'}</p>
+                <p className="text-sm"><strong>Canal:</strong> {
+                  campaignConfig.canalComunicacion === 'email' 
+                    ? 'Correo' 
+                    : campaignConfig.canalComunicacion === 'sms'
+                      ? 'SMS'
+                      : 'WhatsApp'
+                }</p>
+                <p className="text-sm"><strong>Plantilla:</strong> {campaignConfig.selectedTemplate?.name}</p>
               </div>
               <div className="bg-white border border-blue-200 rounded-lg p-2">
-                <p className="text-sm"><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo' : 'WhatsApp'}</p>
+                <p className="text-sm"><strong>Canal:</strong> {
+                  campaignConfig.canalComunicacion === 'email' 
+                    ? 'Correo' 
+                    : campaignConfig.canalComunicacion === 'sms'
+                      ? 'SMS'
+                      : 'WhatsApp'
+                }</p>
                 <p className="text-sm"><strong>Plantilla:</strong> {campaignConfig.selectedTemplate?.name}</p>
               </div>
             </div>
@@ -677,7 +782,13 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
             <div className="bg-white border border-blue-200 rounded-lg p-2">
               <h5 className="text-sm font-bold text-blue-900 mb-1">📧 Comunicación</h5>
               <div className="space-y-0.5 text-sm text-blue-800">
-                <p><strong>Canal:</strong> {campaignConfig.canalComunicacion === 'email' ? 'Correo' : 'WhatsApp'}</p>
+                <p><strong>Canal:</strong> {
+                  campaignConfig.canalComunicacion === 'email' 
+                    ? 'Correo' 
+                    : campaignConfig.canalComunicacion === 'sms'
+                      ? 'SMS'
+                      : 'WhatsApp'
+                }</p>
                 <p><strong>Tipo:</strong> {campaignConfig.tipoAprobacion === 'sin_aprobacion' ? 'Sin Aprobación' : 'Con Aprobación'}</p>
                 <p><strong>{contactLabel}:</strong> {recipientContact || 'No disponible'}</p>
               </div>
@@ -815,12 +926,12 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
           </button>
         ) : (
           <button
-            onClick={handleOpenPasswordPrompt}
-            disabled={!canSend || sending}
+            onClick={handleSendClick}
+            disabled={!canSend || sending || checkingCredentials}
             className="px-5 py-2 text-sm rounded-lg font-bold text-white bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg ml-auto flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Send className="h-3 w-3" />
-            Confirmar y enviar
+            {checkingCredentials ? 'Verificando...' : 'Confirmar y enviar'}
           </button>
         )}
       </div>

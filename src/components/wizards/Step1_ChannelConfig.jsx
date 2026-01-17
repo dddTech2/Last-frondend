@@ -26,16 +26,60 @@ const ChannelCard = ({ icon, title, description, selected, onClick, color }) => 
 };
 
 const Step1_ChannelConfig = ({ campaignData, setCampaignData }) => {
-  const { channel, name } = campaignData;
+  const { channel, name, campaignType = 'normal' } = campaignData;
 
   const handleChannelSelect = (selectedChannel) => {
     setCampaignData({ ...campaignData, channel: selectedChannel });
   };
 
+  const handleCampaignTypeChange = (type) => {
+    setCampaignData({ ...campaignData, campaignType: type });
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800">Inicia tu Campaña</h2>
-      <p className="text-gray-500 mt-1">Primero, selecciona el canal de comunicación para tu campaña.</p>
+      <p className="text-gray-500 mt-1">Selecciona el tipo de campaña y el canal de comunicación.</p>
+
+      {/* Toggle: Tipo de Campaña */}
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3">Tipo de Campaña</h3>
+        <div className="flex gap-4">
+          <button
+            onClick={() => handleCampaignTypeChange('normal')}
+            className={`flex-1 px-6 py-4 rounded-lg border-2 transition-all duration-200 ${
+              campaignType === 'normal'
+                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="font-semibold">Normal</span>
+            </div>
+            <p className="text-xs mt-2 opacity-75">Con segmentación de audiencia</p>
+          </button>
+
+          <button
+            onClick={() => handleCampaignTypeChange('csv')}
+            className={`flex-1 px-6 py-4 rounded-lg border-2 transition-all duration-200 ${
+              campaignType === 'csv'
+                ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="font-semibold">Por CSV</span>
+            </div>
+            <p className="text-xs mt-2 opacity-75">Carga masiva con archivo</p>
+          </button>
+        </div>
+      </div>
 
       <div className="mt-8">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Selecciona el Canal</h3>
@@ -77,6 +121,9 @@ const Step1_ChannelConfig = ({ campaignData, setCampaignData }) => {
           placeholder={`Ej: Campaña de ${channel} para clientes nuevos`}
           className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        {name && name.length < 7 && (
+          <p className="text-xs text-red-500 mt-1">El nombre debe tener al menos 7 caracteres</p>
+        )}
       </div>
     </div>
   );

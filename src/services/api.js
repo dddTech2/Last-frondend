@@ -1,5 +1,6 @@
-export const BASE_URL = "https://backend-475190189080.us-central1.run.app/api/v1";
-//export const BASE_URL = "http://localhost:8000/api/v1";
+// La URL se toma de la variable de entorno VITE_API_URL si existe,
+// de lo contrario usa la URL de producción por defecto.
+export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
 
 
 // Función para obtener el token de autenticación
@@ -62,6 +63,12 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
       error.status = response.status;
       throw error;
     }
+    
+    // Si es 204 No Content, no hay body para parsear
+    if (response.status === 204) {
+      return null;
+    }
+    
     const json = await response.json();
     if (isNotif) {
       const dur = (performance.now() - start).toFixed(1);
@@ -154,6 +161,7 @@ export const loginWithPassword = (username, password) => {
 export const firstTimeLogin = (identifier, password) => apiRequest('/auth/login/first-time', 'POST', { identifier, password });
 
 // --- Endpoints de Usuario ---
+export const getUserProfile = () => apiRequest('/users/me');
 export const changePassword = (current_password, new_password) => apiRequest('/users/me/change-password', 'PUT', { current_password, new_password });
 
 
@@ -166,8 +174,13 @@ export const createSimpleFilter = (filterData) => apiRequest('/audience/filters/
 
 // --- Endpoints de Campañas ---
 export const getCampaignStats = () => apiRequest('/campaigns/stats');
+export const getDashboardStats = () => apiRequest('/campaigns/dashboard-stats');
 export const refreshCampaignStats = () => apiRequest('/campaigns/stats/refresh', 'POST');
+export const getCampaignById = (campaignId) => apiRequest(`/campaigns/${campaignId}`);
+export const updateCampaign = (campaignId, campaignData) => apiRequest(`/campaigns/${campaignId}`, 'PUT', campaignData);
 export const createAndLaunchCampaign = (campaignData) => apiRequest('/campaigns/', 'POST', campaignData);
+export const activateCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}/activate`, 'POST');
+export const inactivateCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}/inactivate`, 'POST');
 export const getAllCampaigns = () => apiRequest('/campaigns/');
 export const deleteCampaign = (campaignId) => apiRequest(`/campaigns/${campaignId}`, 'DELETE');
 
@@ -203,6 +216,25 @@ export const getCampaignPreviewCSV = async (payload) => {
     }
   }
   return res;
+};
+
+export const downloadCampaignLogReport = async (campaignId) => {
+  const token = getAuthToken();
+  const headers = {
+    'Accept': 'text/csv,application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}/reports/send-log-report?campaign_id=${campaignId}&action=download`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || `Error ${response.status}`);
+  }
+  return response;
 };
 
 // --- Endpoints de Campañas Recurrentes (Schedules) ---
@@ -330,6 +362,51 @@ export const addTagToConversation = (conversationId, tagName) => apiRequest(`/co
 
 export const getObligationUrlByCedula = (cedula) => apiRequest(`/obligation-urls/by-cedula/${cedula}`);
 
+export const getCampaignHistory = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      if (Array.isArray(value)) {
+        value.forEach(v => queryParams.append(key, v));
+      } else if (key === 'status' && value) {
+        // Status debe ser un array, convertir si es string
+        queryParams.append(key, value);
+      } else {
+        queryParams.append(key, value);
+      }
+    }
+  });
+  return apiRequest(`/reports/campaign-history?${queryParams.toString()}`);
+};
+
+export const exportCampaignHistory = (filters, email) => {
+  const queryParams = new URLSearchParams();
+  queryParams.append('email', email);
+  
+  // Normalizar filtros para que coincidan con el schema del backend
+  const normalizedFilters = {
+    start_date: filters.start_date || null,
+    end_date: filters.end_date || null,
+    channel: filters.channel || null,
+    status: filters.status ? [filters.status] : null, // Convertir a lista
+    client_cedula: filters.client_cedula || null,
+    recipient_contact: filters.recipient_contact || null,
+    skip: 0,
+    limit: 50
+  };
+  
+  // Eliminar campos null para no enviarlos
+  const cleanFilters = Object.fromEntries(
+    Object.entries(normalizedFilters).filter(([_, v]) => v !== null && v !== '')
+  );
+  
+  return apiRequest(`/reports/campaign-history/export?${queryParams.toString()}`, 'POST', cleanFilters);
+};
+
+export const getClientNamesLookup = async (file) => {
+  return apiRequestWithFile('/reports/client-names-lookup', 'POST', file);
+};
+
 // --- Endpoints de Información del Cliente ---
 export const getResultadoGestor = (cedula) => apiRequest(`/client-info/resultado-gestor/${cedula}`);
 export const getCompromisos = (cedula) => apiRequest(`/client-info/compromisos/${cedula}`);
@@ -456,6 +533,10 @@ export const rejectContract = (cedula, motivo) => apiRequest(`/employees/${cedul
 export const approveRetirement = (cedula) => apiRequest(`/employees/${cedula}/retire/approve`, 'POST', {});
 export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${cedula}/retire/reject`, 'POST', { motivo_rechazo_juridico: motivo });
 
+// --- Endpoints de Credenciales de Empleados ---
+export const checkEmployeeCredential = (adminfo) => apiRequest(`/employee-credentials/${adminfo}`);
+export const checkMyEmployeeCredentials = () => apiRequest('/employee-credentials/me/check');
+
 // --- Endpoints de Comunicaciones (Documents) ---
 export const getCommunicationTemplates = (statusFilter = 'APPROVED', templateType = null) => {
   let endpoint = `/communications/templates?status_filter=${statusFilter}`;
@@ -544,6 +625,15 @@ export const sendCommunication = (commId, channel, sendData) => {
   const query = channel ? `?channel=${encodeURIComponent(channel)}` : '';
   return apiRequest(`/communications/${commId}/send${query}`, 'PATCH', sendData);
 };
+
+export const sendBatchCommunication = (communication_ids, recipient_contact, sender_password = null) => {
+  return apiRequest('/communications/send-batch', 'POST', {
+    communication_ids,
+    recipient_contact,
+    sender_password
+  });
+};
+
 export const getCommunicationPreview = async (commId) => {
   const token = getAuthToken();
   const headers = {
@@ -586,7 +676,10 @@ export const getCommunicationPreview = async (commId) => {
 
 // --- Endpoints para campos de plantillas de comunicación ---
 export const getCommunicationTemplateFields = (templateId) => apiRequest(`/communications/templates/${templateId}/fields`);
+export const addCommunicationTemplateField = (templateId, fieldData) => apiRequest(`/communications/templates/${templateId}/fields`, 'POST', fieldData);
 export const updateCommunicationTemplateField = (fieldId, fieldData) => apiRequest(`/communications/templates/fields/${fieldId}`, 'PUT', fieldData);
+export const deleteCommunicationTemplateField = (fieldId) => apiRequest(`/communications/templates/fields/${fieldId}`, 'DELETE');
+export const getAvailableVariables = () => apiRequest('/communications/available-variables');
 
 // --- Endpoints de Comunicaciones Jurídicas ---
 export const getLegalBatches = () => apiRequest('/communications/legal/batches');
@@ -594,3 +687,33 @@ export const getLegalBatchCommunications = (batchId) => apiRequest(`/communicati
 export const uploadLegalBatchReview = (batchId, file) => apiRequestWithFile(`/communications/legal/batches/${batchId}/upload-review`, 'POST', file);
 export const generateLegalBatchCorrespondence = (batchId) => apiRequest(`/communications/legal/batches/${batchId}/generate-correspondence`, 'POST');
 export const sendLegalBatchCorrespondence = (batchId, credentials) => apiRequest(`/communications/legal/batches/${batchId}/send`, 'POST', credentials);
+
+// --- Endpoints para Campañas por CSV ---
+export const getTemplateVariablesDetail = (templateId) => apiRequest(`/templates/${templateId}/variables-detail`);
+
+export const uploadCampaignCSV = async (formData) => {
+  const token = getAuthToken();
+  const headers = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/whatsapp/upload_campaign_csv`, {
+      method: 'POST',
+      headers,
+      body: formData, // No establecer Content-Type, el navegador lo hace automáticamente con boundary
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Error al cargar el CSV');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error en uploadCampaignCSV:', error);
+    throw error;
+  }
+};
