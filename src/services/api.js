@@ -537,6 +537,18 @@ export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${ced
 export const checkEmployeeCredential = (adminfo) => apiRequest(`/employee-credentials/${adminfo}`);
 export const checkMyEmployeeCredentials = () => apiRequest('/employee-credentials/me/check');
 
+// --- Gestión de Contraseñas de Empleados (Admin) ---
+export const uploadEmployeeCredentialsCSV = (file) => apiRequestWithFile('/employee-credentials/upload-csv', 'POST', file);
+export const createEmployeeCredential = (credentialData) => apiRequest('/employee-credentials/', 'POST', credentialData);
+export const getAllEmployeeCredentials = () => apiRequest('/employee-credentials/');
+export const getEmployeeCredential = (adminfo) => apiRequest(`/employee-credentials/${adminfo}`);
+export const updateEmployeeCredential = (adminfo, credentialData) => apiRequest(`/employee-credentials/${adminfo}`, 'PUT', credentialData);
+export const deleteEmployeeCredential = (adminfo) => apiRequest(`/employee-credentials/${adminfo}`, 'DELETE');
+export const verifyEmployeeCredential = (adminfo, password = null) => {
+  const body = password ? { password } : {};
+  return apiRequest(`/employee-credentials/${adminfo}/verify`, 'POST', body);
+};
+
 // --- Endpoints de Comunicaciones (Documents) ---
 export const getCommunicationTemplates = (statusFilter = 'APPROVED', templateType = null) => {
   let endpoint = `/communications/templates?status_filter=${statusFilter}`;
