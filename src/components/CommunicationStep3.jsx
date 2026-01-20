@@ -138,6 +138,14 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
       );
   };
 
+  // Detectar si un campo es de ciudad de oficina
+  const isCityOfficeField = (field) => {
+    const fieldNameUpper = (field.field_name || '').toUpperCase();
+    const fieldIdUpper = (field.id || '').toUpperCase();
+    
+    return fieldNameUpper === 'CIUDAD_OFICINA' || fieldIdUpper === 'CIUDAD_OFICINA';
+  };
+
   // Partir nombre en 4 partes
   const parseNameInto4Parts = (fullName) => {
     if (!fullName || typeof fullName !== 'string') {
@@ -407,6 +415,19 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                       : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
                       }`}
                   />
+                ) : isCityOfficeField(field) ? (
+                  <select
+                    value={fieldValues[field.__fieldKey] || ''}
+                    onChange={(e) => handleTextChange(field.__fieldKey, e.target.value)}
+                    className={`w-full px-3 py-2.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all ${fieldErrors[field.__fieldKey]
+                      ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                      : 'border-gray-300 bg-white focus:ring-blue-500 focus:border-blue-500'
+                      }`}
+                  >
+                    <option value="">Selecciona una ciudad</option>
+                    <option value="Bogotá D.C">Bogotá D.C</option>
+                    <option value="Santiago de Cali">Santiago de Cali</option>
+                  </select>
                 ) : isNameField(field) ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
