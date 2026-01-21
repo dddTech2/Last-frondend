@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import CommunicationStep1 from './CommunicationStep1';
 import CommunicationStep2 from './CommunicationStep2';
 import CommunicationStep3 from './CommunicationStep3';
@@ -12,8 +12,6 @@ const CommunicationsWizard = () => {
   const [campaignConfig, setCampaignConfig] = useState(null);
   const [completedData, setCompletedData] = useState(null);
   const [step4RunId, setStep4RunId] = useState(0);
-  const [stepHeights, setStepHeights] = useState({});
-  const stepRefs = useRef({});
 
   const TOTAL_STEPS = 4;
 
@@ -23,24 +21,6 @@ const CommunicationsWizard = () => {
     { id: 3, title: 'Paso 3: Mensaje', subtitle: 'Redacta tu comunicación', icon: '3️⃣' },
     { id: 4, title: 'Paso 4: Confirmación', subtitle: 'Resumen y envío', icon: '4️⃣' },
   ];
-
-  // Calcular altura del contenido dinámicamente
-  useEffect(() => {
-    const calculateHeights = () => {
-      const newHeights = {};
-      steps.forEach(step => {
-        const contentElement = stepRefs.current[`content-${step.id}`];
-        if (contentElement) {
-          newHeights[step.id] = contentElement.scrollHeight;
-        }
-      });
-      setStepHeights(newHeights);
-    };
-
-    calculateHeights();
-    window.addEventListener('resize', calculateHeights);
-    return () => window.removeEventListener('resize', calculateHeights);
-  }, [currentStep, step1Data, campaignConfig, completedData]);
 
   const handleStep1Submit = (data) => {
     setStep1Data(data);
@@ -161,7 +141,6 @@ const CommunicationsWizard = () => {
         </div>
         <div
           className="wizard-step__content"
-          ref={(el) => (stepRefs.current['content-1'] = el)}
         >
           <CommunicationStep1
             initialData={step1Data}
@@ -187,7 +166,6 @@ const CommunicationsWizard = () => {
         </div>
         <div
           className="wizard-step__content"
-          ref={(el) => (stepRefs.current['content-2'] = el)}
         >
           {step1Data && selectedCommunication && (
             <CommunicationStep2
@@ -217,7 +195,6 @@ const CommunicationsWizard = () => {
         </div>
         <div
           className="wizard-step__content"
-          ref={(el) => (stepRefs.current['content-3'] = el)}
         >
           {step1Data && campaignConfig && selectedCommunication && (
             <CommunicationStep3
@@ -246,7 +223,6 @@ const CommunicationsWizard = () => {
         </div>
         <div
           className="wizard-step__content"
-          ref={(el) => (stepRefs.current['content-4'] = el)}
         >
           {completedData && (
             <CommunicationStep4

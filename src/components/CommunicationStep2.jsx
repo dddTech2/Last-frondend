@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, FileText, Eye, Download, Maximize2, X, Search, History, Clock, ArrowRight, CheckCircle, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { getCommunicationTemplates, getCommunicationTemplate, getCommunicationTemplateFile, getClientCommunicationHistory } from '../services/api';
 import * as mammoth from 'mammoth';
@@ -320,6 +320,10 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data, init
   const [historyData, setHistoryData] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+  // Refs for duplicate request prevention
+  const lastFetchedCedula = useRef(null);
+  const lastFetchedApprovalType = useRef(null);
+
   // Cargar historial al montar
   useEffect(() => {
     // Si ya tenemos datos iniciales (ej: volviendo del paso 3 o 4), no mostrar modal automáticamente
@@ -339,6 +343,10 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data, init
 
     const checkHistory = async () => {
       if (step1Data?.cedula) {
+        // Prevent duplicate fetches
+        if (lastFetchedCedula.current === step1Data.cedula) return;
+        lastFetchedCedula.current = step1Data.cedula;
+
         try {
           const res = await getClientCommunicationHistory(step1Data.cedula);
           if (res?.pagination?.total_items > 0) {
@@ -370,7 +378,10 @@ const CommunicationStep2 = ({ communicationType, onNext, onBack, step1Data, init
 
   // Cargar plantillas desde el endpoint
   useEffect(() => {
-    fetchTemplates();
+    if (step1Data?.tipoAprobacion && lastFetchedApprovalType.current !== step1Data.tipoAprobacion) {
+      lastFetchedApprovalType.current = step1Data.tipoAprobacion;
+      fetchTemplates();
+    }
   }, [step1Data?.tipoAprobacion]);
 
   // Cleanup de URLs de objeto cuando se desmonta el componente
