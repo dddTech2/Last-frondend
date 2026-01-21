@@ -33,14 +33,14 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
   // Funciones de validación específicas por tipo de campo
 
   // Detectar si un campo de texto debe ser tratado como numérico
-  const isNumericTextField = (field) => {
-    if (field.field_type !== 'TEXT') return false;
-    const name = (field.field_name || '').toLowerCase();
-    const label = (field.field_label || '').toLowerCase();
-    const numericKeywords = ['numero', 'number', 'radicado', 'telefono', 'celular', 'nit', 'cedula', 'documento', 'oferta', 'cuota'];
-    // Excluir si ya es detectado por otras lógicas
-    return numericKeywords.some(kw => name.includes(kw) || label.includes(kw));
-  };
+  // const isNumericTextField = (field) => {
+  //   if (field.field_type !== 'TEXT') return false;
+  //   const name = (field.field_name || '').toLowerCase();
+  //   const label = (field.field_label || '').toLowerCase();
+  //   const numericKeywords = ['numero', 'number', 'radicado', 'telefono', 'celular', 'nit', 'cedula', 'documento', 'oferta', 'cuota'];
+  //   // Excluir si ya es detectado por otras lógicas
+  //   return numericKeywords.some(kw => name.includes(kw) || label.includes(kw));
+  // };
 
   // Helper para detectar campos de moneda
   const isCurrencyField = (field) => {
@@ -73,7 +73,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
     }
 
     // Validar según tipo de campo
-    if (field.field_type === 'NUMBER' || isNumericTextField(field)) {
+    if (field.field_type === 'NUMBER') {
       // Solo números, sin caracteres especiales
       if (!/^\d+$/.test(value)) {
         return `${field.field_label} solo puede contener números`;
@@ -392,7 +392,7 @@ const CommunicationStep3 = ({ communicationType, campaignConfig, onNext, onBack 
                 </label>
 
                 {/* Renderizar input según el tipo de campo */}
-                {field.field_type === 'NUMBER' || isNumericTextField(field) ? (
+                {field.field_type === 'NUMBER' ? (
                   <input
                     type="text"
                     inputMode="numeric"
