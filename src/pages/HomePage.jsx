@@ -38,12 +38,12 @@ const HomePage = () => {
   const allQuickAccessItems = [
     { title: "Gestionar Clientes", description: "Administra y consulta información de clientes", icon: <ManageClientsIcon />, path: "/clients", roles: ["Admin", "Coordinador", "Gestor"] },
     { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", roles: ["Admin", "Coordinador", "Directora de Operaciones"] },
-    { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", roles: ["Admin", "Coordinador", "Gestor"] },
+    { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", public: true, roles: ["Admin", "Coordinador", "Gestor"] },
     { title: "Constructor de Comunicaciones", description: "Crea y configura plantillas de documentos", icon: <BuilderIcon />, path: "/communications/builder", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { title: "Aprobación de Plantillas", description: "Revisa y aprueba plantillas de mensajes", icon: <TemplateApprovalIcon />, path: "/templates/approval", roles: ["Admin", "Jurídico", "Directora de Operaciones"] },
     { title: "Crear Plantilla", description: "Crea nuevas plantillas de SMS, WhatsApp o Email", icon: <BuilderIcon />, path: "/templates/new", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { title: "Aprobación Jurídica", description: "Revisa comunicaciones pendientes de Jurídico", icon: <LegalApprovalIcon />, path: "/communications/legal-approval", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico"], strictForRoles: true },
-    { title: "Demográficos", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Directora de Operaciones", "Jurídico", "Juridico"] },
+    { title: "Demográficos", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", public: true, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Directora de Operaciones", "Jurídico", "Juridico"] },
     { title: "Gestión de Usuarios", description: "Administra usuarios del sistema", icon: <UserManagementIcon />, path: "/users", roles: ["Admin"] },
     { title: "Reportes y Analítica", description: "Visualiza métricas y genera reportes", icon: <ReportsIcon />, path: "/reports", roles: ["Admin", "Coordinador"] },
     { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", roles: ["Admin", "Coordinador", "Gestor"] },
@@ -54,14 +54,16 @@ const HomePage = () => {
   
   // Filtramos los accesos rápidos basados en los roles del usuario
   const hasSuperAdmin = resolvedRoles.includes("Super Administrador");
-  const accessibleItems = resolvedRoles.length > 0
-    ? allQuickAccessItems.filter(item => {
-        if (hasSuperAdmin && !item.strictForRoles) {
-          return true;
-        }
-        return resolvedRoles.some(userRole => item.roles.includes(userRole));
-      })
-    : [];
+  const accessibleItems = allQuickAccessItems.filter(item => {
+    if (item.public) return true;
+    
+    if (resolvedRoles.length === 0) return false;
+
+    if (hasSuperAdmin && !item.strictForRoles) {
+      return true;
+    }
+    return resolvedRoles.some(userRole => item.roles.includes(userRole));
+  });
   
   console.log('Accesos filtrados:', accessibleItems);
 
