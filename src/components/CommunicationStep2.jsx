@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, FileText, Eye, Download, Maximize2, X, Search, History, Clock, ArrowRight, CheckCircle, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertCircle, FileText, Eye, Maximize2, X, Search, History, Clock, ArrowRight, CheckCircle, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { getCommunicationTemplates, getCommunicationTemplate, getCommunicationTemplateFile, getClientCommunicationHistory } from '../services/api';
 import * as mammoth from 'mammoth';
 import JoditEditor from 'jodit-react';
@@ -136,19 +136,8 @@ const FullDocumentModal = ({ isOpen, onClose, previewFile, templateName }) => {
         </div>
 
         {/* Footer del Modal */}
-        <div className="border-t border-gray-200 p-4 bg-white sticky bottom-0 flex justify-between">
-          <button
-            onClick={() => {
-              const a = document.createElement('a');
-              a.href = previewFile.url;
-              a.download = `${templateName}`;
-              a.click();
-            }}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Descargar
-          </button>
+        <div className="border-t border-gray-200 p-4 bg-white sticky bottom-0 flex justify-end">
+
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
