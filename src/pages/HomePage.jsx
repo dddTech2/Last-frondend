@@ -71,14 +71,14 @@ const HomePage = () => {
     <div className="p-8 bg-gray-50 min-h-screen">
       <WelcomeHeader name={user ? user.name : 'Invitado'} />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard title="Cartera Asignada" value="$15,230.50" icon={<WalletIcon />} />
         <MetricCard title="Recuperación del Mes" value="$8,450.30" icon={<RecoveryIcon />} />
         <MetricCard title="Campañas Activas" value="12" icon={<CampaignIcon />} />
         <MetricCard title="Nuevos Clientes" value="24" icon={<NewClientsIcon />} />
-      </div>
+      </div> */}
 
-      <ClientSearch />
+      {/* <ClientSearch /> */}
 
       <div>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Acceso Rápido</h2>
