@@ -164,6 +164,15 @@ export const firstTimeLogin = (identifier, password) => apiRequest('/auth/login/
 export const getUserProfile = () => apiRequest('/users/me');
 export const changePassword = (current_password, new_password) => apiRequest('/users/me/change-password', 'PUT', { current_password, new_password });
 
+// --- Endpoints de Administración de Usuarios (Admin) ---
+export const getUsers = (skip = 0, limit = 100) => apiRequest(`/users/?skip=${skip}&limit=${limit}`);
+export const createUser = (userData) => apiRequest('/users/', 'POST', userData);
+export const updateUser = (userId, userData) => apiRequest(`/users/${userId}`, 'PUT', userData);
+export const deleteUser = (userId) => apiRequest(`/users/${userId}`, 'DELETE');
+export const resetUserPassword = (userId, new_password) => apiRequest(`/users/${userId}/password`, 'PUT', { new_password });
+export const updateUserRoles = (userId, role_ids) => apiRequest(`/users/${userId}/roles`, 'PUT', { role_ids });
+export const unlockUser = (userId) => apiRequest(`/users/${userId}/unlock`, 'POST');
+
 
 // --- Endpoints de Segmentación ---
 export const getAvailableFilterFields = () => apiRequest('/audience/available-filters');

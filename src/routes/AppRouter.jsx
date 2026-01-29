@@ -16,6 +16,7 @@ import DemographicsPage from '../pages/DemographicsPage';
 import ClientSearchPage from '../pages/ClientSearchPage';
 import Vision360Page from '../pages/Vision360Page';
 import ProtectedRoute from './ProtectedRoute';
+import UsersPage from '../pages/UsersPage';
 
 export const AppRouter = () => {
   return (
@@ -27,6 +28,7 @@ export const AppRouter = () => {
       <Route path="/" element={<ProtectedRoute />}>
         <Route index element={<HomePage />} />
         <Route path="clients" element={<ClientSearchPage />} />
+        <Route path="users" element={<UsersPage />} />
         <Route path="vision360/:cedula" element={<Vision360Page />} />
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="campaigns/new" element={<CreateCampaignPage />} />
