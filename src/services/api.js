@@ -709,6 +709,18 @@ export const uploadLegalBatchReview = (batchId, file) => apiRequestWithFile(`/co
 export const generateLegalBatchCorrespondence = (batchId) => apiRequest(`/communications/legal/batches/${batchId}/generate-correspondence`, 'POST');
 export const sendLegalBatchCorrespondence = (batchId, credentials) => apiRequest(`/communications/legal/batches/${batchId}/send`, 'POST', credentials);
 
+
+// --- Endpoints de Reportes ---
+export const getEffectivenessReport = (params) => {
+  // params: { start_date, end_date, coordinator_code, system_origin }
+  const queryParams = new URLSearchParams(params).toString();
+  return apiRequest(`/communications/reports/effectiveness?${queryParams}`);
+};
+
+export const refreshEffectivenessReport = () => {
+  return apiRequest('/communications/reports/effectiveness/refresh', 'POST');
+};
+
 // --- Endpoints para Campañas por CSV ---
 export const getTemplateVariablesDetail = (templateId) => apiRequest(`/templates/${templateId}/variables-detail`);
 
