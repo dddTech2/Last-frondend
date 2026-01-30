@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, FileText } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick }) => (
   <div 
@@ -32,6 +32,13 @@ const ReportsLandingPage = () => {
           description="Analiza el impacto financiero de las campañas de Email, SMS y WhatsApp cruzado con recaudos."
           icon={BarChart3}
           onClick={() => navigate('/reports/effectiveness')}
+        />
+        
+        <ReportCard
+          title="Efectividad de Campañas Masivas"
+          description="Analiza ROI de campañas SMS/WhatsApp/Email con atribución de pagos en ventana de 30 días. Comparación recordatorios vs regulares."
+          icon={TrendingUp}
+          onClick={() => navigate('/reports/campaign-effectiveness')}
         />
         
         {/* Placeholder for future reports */}

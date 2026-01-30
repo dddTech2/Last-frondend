@@ -750,3 +750,18 @@ export const uploadCampaignCSV = async (formData) => {
     throw error;
   }
 };
+
+// --- Endpoints de Reportes de Campañas Masivas ---
+export const getCampaignEffectivenessReport = (params) => {
+  const queryParams = new URLSearchParams(params).toString();
+  return apiRequest(`/reports/campaign-effectiveness${queryParams ? `?${queryParams}` : ''}`);
+};
+
+export const getDailyActivityReport = (params) => {
+  const queryParams = new URLSearchParams(params).toString();
+  return apiRequest(`/reports/daily-activity${queryParams ? `?${queryParams}` : ''}`);
+};
+
+export const refreshEffectivenessViews = () => {
+  return apiRequest('/reports/refresh-effectiveness-views', 'POST');
+};
