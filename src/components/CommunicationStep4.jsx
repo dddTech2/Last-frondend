@@ -721,6 +721,12 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
             <p className="text-green-700 text-sm">
               ID: <code className="bg-white px-1.5 rounded">{commId}</code>
             </p>
+            {sendError && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg animate-pulse">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span className="break-words leading-tight">{sendError}</span>
+              </div>
+            )}
           </div>
 
           {generatedDocs.length > 1 && (
