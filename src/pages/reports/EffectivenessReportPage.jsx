@@ -427,6 +427,21 @@ const EffectivenessReportPage = () => {
     setCurrentPage(1);
   };
 
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (name) => {
+    if (sortConfig.key !== name) return <ArrowUpDown className="h-4 w-4 text-gray-300 ml-1" />;
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="h-4 w-4 text-blue-500 ml-1" />
+      : <ArrowDown className="h-4 w-4 text-blue-500 ml-1" />;
+  };
+
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6">
       
