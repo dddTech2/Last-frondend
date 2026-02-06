@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
   ArrowLeft, RefreshCw, Search, Filter, Calendar, Bell, 
-  DollarSign, Send, MessageCircle, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown
+  DollarSign, Send, MessageCircle, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import * as api from '../../services/api';
 import { formatCurrency, formatNumber, formatMonthLabel } from '../../utils/campaignUtils';
@@ -13,7 +14,10 @@ import {
   ChannelDistributionChart,
   PerformanceOverTimeChart,
   MonthlyTrendsChart,
-  ReminderComparisonChart
+  ReminderComparisonChart,
+  RecoveryByOriginChart,
+  ChannelOriginStackedChart,
+  EffectivenessByOriginChart
 } from '../../components/reports/CampaignCharts';
 
 const CampaignEffectivenessPage = () => {
@@ -28,10 +32,15 @@ const CampaignEffectivenessPage = () => {
   const [channelFilter, setChannelFilter] = useState('ALL');
   const [monthFilter, setMonthFilter] = useState('ALL');
   const [reminderFilter, setReminderFilter] = useState('ALL');
+  const [originFilter, setOriginFilter] = useState('ALL');
   
   // Ordenamiento
   const [sortField, setSortField] = useState('campaign_send_date');
   const [sortDirection, setSortDirection] = useState('desc');
+  
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Filtros de fecha para API
   const [dateFilters, setDateFilters] = useState({
@@ -105,6 +114,12 @@ const CampaignEffectivenessPage = () => {
     return Array.from(channels);
   }, [campaigns]);
 
+  // Sistemas de Origen únicos para el filtro
+  const uniqueOrigins = useMemo(() => {
+    const origins = new Set(campaigns.map(c => c.sistema_origen).filter(Boolean));
+    return Array.from(origins).sort();
+  }, [campaigns]);
+
   // Campañas filtradas (filtros locales)
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter(c => {
@@ -117,10 +132,15 @@ const CampaignEffectivenessPage = () => {
       const matchesMonth = monthFilter === 'ALL' || c.campaign_send_date?.startsWith(monthFilter);
       const matchesReminder = reminderFilter === 'ALL' || 
         (reminderFilter === 'REMINDER' ? c.is_reminder_campaign : !c.is_reminder_campaign);
+      const matchesOrigin = originFilter === 'ALL' || c.sistema_origen === originFilter;
       
-      return matchesSearch && matchesChannel && matchesMonth && matchesReminder;
+      return matchesSearch && matchesChannel && matchesMonth && matchesReminder && matchesOrigin;
     });
-  }, [campaigns, searchTerm, channelFilter, monthFilter, reminderFilter]);
+  }, [campaigns, searchTerm, channelFilter, monthFilter, reminderFilter, originFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, channelFilter, monthFilter, reminderFilter, originFilter]);
 
   // Función para manejar el ordenamiento
   const handleSort = (field) => {
@@ -132,28 +152,53 @@ const CampaignEffectivenessPage = () => {
       setSortField(field);
       setSortDirection('desc');
     }
+    setCurrentPage(1); // Resetear a la primera página al ordenar
   };
 
   // Campañas ordenadas
   const sortedCampaigns = useMemo(() => {
+    // Crear una copia para no mutar el original
     const sorted = [...filteredCampaigns];
     
     sorted.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+      // Obtener valores crudos
+      const rawA = a[sortField];
+      const rawB = b[sortField];
+
+      // Definir si tratamos como números
+      // Detectamos si es un campo numérico conocido o si los valores son numéricos
+      const numericFields = ['total_messages_sent', 'attributed_recovered_amount', 'attributed_payments_count'];
+      const isExplicitNumeric = numericFields.includes(sortField);
       
-      // Manejar valores null/undefined
-      if (aValue === null || aValue === undefined) aValue = '';
-      if (bValue === null || bValue === undefined) bValue = '';
+      // Función helper para obtener valor numérico seguro
+      const getNum = (val) => {
+        if (val === null || val === undefined || val === '') return 0;
+        const num = parseFloat(val);
+        return isNaN(num) ? 0 : num;
+      };
+
+      if (isExplicitNumeric) {
+        const numA = getNum(rawA);
+        const numB = getNum(rawB);
+        return sortDirection === 'asc' ? numA - numB : numB - numA;
+      }
+
+      // Comparación de Strings (Default)
+      const strA = String(rawA || '').toLowerCase().trim();
+      const strB = String(rawB || '').toLowerCase().trim();
       
-      // Comparar
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
+      if (strA < strB) return sortDirection === 'asc' ? -1 : 1;
+      if (strA > strB) return sortDirection === 'asc' ? 1 : -1;
+      
+      // Empate: Orden secundario estable por fecha (más reciente primero)
+      // Solo aplicamos esto si el campo primario no es la fecha misma
+      if (sortField !== 'campaign_send_date') {
+        const dateA = a.campaign_send_date || '';
+        const dateB = b.campaign_send_date || '';
+        if (dateA < dateB) return 1; 
+        if (dateA > dateB) return -1;
       }
       
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
     
@@ -169,6 +214,12 @@ const CampaignEffectivenessPage = () => {
       ? <ArrowUp className="h-4 w-4 text-blue-600" />
       : <ArrowDown className="h-4 w-4 text-blue-600" />;
   };
+
+  // Lógica de Paginación
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = sortedCampaigns.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedCampaigns.length / itemsPerPage);
 
   // Métricas calculadas
   const metrics = useMemo(() => {
@@ -353,8 +404,28 @@ const CampaignEffectivenessPage = () => {
             </div>
           </div>
 
-          {/* Placeholder para simetría */}
-          <div></div>
+          {/* Sistema Origen */}
+          <div>
+            <label htmlFor="originFilter" className="block text-xs font-medium text-gray-700 mb-1">
+              Sistema Origen
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Filter className="h-4 w-4 text-gray-400" />
+              </div>
+              <select
+                id="originFilter"
+                value={originFilter}
+                onChange={(e) => setOriginFilter(e.target.value)}
+                className="pl-10 block w-full border-gray-300 rounded-md shadow-sm text-sm h-10 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="ALL">Todos los Orígenes</option>
+                {uniqueOrigins.map(origin => (
+                  <option key={origin} value={origin}>{origin}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -395,6 +466,15 @@ const CampaignEffectivenessPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <MonthlyTrendsChart campaigns={filteredCampaigns} />
         <ReminderComparisonChart campaigns={filteredCampaigns} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <RecoveryByOriginChart campaigns={filteredCampaigns} />
+        <ChannelOriginStackedChart campaigns={filteredCampaigns} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <EffectivenessByOriginChart campaigns={filteredCampaigns} />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -437,6 +517,15 @@ const CampaignEffectivenessPage = () => {
                 </th>
                 <th 
                   className="px-6 py-3 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleSort('sistema_origen')}
+                >
+                  <div className="flex items-center gap-2">
+                    Sistema Origen
+                    <SortIcon field="sistema_origen" />
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-3 font-medium cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => handleSort('campaign_send_date')}
                 >
                   <div className="flex items-center gap-2">
@@ -473,58 +562,106 @@ const CampaignEffectivenessPage = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">Cargando datos...</td>
-                </tr>
-              ) : sortedCampaigns.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    No se encontraron campañas que coincidan con sus criterios.
-                  </td>
-                </tr>
-              ) : (
-                sortedCampaigns.slice(0, 50).map((campaign) => (
-                  <tr key={campaign.campaign_id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900 truncate max-w-xs" title={campaign.campaign_name}>
-                      {campaign.campaign_name}
-                      {campaign.is_reminder_campaign && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                          Recordatorio
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${campaign.channel_type === 'SMS' ? 'bg-blue-100 text-blue-800' : 
-                          campaign.channel_type === 'WHATSAPP' ? 'bg-green-100 text-green-800' : 
-                          'bg-purple-100 text-purple-800'}`}>
-                        {campaign.channel_type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{campaign.campaign_send_date}</td>
-                    <td className="px-6 py-4 text-gray-500 text-right">{formatNumber(campaign.total_messages_sent)}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900 text-right">{formatCurrency(campaign.attributed_recovered_amount)}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                        {campaign.status}
-                      </span>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">Cargando datos...</td>
+                  </tr>
+                ) : sortedCampaigns.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      No se encontraron campañas que coincidan con sus criterios.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {sortedCampaigns.length > 50 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-center text-sm text-gray-500">
-            Mostrando los primeros 50 resultados de {sortedCampaigns.length}
+                ) : (
+                  currentItems.map((campaign, index) => (
+                    <tr key={`${campaign.campaign_id}-${campaign.sistema_origen || 'unknown'}-${index}`} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900 truncate max-w-xs" title={campaign.campaign_name}>
+                        {campaign.campaign_name}
+                        {campaign.is_reminder_campaign && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Recordatorio
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                          ${campaign.channel_type === 'SMS' ? 'bg-blue-100 text-blue-800' : 
+                            campaign.channel_type === 'WHATSAPP' ? 'bg-green-100 text-green-800' : 
+                            'bg-purple-100 text-purple-800'}`}>
+                          {campaign.channel_type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
+                        {campaign.sistema_origen || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{campaign.campaign_send_date}</td>
+                      <td className="px-6 py-4 text-gray-500 text-right">{formatNumber(campaign.total_messages_sent)}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900 text-right">{formatCurrency(campaign.attributed_recovered_amount)}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          {campaign.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+          
+          {/* Pagination Controls */}
+          {sortedCampaigns.length > 0 && (
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center text-sm text-gray-500">
+                <span className="mr-2">Mostrar</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 py-1"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="ml-2">por página</span>
+                <span className="mx-4 text-gray-300">|</span>
+                <span>
+                  Mostrando {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, sortedCampaigns.length)} de {sortedCampaigns.length}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-300 rounded-md bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                
+                {/* Page Numbers - Simple Version */}
+                <span className="text-sm font-medium text-gray-700">
+                  Página {currentPage} de {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-300 rounded-md bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
 };
 
 export default CampaignEffectivenessPage;
