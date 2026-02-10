@@ -11,6 +11,26 @@ const EmailPreview = ({ subject, htmlContent }) => {
         iframeDoc.write(htmlContent);
         iframeDoc.close();
 
+        // Interceptar clics en enlaces para abrirlos en nueva pestaña
+        const handleLinkClicks = () => {
+          if (!iframeRef.current) return;
+          const doc = iframeRef.current.contentDocument;
+          if (!doc) return;
+
+          const links = doc.querySelectorAll('a[href]');
+          links.forEach((link) => {
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              const href = link.getAttribute('href');
+              if (href && href !== '#') {
+                window.open(href, '_blank', 'noopener,noreferrer');
+              }
+            });
+          });
+        };
+
         // Ajustar el tamaño del iframe al contenido
         const resizeIframe = () => {
           if (iframeRef.current) {
@@ -26,7 +46,10 @@ const EmailPreview = ({ subject, htmlContent }) => {
         };
 
         // Usar un pequeño delay para asegurar que el contenido se renderice antes de medir
-        const timer = setTimeout(resizeIframe, 100);
+        const timer = setTimeout(() => {
+          handleLinkClicks();
+          resizeIframe();
+        }, 100);
         
         // Limpiar el timer si el componente se desmonta
         return () => clearTimeout(timer);
@@ -47,7 +70,7 @@ const EmailPreview = ({ subject, htmlContent }) => {
             ref={iframeRef}
             title="Vista previa de Email"
             className="w-full border-0 bg-white" // Se quita la altura fija h-96
-            sandbox="allow-same-origin"
+            sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             scrolling="no" // Deshabilitar el scroll explícitamente
           />
         </div>
