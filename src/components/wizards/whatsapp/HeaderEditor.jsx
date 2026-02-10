@@ -32,12 +32,23 @@ const HeaderEditor = ({ template, setTemplate }) => {
     }
   };
 
+  const MAX_FILE_SIZE_MB = 15;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      handleUpload(file);
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setError(`El archivo supera el límite de ${MAX_FILE_SIZE_MB} MB. Peso del archivo: ${(file.size / (1024 * 1024)).toFixed(2)} MB.`);
+      setUploadStatus('error');
+      setSelectedFile(null);
+      event.target.value = '';
+      return;
     }
+
+    setSelectedFile(file);
+    handleUpload(file);
   };
 
   const handleUpload = async (file) => {
