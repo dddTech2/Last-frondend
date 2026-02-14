@@ -13,7 +13,7 @@ const getAuthToken = () => {
   return null;
 };
 
-const apiRequest = async (endpoint, method = 'GET', body = null) => {
+export const apiRequest = async (endpoint, method = 'GET', body = null) => {
   const traceId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const start = performance.now();
   const isNotif = endpoint.startsWith('/notifications');

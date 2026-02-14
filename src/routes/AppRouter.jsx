@@ -18,6 +18,7 @@ import Vision360Page from '../pages/Vision360Page';
 import ReportsLandingPage from '../pages/reports/ReportsLandingPage';
 import EffectivenessReportPage from '../pages/reports/EffectivenessReportPage';
 import CampaignEffectivenessPage from '../pages/reports/CampaignEffectivenessPage';
+import RagManagementPage from '../pages/RagManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import UsersPage from '../pages/UsersPage';
 
@@ -48,6 +49,7 @@ export const AppRouter = () => {
         <Route path="reports" element={<ReportsLandingPage />} />
         <Route path="reports/effectiveness" element={<EffectivenessReportPage />} />
         <Route path="reports/campaign-effectiveness" element={<CampaignEffectivenessPage />} />
+        <Route path="rag-admin" element={<RagManagementPage />} />
         {/* Aquí se pueden añadir más rutas protegidas */}
       </Route>
     </Routes>
