@@ -42,6 +42,9 @@ const NotificationProvider = ({ children }) => {
       });
     }
 
+    // Silence keepalive events to avoid log noise
+    if (msg.event === 'keepalive') return;
+
     // Original logic for notifications panel
     console.debug('[NotificationContext] Event received:', msg.event, msg.payload);
     console.log('--- NUEVA ACTUALIZACIÓN DE NOTIFICACIÓN ---');
@@ -172,7 +175,7 @@ const NotificationProvider = ({ children }) => {
     console.debug('[NotificationContext] Initializing socket with available token...');
     socketRef.current = new NotificationsSocket(getToken, handleNewNotification);
     socketRef.current.connect(BASE_URL);
-    fetchNotifications();
+    // fetchNotifications(); // Optimization: Socket sends initial snapshot, no need to fetch manually.
 
     return () => {
       // Nota: se eliminó clearTimeout(connectTimeout) porque la variable nunca se define y generaba ReferenceError
