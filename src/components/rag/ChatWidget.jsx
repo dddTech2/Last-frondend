@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, X, Send, Minimize2, Loader2, Paperclip, FileText } from 'lucide-react';
-import { RAG_BASE_URL, downloadDocument } from '../../services/ragService';
+import { MessageCircle, X, Send, Minimize2, Loader2, Paperclip, FileText, Download, ExternalLink } from 'lucide-react';
+import { RAG_BASE_URL, downloadDocument, getDocumentUrl } from '../../services/ragService';
 import { toast } from 'sonner';
+import DocumentPreviewModal from '../DocumentPreviewModal';
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +15,16 @@ const ChatWidget = () => {
   const [sessionId, setSessionId] = useState(() => {
     return sessionStorage.getItem('ragSessionId');
   });
+
+  // Modal state for document preview
+  const [previewModal, setPreviewModal] = useState({
+    isOpen: false,
+    documentUrl: null,
+    documentName: ''
+  });
+  
+  // State for dropdown menu
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   useEffect(() => {
     if (sessionId) {
@@ -163,6 +174,27 @@ const ChatWidget = () => {
     }
   };
 
+  const handlePreview = async (docId, fileName) => {
+    if (!docId) {
+      toast.error("No se puede预览 el documento: ID no encontrado");
+      return;
+    }
+    
+    try {
+      toast.info(`Cargando ${fileName}...`);
+      const url = await getDocumentUrl(docId);
+      setPreviewModal({
+        isOpen: true,
+        documentUrl: url,
+        documentName: fileName
+      });
+      toast.success("Documento cargado");
+    } catch (error) {
+      console.error("Preview error:", error);
+      toast.error("Error al cargar el documento");
+    }
+  };
+
   const handleDownload = async (docId, fileName) => {
     if (!docId) {
       toast.error("No se puede descargar el documento: ID no encontrado");
@@ -171,12 +203,30 @@ const ChatWidget = () => {
     
     try {
       toast.info(`Iniciando descarga de ${fileName}...`);
-      await downloadDocument(docId, fileName);
+      const url = await getDocumentUrl(docId);
+      
+      // Trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'documento';
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
       toast.success("Descarga iniciada");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Error al descargar el documento");
     }
+  };
+
+  const closePreviewModal = () => {
+    setPreviewModal({
+      isOpen: false,
+      documentUrl: null,
+      documentName: ''
+    });
   };
 
   if (!isOpen) {
@@ -247,7 +297,7 @@ const ChatWidget = () => {
 
               {/* Citations / Sources */}
               {Array.isArray(msg.sources) && msg.sources.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-2">
                   {msg.sources.map((source, sIdx) => {
                     if (!source) return null;
                     // Try to resolve the name from various possible fields including metadata
@@ -264,16 +314,59 @@ const ChatWidget = () => {
                     // Try to resolve document ID
                     const docId = source.document_id || source.id || source.metadata?.document_id;
 
+                    if (!docId) {
+                      return (
+                        <span
+                          key={sIdx}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-400 border border-gray-200"
+                          title="Documento sin ID disponible"
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          {sourceName}
+                        </span>
+                      );
+                    }
+
                     return (
-                    <button 
-                        key={sIdx} 
-                        onClick={() => handleDownload(docId, sourceName)}
-                        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-indigo-600 cursor-pointer transition-colors border border-transparent hover:border-indigo-200"
-                        title={pageNum ? `Página ${pageNum} - Clic para descargar` : 'Clic para descargar documento fuente'}
-                    >
-                      <FileText className="h-3 w-3 mr-1" />
-                      {sourceName}
-                    </button>
+                      <div key={sIdx} className="relative">
+                        <button 
+                          onClick={() => setOpenDropdown(openDropdown === sIdx ? null : sIdx)}
+                          onBlur={() => setTimeout(() => setOpenDropdown(null), 200)}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-indigo-600 cursor-pointer transition-colors border border-transparent hover:border-indigo-200"
+                          title={pageNum ? `Página ${pageNum}` : sourceName}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          {sourceName}
+                          <svg className="h-3 w-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {/* Dropdown with actions */}
+                        {openDropdown === sIdx && (
+                          <div className="absolute left-0 top-full mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
+                            <button
+                              onClick={() => {
+                                handlePreview(docId, sourceName);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Ver documento
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleDownload(docId, sourceName);
+                                setOpenDropdown(null);
+                              }}
+                              className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2"
+                            >
+                              <Download className="h-3 w-3" />
+                              Descargar
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -315,6 +408,14 @@ const ChatWidget = () => {
              <p className="text-xs text-red-500 mt-1 text-center">Desconectado. Reintentando...</p>
         )}
       </div>
+
+      {/* Document Preview Modal */}
+      {previewModal.isOpen && (
+        <DocumentPreviewModal
+          fileUrl={previewModal.documentUrl}
+          onClose={closePreviewModal}
+        />
+      )}
     </div>
   );
 };

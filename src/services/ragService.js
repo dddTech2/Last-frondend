@@ -142,17 +142,13 @@ export const downloadDocument = async (documentId, filename) => {
       const data = await response.json();
       const signedUrl = data.url;
 
-      // Trigger download
-      const a = document.createElement('a');
-      a.href = signedUrl;
-      a.download = filename || 'documento';
-      a.target = '_blank'; // Open in new tab since it's likely a GCS/S3 link
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
+      return signedUrl;
     } catch (error) {
-      console.error('Error downloading document:', error);
+      console.error('Error getting document URL:', error);
       throw error;
     }
   };
+
+export const getDocumentUrl = async (documentId) => {
+  return downloadDocument(documentId, null);
+};
