@@ -31,7 +31,7 @@ const HomePage = () => {
     : user?.decoded?.role
       ? [user.decoded.role]
       : [];
-  
+
   console.log('Usuario actual:', user);
 
   // Definimos todos los accesos rápidos posibles y los roles que pueden verlos
@@ -47,16 +47,16 @@ const HomePage = () => {
     { title: "Gestión de Usuarios", description: "Administra usuarios del sistema", icon: <UserManagementIcon />, path: "/users", roles: ["Admin"] },
     { title: "Reportes y Analítica", description: "Visualiza métricas y genera reportes", icon: <ReportsIcon />, path: "/reports", roles: ["Admin", "Coordinador"] },
     { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", roles: ["Admin", "Coordinador", "Gestor"] },
-    { title: "Administración de Personal", description: "Gestionar altas, bajas y usuarios de proveedores", icon: <BriefcaseIcon />, path: "/administracion-personal", roles: ["Admin", "Super Administrador", "Jurídico"] },
+    { title: "Administración de Personal", description: "Gestionar altas, bajas y usuarios de proveedores", icon: <BriefcaseIcon />, path: "/administracion-personal", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico", "Tecnologia", "talento_humano", "analista"] },
   ];
 
   console.log('Todos los accesos rápidos:', allQuickAccessItems);
-  
+
   // Filtramos los accesos rápidos basados en los roles del usuario
   const hasSuperAdmin = resolvedRoles.includes("Super Administrador");
   const accessibleItems = allQuickAccessItems.filter(item => {
     if (item.public) return true;
-    
+
     if (resolvedRoles.length === 0) return false;
 
     if (hasSuperAdmin && !item.strictForRoles) {
@@ -64,13 +64,13 @@ const HomePage = () => {
     }
     return resolvedRoles.some(userRole => item.roles.includes(userRole));
   });
-  
+
   console.log('Accesos filtrados:', accessibleItems);
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <WelcomeHeader name={user ? user.name : 'Invitado'} />
-      
+
       {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard title="Cartera Asignada" value="$15,230.50" icon={<WalletIcon />} />
         <MetricCard title="Recuperación del Mes" value="$8,450.30" icon={<RecoveryIcon />} />
