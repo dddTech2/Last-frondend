@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 const WhatsAppChatPage = () => {
   const { subscribe } = useNotifications();
   const { user, logout } = useAuth();
-  const userRole = user?.decoded?.role || 'gestor'; // Default to gestor if not set
+  const userRole = user?.decoded?.role || user?.decoded?.roles?.[0] || 'gestor'; // Default to gestor if not set
   const { play: playNotificationSound, init: initNotificationSound } = useSound('/new-notificationWpp.mp3');
 
   const [allConversations, setAllConversations] = useState([]);
