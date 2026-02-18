@@ -719,7 +719,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         />
       </div>
 
-      {(formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (
+      {formData.contrato === 'PLANTA' && (
         <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded mt-6">
           <h4 className="font-semibold text-yellow-900 mb-4">📋 Información Contractual</h4>
 
@@ -745,49 +745,53 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
               )}
             </div>
 
-            <div>
-              <FormField
-                label="Tipo de Contrato Laboral"
-                name="tipo_contrato_laboral"
-                type="select"
-                value={formData.tipo_contrato_laboral}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                options={[
-                  { value: 'FIJO', label: 'Fijo' },
-                  { value: 'INDEFINIDO', label: 'Indefinido' }
-                ]}
-                required
-                disabled={isSubmitting}
-                error={!!getFieldError('tipo_contrato_laboral')}
-              />
-              {getFieldError('tipo_contrato_laboral') && (
-                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="h-4 w-4" /> {getFieldError('tipo_contrato_laboral')}
-                </p>
-              )}
-            </div>
+            {formData.contrato === 'PLANTA' && (
+              <>
+                <div>
+                  <FormField
+                    label="Tipo de Contrato Laboral"
+                    name="tipo_contrato_laboral"
+                    type="select"
+                    value={formData.tipo_contrato_laboral}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    options={[
+                      { value: 'FIJO', label: 'Fijo' },
+                      { value: 'INDEFINIDO', label: 'Indefinido' }
+                    ]}
+                    required
+                    disabled={isSubmitting}
+                    error={!!getFieldError('tipo_contrato_laboral')}
+                  />
+                  {getFieldError('tipo_contrato_laboral') && (
+                    <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" /> {getFieldError('tipo_contrato_laboral')}
+                    </p>
+                  )}
+                </div>
 
-            {formData.tipo_contrato_laboral === 'FIJO' && (
-              <div>
-                <FormField
-                  label="Fecha Terminación de Contrato"
-                  name="fecha_terminacion_contrato"
-                  type="date"
-                  value={formData.fecha_terminacion_contrato}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  min={getTodayDate()}
-                  required
-                  disabled={isSubmitting}
-                  error={!!getFieldError('fecha_terminacion_contrato')}
-                />
-                {getFieldError('fecha_terminacion_contrato') && (
-                  <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" /> {getFieldError('fecha_terminacion_contrato')}
-                  </p>
+                {formData.tipo_contrato_laboral === 'FIJO' && (
+                  <div>
+                    <FormField
+                      label="Fecha Terminación de Contrato"
+                      name="fecha_terminacion_contrato"
+                      type="date"
+                      value={formData.fecha_terminacion_contrato}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      min={getTodayDate()}
+                      required
+                      disabled={isSubmitting}
+                      error={!!getFieldError('fecha_terminacion_contrato')}
+                    />
+                    {getFieldError('fecha_terminacion_contrato') && (
+                      <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" /> {getFieldError('fecha_terminacion_contrato')}
+                      </p>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
 
             <div className="md:col-span-2">

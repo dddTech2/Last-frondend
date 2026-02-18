@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { validateForm, validators } from '../utils/InputValidator';
 import * as api from '../services/api';
@@ -116,7 +116,7 @@ const useIngresoForm = (initialState = {}) => {
    * NOTA: 'localidad' NO está aquí - se valida condicionalmente en validateAll()
    * NOTA: 'password_renovar_confirm' se valida especialmente en validateField()
    */
-  const validationRules = {
+  const validationRules = useMemo(() => ({
     cedula: validators.cedula,
     nombre: validators.nombre,
     celular: validators.celular,
@@ -127,19 +127,22 @@ const useIngresoForm = (initialState = {}) => {
     contrato: (value) => validators.required(value, 'Tipo de Contrato'),
     jefe_inmediato: validators.jefeInmediato,
     asignacion_salarial: (value) => {
-      if ((formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (!value || value.toString().trim() === '')) {
+      // Solo requerido para PLANTA
+      if (formData.contrato === 'PLANTA' && (!value || value.toString().trim() === '')) {
         return 'La asignación salarial es requerida';
       }
       return null;
     },
     tipo_contrato_laboral: (value) => {
-      if ((formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (!value || value === '')) {
+      // Solo requerido para PLANTA
+      if (formData.contrato === 'PLANTA' && (!value || value === '')) {
         return 'El tipo de contrato laboral es requerido';
       }
       return null;
     },
     fecha_terminacion_contrato: (value) => {
-      if (formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') {
+      // Solo requerido para PLANTA y contrato FIJO
+      if (formData.contrato === 'PLANTA') {
         if (formData.tipo_contrato_laboral === 'FIJO' && (!value || value === '')) {
           return 'La fecha de terminación es requerida para contratos fijos';
         }
@@ -175,7 +178,7 @@ const useIngresoForm = (initialState = {}) => {
       }
       return null;
     },
-  };
+  }), [formData.contrato, formData.tipo_contrato_laboral, formData.cargo]);
 
   /**
    * Validar cédula contra la API para evitar duplicados
@@ -239,8 +242,7 @@ const useIngresoForm = (initialState = {}) => {
     }
 
     return null;
-    return null;
-  }, [formData.cargo, formData.contrato, formData.tipo_contrato_laboral]);
+  }, [formData.cargo, formData.contrato, formData.tipo_contrato_laboral, validationRules]);
 
   /**
    * Manejar cambios en los campos
@@ -354,7 +356,7 @@ const useIngresoForm = (initialState = {}) => {
       console.error('📌 Campos con error:', Object.keys(newErrors));
     }
     return !hasErrors;
-  }, [formData, validateField]);
+  }, [formData, validateField, validationRules]);
 
   /**
    * Obtener datos limpios para enviar a la API
@@ -382,14 +384,14 @@ const useIngresoForm = (initialState = {}) => {
       payloadData.asignacion_salarial = parseInt(numericSalario, 10);
     }
 
-    // Limpiar campos contractuales si no aplican
-    if (['PLANTA', 'CORRETAJE'].includes(formData.contrato)) {
-      // Validar que si no es FIJO, no enviemos fecha
+    // Limpiar campos contractuales: SOLO SE ENVÍAN PARA PLANTA
+    if (formData.contrato === 'PLANTA') {
+      // Planta lleva todo, pero fecha terminacion solo si es FIJO
       if (payloadData.tipo_contrato_laboral !== 'FIJO') {
         delete payloadData.fecha_terminacion_contrato;
       }
     } else {
-      // Si no es PLANTA/CORRETAJE, borrar todo rastro de esto
+      // Si no es PLANTA (CORRETAJE, PRESTACION, etc.), borrar todo dato contractual
       delete payloadData.asignacion_salarial;
       delete payloadData.tipo_contrato_laboral;
       delete payloadData.fecha_terminacion_contrato;

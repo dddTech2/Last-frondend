@@ -123,9 +123,7 @@ export const validators = {
     if (isNaN(date.getTime())) {
       return 'Formato de fecha inválido';
     }
-    if (date > new Date()) {
-      return 'La fecha no puede ser futura';
-    }
+    // Eliminamos restricción de fechas futuras para evitar bloqueos
     return null;
   },
 
