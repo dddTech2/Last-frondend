@@ -65,12 +65,12 @@ export const validators = {
   // Validar email - Requiere @ obligatoriamente
   email: (value, fieldName = 'correo') => {
     if (!value) return `El ${fieldName} es requerido`;
-    
+
     // Validación 1: Debe contener @
     if (!value.includes('@')) {
       return `El ${fieldName} debe contener obligatoriamente @`;
     }
-    
+
     // Validación 2: Formato general
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       return 'Formato de correo inválido (debe ser: usuario@dominio.com)';
@@ -129,6 +129,16 @@ export const validators = {
     return null;
   },
 
+  // Validar fecha permitiendo fechas futuras (ej: fecha_ingreso)
+  dateAllowFuture: (value) => {
+    if (!value) return 'La fecha es requerida';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return 'Formato de fecha inválido';
+    }
+    return null;
+  },
+
   // Validar fecha de nacimiento - Mínimo 18 años
   fechaNacimiento: (value) => {
     if (!value) return 'La fecha de nacimiento es requerida';
@@ -136,10 +146,10 @@ export const validators = {
     if (isNaN(date.getTime())) {
       return 'Formato de fecha inválido';
     }
-    
+
     const today = new Date();
     const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-    
+
     if (date > today) {
       return 'La fecha no puede ser futura';
     }

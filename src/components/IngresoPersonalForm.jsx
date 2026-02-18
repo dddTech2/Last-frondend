@@ -58,11 +58,27 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     // Validar email en tiempo real si tiene @
     if (e.target.value.includes('@')) {
       const error = validators.email(e.target.value, e.target.name === 'correo_personal' ? 'correo personal' : 'correo Renovar');
-      setErrors(prev => ({
-        ...prev,
-        [e.target.name]: error,
-      }));
+      setErrors(prev => ({ ...prev, [e.target.name]: error }));
     }
+  };
+
+  // Handler para formato de moneda (miles)
+  const handleSalarioChange = (e) => {
+    let value = e.target.value.replace(/\D/g, ''); // Remover todo lo que no sea dígito
+
+    // Limitar longitud
+    if (value.length > 9) value = value.slice(0, 9);
+
+    // Formatear con puntos
+    const formattedValue = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    // Actualizar estado manualmente
+    handleChange({
+      target: {
+        name: 'asignacion_salarial',
+        value: formattedValue
+      }
+    });
   };
 
   const handleEmailBlur = (e) => {
@@ -659,7 +675,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
             value={formData.fecha_ingreso}
             onChange={handleChange}
             onBlur={handleBlur}
-            max={getTodayDate()}
             required
             disabled={isSubmitting}
             error={!!getFieldError('fecha_ingreso')}
@@ -703,6 +718,96 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           required
         />
       </div>
+
+      {(formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded mt-6">
+          <h4 className="font-semibold text-yellow-900 mb-4">📋 Información Contractual</h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <FormField
+                label="Asignación Salarial"
+                name="asignacion_salarial"
+                type="text"
+                value={formData.asignacion_salarial}
+                onChange={handleSalarioChange}
+                onBlur={handleBlur}
+                placeholder="Ej: 1.500.000"
+                required
+                disabled={isSubmitting}
+                error={!!getFieldError('asignacion_salarial')}
+                icon={Briefcase}
+              />
+              {getFieldError('asignacion_salarial') && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" /> {getFieldError('asignacion_salarial')}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <FormField
+                label="Tipo de Contrato Laboral"
+                name="tipo_contrato_laboral"
+                type="select"
+                value={formData.tipo_contrato_laboral}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                options={[
+                  { value: 'FIJO', label: 'Fijo' },
+                  { value: 'INDEFINIDO', label: 'Indefinido' }
+                ]}
+                required
+                disabled={isSubmitting}
+                error={!!getFieldError('tipo_contrato_laboral')}
+              />
+              {getFieldError('tipo_contrato_laboral') && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" /> {getFieldError('tipo_contrato_laboral')}
+                </p>
+              )}
+            </div>
+
+            {formData.tipo_contrato_laboral === 'FIJO' && (
+              <div>
+                <FormField
+                  label="Fecha Terminación de Contrato"
+                  name="fecha_terminacion_contrato"
+                  type="date"
+                  value={formData.fecha_terminacion_contrato}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  min={getTodayDate()}
+                  required
+                  disabled={isSubmitting}
+                  error={!!getFieldError('fecha_terminacion_contrato')}
+                />
+                {getFieldError('fecha_terminacion_contrato') && (
+                  <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" /> {getFieldError('fecha_terminacion_contrato')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observaciones de Contrato
+              </label>
+              <textarea
+                name="observaciones_contrato"
+                value={formData.observaciones_contrato || ''}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                placeholder="Ingrese cualquier observación relevante sobre el contrato..."
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded text-sm text-blue-800 mt-6">
         <p className="font-semibold mb-1">Datos Personales y Seguridad Social</p>
@@ -997,6 +1102,24 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       }
 
       // Fechas: formatear
+      if (field === 'fecha_terminacion_contrato' && value) {
+        try {
+          return new Date(value).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+        } catch {
+          return value;
+        }
+      }
+
+      // Format currency
+      if (field === 'asignacion_salarial' && value) {
+        return `$${value}`;
+      }
+
+      // Format tipo contrato laboral
+      if (field === 'tipo_contrato_laboral') {
+        return value === 'FIJO' ? 'Fijo' : (value === 'INDEFINIDO' ? 'Indefinido' : value);
+      }
+
       if ((field === 'fecha_ingreso' || field === 'fecha_nacimiento') && value) {
         try {
           return new Date(value).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1092,6 +1215,31 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
               <p className="text-xs text-gray-500 font-semibold uppercase">Jefe Inmediato</p>
               <p className="text-sm text-gray-800 mt-1">{formatValue('jefe_inmediato', formData.jefe_inmediato)}</p>
             </div>
+
+            {(formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (
+              <>
+                <div className="bg-yellow-50 p-3 rounded border border-yellow-100">
+                  <p className="text-xs text-yellow-700 font-semibold uppercase">Asignación Salarial</p>
+                  <p className="text-sm text-yellow-900 mt-1">{formatValue('asignacion_salarial', formData.asignacion_salarial)}</p>
+                </div>
+                <div className="bg-yellow-50 p-3 rounded border border-yellow-100">
+                  <p className="text-xs text-yellow-700 font-semibold uppercase">Tipo Contrato Laboral</p>
+                  <p className="text-sm text-yellow-900 mt-1">{formatValue('tipo_contrato_laboral', formData.tipo_contrato_laboral)}</p>
+                </div>
+                {formData.tipo_contrato_laboral === 'FIJO' && (
+                  <div className="bg-yellow-50 p-3 rounded border border-yellow-100">
+                    <p className="text-xs text-yellow-700 font-semibold uppercase">Fecha Terminación</p>
+                    <p className="text-sm text-yellow-900 mt-1">{formatValue('fecha_terminacion_contrato', formData.fecha_terminacion_contrato)}</p>
+                  </div>
+                )}
+                {formData.observaciones_contrato && (
+                  <div className="bg-yellow-50 p-3 rounded border border-yellow-100 md:col-span-2">
+                    <p className="text-xs text-yellow-700 font-semibold uppercase">Observaciones</p>
+                    <p className="text-sm text-yellow-900 mt-1">{formData.observaciones_contrato}</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

@@ -49,7 +49,7 @@ const AdministracionPersonal = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCargo, setFilterCargo] = useState('todos');
   const [filterArea, setFilterArea] = useState('todos');
-  const [filterEstado, setFilterEstado] = useState('todos'); // Por defecto mostrar todos los estados
+  const [filterEstado, setFilterEstado] = useState('ACTIVO'); // Por defecto mostrar solo activos
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [allEmployees, setAllEmployees] = useState([]); // Almacena TODOS los empleados
@@ -721,18 +721,19 @@ const AdministracionPersonal = () => {
               <table className="w-full">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Cédula</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Cargo</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Área</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Fecha Ingreso</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Estado</th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {loadingAllEmployees ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                         <div className="flex justify-center items-center gap-2">
                           <Loader2 className="h-6 w-6 animate-spin text-green-600" />
                           <span className="text-lg">Cargando personal...</span>
@@ -742,16 +743,25 @@ const AdministracionPersonal = () => {
                   ) : paginatedEmployees.length > 0 ? (
                     paginatedEmployees.map((personal) => (
                       <tr key={personal.cedula} className="hover:bg-green-50 transition-colors duration-150">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-700">{personal.cedula}</td>
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{personal.nombre}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{personal.correo_renovar || 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 capitalize">
-                            {personal.cargo}
-                          </span>
+                        <td className="px-6 py-4 text-sm font-medium text-green-700 uppercase">
+                          {personal.cargo}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{personal.area}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {personal.fecha_ingreso ? new Date(personal.fecha_ingreso).toLocaleDateString('es-CO') : 'N/A'}
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${personal.estado === 'ACTIVO' ? 'bg-emerald-100 text-emerald-800' :
+                            personal.estado === 'RETIRADO' ? 'bg-red-100 text-red-800' :
+                              personal.estado === 'PENDIENTE_RETIRO_JURIDICO' ? 'bg-orange-100 text-orange-800' :
+                                personal.estado === 'PENDIENTE_APROBACION_JURIDICO' ? 'bg-yellow-100 text-yellow-800' :
+                                  personal.estado === 'EN_PROCESO_DE_CONTRATACION' ? 'bg-blue-100 text-blue-800' :
+                                    personal.estado === 'RECHAZO_JURIDICO' ? 'bg-rose-100 text-rose-800' :
+                                      personal.estado === 'RECHAZO_RETIRO_JURIDICO' ? 'bg-pink-100 text-pink-800' :
+                                        'bg-gray-100 text-gray-800'
+                            }`}>
+                            {personal.estado ? personal.estado.replace(/_/g, ' ') : 'N/A'}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -782,7 +792,7 @@ const AdministracionPersonal = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                         {searchTerm ? (
                           <>
                             <p className="text-lg font-semibold">No se encontraron resultados para "{searchTerm}"</p>

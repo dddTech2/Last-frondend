@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, User, Mail, Phone, CreditCard, Briefcase, Building2, Calendar, Shield, Home, MapPin, Users, Clock, FileText, UserCheck, Wifi, Hash } from 'lucide-react';
+import { Loader2, User, Mail, Phone, CreditCard, Briefcase, Building2, Calendar, Shield, Home, MapPin, Users, Clock, FileText, UserCheck, Wifi, Hash, AlertTriangle } from 'lucide-react';
 
 // Helpers
 const toTitle = (str) => {
@@ -108,6 +108,17 @@ const PersonalDetailView = ({ personal, isLoading }) => {
     usuario_red,
     adminfo,
     asignacion,
+    // Nuevos campos contractuales
+    asignacion_salarial,
+    tipo_contrato_laboral,
+    fecha_terminacion_contrato,
+    observaciones_contrato,
+    // Campos de retiro
+    motivo_retiro,
+    fecha_retiro_deseada,
+    observacion_retiro,
+    fecha_retiro,
+    usuario_que_retiro,
   } = personal;
 
   const estadoColor = estado === 'ACTIVO' ? 'emerald' : 'rose';
@@ -151,6 +162,20 @@ const PersonalDetailView = ({ personal, isLoading }) => {
           <Row icon={Calendar} label="Fecha de Ingreso" value={formatDate(fecha_ingreso)} />
           <Row icon={Clock} label="Temporal" value={temporal} />
           {fecha_fin_contrato_temporal && <Row icon={Calendar} label="Fin Contrato Temporal" value={formatDate(fecha_fin_contrato_temporal)} />}
+
+          {/* Nuevos campos contractuales */}
+          {asignacion_salarial && (
+            <Row icon={CreditCard} label="Asignación Salarial" value={`$${Number(asignacion_salarial).toLocaleString('es-CO')}`} />
+          )}
+          {tipo_contrato_laboral && (
+            <Row icon={FileText} label="Tipo de Contrato Laboral" value={tipo_contrato_laboral === 'FIJO' ? 'Fijo' : 'Indefinido'} />
+          )}
+          {tipo_contrato_laboral === 'FIJO' && fecha_terminacion_contrato && (
+            <Row icon={Calendar} label="Fecha Terminación de Contrato" value={formatDate(fecha_terminacion_contrato)} />
+          )}
+          {observaciones_contrato && (
+            <Row icon={FileText} label="Observaciones de Contrato" value={observaciones_contrato} />
+          )}
         </Section>
 
         <Section title="Información de Contacto y Sistemas">
@@ -183,6 +208,17 @@ const PersonalDetailView = ({ personal, isLoading }) => {
           <Row icon={User} label="Nombre Contacto" value={contacto_emergencia} />
           <Row icon={Phone} label="Teléfono Contacto" value={telefono_emergencia} />
         </Section>
+
+        {/* Sección de Retiro (solo si hay datos) */}
+        {(estado === 'PENDIENTE_RETIRO_JURIDICO' || estado === 'RETIRADO' || motivo_retiro) && (
+          <Section title="Información de Retiro">
+            <Row icon={AlertTriangle} label="Motivo de Retiro" value={motivo_retiro} />
+            <Row icon={Calendar} label="Fecha de Retiro Deseada" value={formatDate(fecha_retiro_deseada)} />
+            {fecha_retiro && <Row icon={Calendar} label="Fecha de Retiro Efectiva" value={formatDate(fecha_retiro)} />}
+            {observacion_retiro && <Row icon={FileText} label="Observaciones de Retiro" value={observacion_retiro} />}
+            {usuario_que_retiro && <Row icon={UserCheck} label="Solicitado por" value={usuario_que_retiro} />}
+          </Section>
+        )}
       </div>
     </div>
   );

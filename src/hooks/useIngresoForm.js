@@ -22,6 +22,12 @@ const useIngresoForm = (initialState = {}) => {
     contrato: '',
     jefe_inmediato: '',
 
+    // Información Contractual (PLANTA/CORRETAJE)
+    asignacion_salarial: '',
+    tipo_contrato_laboral: '',
+    fecha_terminacion_contrato: '',
+    observaciones_contrato: '',
+
     // Step 3 - Credenciales Renovar (Gestionado en Tecnología)
     // correo_renovar: '',
     // password_renovar: '',
@@ -79,6 +85,33 @@ const useIngresoForm = (initialState = {}) => {
   }, [formData.contrato, determineEstadoByTipoContrato]);
 
   /**
+   * Efecto: Limpiar campos contractuales si el contrato NO es PLANTA o CORRETAJE
+   */
+  useEffect(() => {
+    if (formData.contrato !== 'PLANTA' && formData.contrato !== 'CORRETAJE') {
+      setFormData(prev => ({
+        ...prev,
+        asignacion_salarial: '',
+        tipo_contrato_laboral: '',
+        fecha_terminacion_contrato: '',
+        observaciones_contrato: '',
+      }));
+    }
+  }, [formData.contrato]);
+
+  /**
+   * Efecto: Limpiar fecha terminación si tipo de contrato laboral NO es FIJO
+   */
+  useEffect(() => {
+    if (formData.tipo_contrato_laboral !== 'FIJO') {
+      setFormData(prev => ({
+        ...prev,
+        fecha_terminacion_contrato: '',
+      }));
+    }
+  }, [formData.tipo_contrato_laboral]);
+
+  /**
    * Reglas de validación del formulario
    * NOTA: 'localidad' NO está aquí - se valida condicionalmente en validateAll()
    * NOTA: 'password_renovar_confirm' se valida especialmente en validateField()
@@ -90,9 +123,30 @@ const useIngresoForm = (initialState = {}) => {
     correo_personal: (value) => validators.email(value, 'correo personal'),
     cargo: (value) => validators.required(value, 'Cargo'),
     area: (value) => validators.required(value, 'Área'),
-    fecha_ingreso: validators.date,
+    fecha_ingreso: validators.dateAllowFuture,
     contrato: (value) => validators.required(value, 'Tipo de Contrato'),
     jefe_inmediato: validators.jefeInmediato,
+    asignacion_salarial: (value) => {
+      if ((formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (!value || value.toString().trim() === '')) {
+        return 'La asignación salarial es requerida';
+      }
+      return null;
+    },
+    tipo_contrato_laboral: (value) => {
+      if ((formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (!value || value === '')) {
+        return 'El tipo de contrato laboral es requerido';
+      }
+      return null;
+    },
+    fecha_terminacion_contrato: (value) => {
+      if (formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') {
+        if (formData.tipo_contrato_laboral === 'FIJO' && (!value || value === '')) {
+          return 'La fecha de terminación es requerida para contratos fijos';
+        }
+      }
+      return null;
+    },
+    observaciones_contrato: () => null, // Opcional
     // correo_renovar: (value) => validators.email(value, 'correo Renovar'),
     // password_renovar: validators.password,
     // password_renovar_confirm: () => null, // Se valida con lógica especial en validateField
@@ -185,7 +239,8 @@ const useIngresoForm = (initialState = {}) => {
     }
 
     return null;
-  }, [formData.cargo]);
+    return null;
+  }, [formData.cargo, formData.contrato, formData.tipo_contrato_laboral]);
 
   /**
    * Manejar cambios en los campos
@@ -319,6 +374,27 @@ const useIngresoForm = (initialState = {}) => {
     // Remover campos que no existen en el backend
     delete payloadData.nombre;
     delete payloadData.contrato;
+
+    // Convertir asignacion_salarial a número (remover puntos) si existe
+    if (payloadData.asignacion_salarial) {
+      // Si el usuario ingresó "1.500.000", convertimos a 1500000 (int)
+      const numericSalario = payloadData.asignacion_salarial.toString().replace(/\./g, '');
+      payloadData.asignacion_salarial = parseInt(numericSalario, 10);
+    }
+
+    // Limpiar campos contractuales si no aplican
+    if (['PLANTA', 'CORRETAJE'].includes(formData.contrato)) {
+      // Validar que si no es FIJO, no enviemos fecha
+      if (payloadData.tipo_contrato_laboral !== 'FIJO') {
+        delete payloadData.fecha_terminacion_contrato;
+      }
+    } else {
+      // Si no es PLANTA/CORRETAJE, borrar todo rastro de esto
+      delete payloadData.asignacion_salarial;
+      delete payloadData.tipo_contrato_laboral;
+      delete payloadData.fecha_terminacion_contrato;
+      delete payloadData.observaciones_contrato;
+    }
 
     // Si adminfo está vacío, no enviarlo
     if (!payloadData.adminfo || payloadData.adminfo.trim() === '') {
