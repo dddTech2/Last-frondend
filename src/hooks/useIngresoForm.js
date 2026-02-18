@@ -21,6 +21,7 @@ const useIngresoForm = (initialState = {}) => {
     fecha_ingreso: '',
     contrato: '',
     jefe_inmediato: '',
+    nombre_temporal: '', // Nuevo campo para empresas temporales
 
     // Información Contractual (PLANTA/CORRETAJE)
     asignacion_salarial: '',
@@ -97,6 +98,10 @@ const useIngresoForm = (initialState = {}) => {
         observaciones_contrato: '',
       }));
     }
+    // Limpiar nombre temporal si no es temporal
+    if (formData.contrato !== 'TEMPORAL') {
+      setFormData(prev => ({ ...prev, nombre_temporal: '' }));
+    }
   }, [formData.contrato]);
 
   /**
@@ -125,6 +130,12 @@ const useIngresoForm = (initialState = {}) => {
     area: (value) => validators.required(value, 'Área'),
     fecha_ingreso: validators.dateAllowFuture,
     contrato: (value) => validators.required(value, 'Tipo de Contrato'),
+    nombre_temporal: (value) => {
+      if (formData.contrato === 'TEMPORAL' && (!value || value.toString().trim() === '')) {
+        return 'El nombre de la temporal es requerido';
+      }
+      return null;
+    },
     jefe_inmediato: validators.jefeInmediato,
     asignacion_salarial: (value) => {
       // Solo requerido para PLANTA
@@ -371,11 +382,13 @@ const useIngresoForm = (initialState = {}) => {
       ...cleanData,
       nombre_completo: cleanData.nombre,
       tipo_contrato: cleanData.contrato,
+      temporal: cleanData.nombre_temporal, // Mapear nombre_temporal a temporal
     };
 
     // Remover campos que no existen en el backend
     delete payloadData.nombre;
     delete payloadData.contrato;
+    delete payloadData.nombre_temporal;
 
     // Convertir asignacion_salarial a número (remover puntos) si existe
     if (payloadData.asignacion_salarial) {
@@ -408,6 +421,13 @@ const useIngresoForm = (initialState = {}) => {
     if (!payloadData.cola || payloadData.cola.trim() === '') delete payloadData.cola;
     if (!payloadData.asignacion || payloadData.asignacion.trim() === '') delete payloadData.asignacion;
     if (!payloadData.correo_renovar || payloadData.correo_renovar.trim() === '') delete payloadData.correo_renovar;
+
+    if (!payloadData.correo_renovar || payloadData.correo_renovar.trim() === '') delete payloadData.correo_renovar;
+
+    // Limpiar temporal si no es TEMPORAL (seguridad adicional)
+    if (payloadData.tipo_contrato !== 'TEMPORAL') {
+      delete payloadData.temporal;
+    }
 
     return payloadData;
   }, [formData]);

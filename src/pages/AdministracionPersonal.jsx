@@ -476,53 +476,125 @@ const AdministracionPersonal = () => {
 
   // --- FUNCIONES DE EXPORTACIÓN ---
   const handleExportCSV = useCallback(() => {
-    if (employees.length === 0) {
+    if (filteredEmployees.length === 0) {
       toast.error('No hay datos para exportar');
       return;
     }
 
     const columns = [
-      { key: 'nombre', label: 'Nombre' },
-      { key: 'correo_renovar', label: 'Email' },
-      { key: 'celular', label: 'Teléfono' },
+      // Información Personal
       { key: 'cedula', label: 'Cédula' },
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'celular', label: 'Celular' },
+      { key: 'correo_personal', label: 'Correo Personal' },
+      { key: 'correo_renovar', label: 'Correo Corporativo' },
+
+      // Información Laboral
       { key: 'cargo', label: 'Cargo' },
       { key: 'area', label: 'Área' },
       { key: 'fecha_ingreso', label: 'Fecha Ingreso' },
+      { key: 'contrato', label: 'Tipo Contrato' },
+      { key: 'nombre_temporal', label: 'Empresa Temporal' },
+      { key: 'jefe_inmediato', label: 'Jefe Inmediato' },
       { key: 'estado', label: 'Estado' },
+
+      // Información Tecnológica y Operativa
+      { key: 'usuario_red', label: 'Usuario Red' },
+      { key: 'adminfo', label: 'Adminfo' },
+      { key: 'extension_3cx', label: 'Extensión 3CX' },
+      { key: 'cola_3cx', label: 'Cola 3CX' },
+
+      // Información Adicional
+      { key: 'fecha_nacimiento', label: 'Fecha Nacimiento' },
+      { key: 'genero', label: 'Género' },
+      { key: 'ciudad', label: 'Ciudad' },
+      { key: 'localidad', label: 'Localidad' },
+      { key: 'lugar', label: 'Lugar Trabajo' },
+      { key: 'direccion_residencia', label: 'Dirección Residencia' },
+
+      // Seguridad Social
+      { key: 'eps', label: 'EPS' },
+      { key: 'fondo_pensiones', label: 'Fondo Pensiones' },
+      { key: 'arl', label: 'ARL' },
+
+      // Información Familiar y Emergencia
+      { key: 'cantidad_hijos', label: 'Hijos' },
+      { key: 'contacto_emergencia_nombre', label: 'Contacto Emergencia' },
+      { key: 'contacto_emergencia_telefono', label: 'Teléfono Emergencia' },
+
+      // Información Contractual
+      { key: 'asignacion_salarial', label: 'Salario' },
+      { key: 'tipo_contrato_laboral', label: 'Contrato Laboral' },
+      { key: 'fecha_terminacion_contrato', label: 'Fin Contrato' },
     ];
 
     const timestamp = new Date().toLocaleDateString('es-CO').replace(/\//g, '-');
     const filename = `personal_${timestamp}.csv`;
 
-    exportToCSV(employees, filename, columns);
-    toast.success(`✅ Exportado ${employees.length} registros a CSV`);
-  }, [employees]);
+    exportToCSV(filteredEmployees, filename, columns);
+    toast.success(`✅ Exportado ${filteredEmployees.length} registros a CSV`);
+  }, [filteredEmployees]);
 
   const handleExportExcel = useCallback(async () => {
-    if (employees.length === 0) {
+    if (filteredEmployees.length === 0) {
       toast.error('No hay datos para exportar');
       return;
     }
 
     const columns = [
-      { key: 'nombre', label: 'Nombre' },
-      { key: 'correo_renovar', label: 'Email' },
-      { key: 'celular', label: 'Teléfono' },
+      // Información Personal
       { key: 'cedula', label: 'Cédula' },
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'celular', label: 'Celular' },
+      { key: 'correo_personal', label: 'Correo Personal' },
+      { key: 'correo_renovar', label: 'Correo Corporativo' },
+
+      // Información Laboral
       { key: 'cargo', label: 'Cargo' },
       { key: 'area', label: 'Área' },
       { key: 'fecha_ingreso', label: 'Fecha Ingreso' },
+      { key: 'contrato', label: 'Tipo Contrato' },
+      { key: 'nombre_temporal', label: 'Empresa Temporal' },
+      { key: 'jefe_inmediato', label: 'Jefe Inmediato' },
       { key: 'estado', label: 'Estado' },
+
+      // Información Tecnológica y Operativa
+      { key: 'usuario_red', label: 'Usuario Red' },
+      { key: 'adminfo', label: 'Adminfo' },
+      { key: 'extension_3cx', label: 'Extensión 3CX' },
+      { key: 'cola_3cx', label: 'Cola 3CX' },
+
+      // Información Adicional
+      { key: 'fecha_nacimiento', label: 'Fecha Nacimiento' },
+      { key: 'genero', label: 'Género' },
+      { key: 'ciudad', label: 'Ciudad' },
+      { key: 'localidad', label: 'Localidad' },
+      { key: 'lugar', label: 'Lugar Trabajo' },
+      { key: 'direccion_residencia', label: 'Dirección Residencia' },
+
+      // Seguridad Social
+      { key: 'eps', label: 'EPS' },
+      { key: 'fondo_pensiones', label: 'Fondo Pensiones' },
+      { key: 'arl', label: 'ARL' },
+
+      // Información Familiar y Emergencia
+      { key: 'cantidad_hijos', label: 'Hijos' },
+      { key: 'contacto_emergencia_nombre', label: 'Contacto Emergencia' },
+      { key: 'contacto_emergencia_telefono', label: 'Teléfono Emergencia' },
+
+      // Información Contractual
+      { key: 'asignacion_salarial', label: 'Salario' },
+      { key: 'tipo_contrato_laboral', label: 'Contrato Laboral' },
+      { key: 'fecha_terminacion_contrato', label: 'Fin Contrato' },
     ];
 
     const timestamp = new Date().toLocaleDateString('es-CO').replace(/\//g, '-');
     const filename = `personal_${timestamp}.xlsx`;
 
     try {
-      const success = await exportToXLSX(employees, filename, 'Personal', columns);
+      const success = await exportToXLSX(filteredEmployees, filename, 'Personal', columns);
       if (success) {
-        toast.success(`✅ Exportado ${employees.length} registros a Excel`);
+        toast.success(`✅ Exportado ${filteredEmployees.length} registros a Excel`);
       } else {
         toast.error('❌ No se pudo exportar a Excel. Intenta de nuevo.');
       }
@@ -530,7 +602,7 @@ const AdministracionPersonal = () => {
       console.error('Error al exportar:', error);
       toast.error('❌ Error durante la exportación. Intenta de nuevo.');
     }
-  }, [employees]);
+  }, [filteredEmployees]);
 
   return (
     <>

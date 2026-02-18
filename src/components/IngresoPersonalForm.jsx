@@ -190,8 +190,14 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       'cargo', 'area', 'fecha_ingreso', 'contrato', 'jefe_inmediato',
       'fecha_nacimiento', 'genero', 'ciudad', 'lugar', 'direccion_residencia',
       'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos', 'contacto_emergencia_nombre',
+      'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos', 'contacto_emergencia_nombre',
       'contacto_emergencia_telefono'
     ];
+
+    // Si es TEMPORAL, agregar nombre_temporal
+    if (formData.contrato === 'TEMPORAL') {
+      step2Fields.push('nombre_temporal');
+    }
 
     // Si es Bogotá, agregar localidad
     if (formData.ciudad === 'BOGOTA') {
@@ -234,6 +240,10 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         'cantidad_hijos', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'
       ];
 
+      if (formData.contrato === 'TEMPORAL') {
+        allStep2Fields.push('nombre_temporal');
+      }
+
       let touchedFields = {};
       allStep2Fields.forEach(field => {
         touchedFields[field] = true;
@@ -257,7 +267,9 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         arl: 'ARL',
         cantidad_hijos: 'Cantidad de Hijos',
         contacto_emergencia_nombre: 'Contacto de Emergencia - Nombre',
+        contacto_emergencia_nombre: 'Contacto de Emergencia - Nombre',
         contacto_emergencia_telefono: 'Contacto de Emergencia - Teléfono',
+        nombre_temporal: 'Nombre de la Temporal',
       };
 
       // Mostrar errores específicos
@@ -273,7 +285,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     setStep(3);
     setSubmitError(null);
     setErrors({});
-    toast.success('✅ Datos laborales y personales guardados correctamente');
+    toast.success('✅ Datos laborales y personales VALIDADOS, REVISA Y GUARDA');
   };
 
   // Opciones para los selectores
@@ -360,6 +372,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     { value: 'INTEGRA', label: 'Integra' },
     { value: 'FUTURA', label: 'Futura' },
     { value: 'SURA', label: 'Sura' },
+    { value: 'COLPENSIONES', label: 'Colpensiones' },
   ];
 
   // EPS más comunes en Colombia
@@ -438,7 +451,9 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       arl: 'ARL',
       cantidad_hijos: 'Cantidad de Hijos',
       contacto_emergencia_nombre: 'Contacto de Emergencia - Nombre',
+      contacto_emergencia_nombre: 'Contacto de Emergencia - Nombre',
       contacto_emergencia_telefono: 'Contacto de Emergencia - Teléfono',
+      nombre_temporal: 'Nombre de la Temporal',
     };
 
     const missingFields = [];
@@ -460,6 +475,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     if (!formData.cantidad_hijos) missingFields.push(fieldLabels.cantidad_hijos);
     if (!formData.contacto_emergencia_nombre) missingFields.push(fieldLabels.contacto_emergencia_nombre);
     if (!formData.contacto_emergencia_telefono) missingFields.push(fieldLabels.contacto_emergencia_telefono);
+    if (formData.contrato === 'TEMPORAL' && !formData.nombre_temporal) missingFields.push(fieldLabels.nombre_temporal);
 
     return missingFields;
   };
@@ -482,7 +498,8 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       formData.arl &&
       formData.cantidad_hijos &&
       formData.contacto_emergencia_nombre &&
-      formData.contacto_emergencia_telefono
+      formData.contacto_emergencia_telefono &&
+      (formData.contrato === 'TEMPORAL' ? formData.nombre_temporal : true)
       // estado se determina automáticamente según tipo de contrato
     );
 
@@ -706,6 +723,31 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           )}
         </div>
       </div>
+
+      {formData.contrato === 'TEMPORAL' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <FormField
+              label="Nombre de la Temporal"
+              name="nombre_temporal"
+              type="text"
+              placeholder="Ej: Manpower, Adecco..."
+              value={formData.nombre_temporal}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              required
+              disabled={isSubmitting}
+              error={!!getFieldError('nombre_temporal')}
+              icon={Briefcase}
+            />
+            {getFieldError('nombre_temporal') && (
+              <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" /> {getFieldError('nombre_temporal')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SelectJefeInmediato
