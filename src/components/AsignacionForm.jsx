@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import Select from 'react-select';
 import { Search, Save, Loader2, UserCog, Hash, Wifi, Users, ArrowLeft, AlertCircle } from 'lucide-react';
 import FormField from './FormField';
 
@@ -6,7 +7,7 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
   const [searchTerm, setSearchTerm] = useState('');
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     adminfo: '',
@@ -14,21 +15,50 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
     jefe_inmediato: '',
   });
 
-  // Obtener lista única de jefes inmediatos para el dropdown
-  const jefesInmediatos = useMemo(() => {
-    const jefesSet = new Set();
-    employees.forEach(emp => {
-      if (emp.jefe_inmediato && typeof emp.jefe_inmediato === 'string' && emp.jefe_inmediato.trim()) {
-        jefesSet.add(emp.jefe_inmediato.trim());
-      }
-    });
-    return Array.from(jefesSet).sort();
+  // Preparar opciones para el selector de Jefe Inmediato (autocompletado)
+  // Usamos TODOS los empleados como posibles jefes/coordinadores
+  const employeeOptions = useMemo(() => {
+    return employees
+      .filter(emp => emp.nombre && emp.nombre.trim() !== '') // Filtrar vacíos
+      .map(emp => ({
+        value: emp.nombre, // Usamos el nombre como valor porque así lo espera el backend actualmente
+        label: `${emp.nombre} - ${emp.cargo || 'Sin Cargo'}`,
+        cargo: emp.cargo
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
   }, [employees]);
 
-  // Filter employees based on search term and pending status
+  // Estilos personalizados para react-select
+  const customSelectStyles = {
+    control: (base, state) => ({
+      ...base,
+      borderColor: state.isFocused ? '#6366f1' : '#d1d5db', // Indigo-500 al foco
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(99, 102, 241, 0.2)' : 'none',
+      '&:hover': {
+        borderColor: '#6366f1'
+      },
+      paddingTop: '2px',
+      paddingBottom: '2px',
+      borderRadius: '0.5rem',
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected ? '#6366f1' : state.isFocused ? '#e0e7ff' : 'white',
+      color: state.isSelected ? 'white' : '#1f2937',
+      cursor: 'pointer',
+    }),
+    input: (base) => ({
+      ...base,
+      'input:focus': {
+        boxShadow: 'none',
+      },
+    }),
+  };
+
+  // ... (filtro de empleados para búsqueda principal se mantiene igual)
   const filteredEmployees = useMemo(() => {
     if (!searchTerm && !showPendingOnly) return [];
-    
+
     let result = employees;
 
     // Filter by pending data - sin adminfo asignado
@@ -39,7 +69,7 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
     // Filter by search term (Name or Cedula)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(emp => 
+      result = result.filter(emp =>
         (emp.nombre || '').toLowerCase().includes(term) ||
         (emp.cedula || '').includes(term)
       );
@@ -50,7 +80,7 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
 
   const handleSelectEmployee = (emp) => {
     setSelectedEmployee(emp);
-    
+
     // Función para convertir cualquier valor a string seguro
     const safeString = (val) => {
       if (val === null || val === undefined) return '';
@@ -72,10 +102,17 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleJefeChange = (option) => {
+    setFormData(prev => ({
+      ...prev,
+      jefe_inmediato: option ? option.value : ''
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedEmployee) return;
-    
+
     // Payload para el PUT - usar nombres que acepta el backend
     const payload = {
       cedula: selectedEmployee.cedula,
@@ -83,17 +120,20 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
       asignacion: formData.asignacion, // Backend acepta "asignacion"
       jefe_inmediato: formData.jefe_inmediato,
     };
-    
+
     onSubmit(payload);
   };
 
   // --- VIEW: EDIT FORM ---
   if (selectedEmployee) {
+    // Encontrar la opción correspondiente al valor actual para mostrarla seleccionada
+    const currentJefeOption = employeeOptions.find(opt => opt.value === formData.jefe_inmediato);
+
     return (
       <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
         <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setSelectedEmployee(null)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-gray-700"
             title="Volver a la búsqueda"
@@ -115,47 +155,41 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
             icon={<Hash className="h-4 w-4 text-gray-400" />}
             placeholder="Ej: ADM001"
           />
-          
+
           <FormField
             label="Asignación"
             name="asignacion"
             value={formData.asignacion}
             onChange={handleChange}
             icon={<Wifi className="h-4 w-4 text-gray-400" />}
-            placeholder="Usuario de red / equipo asignado"
+            placeholder="Asignación adminfo"
           />
 
-          {/* Dropdown de Jefe Inmediato */}
+          {/* Autocomplete de Jefe Inmediato con React-Select */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <Users className="h-4 w-4 text-gray-400" />
               Jefe Inmediato / Coordinador
             </label>
-            <select
-              name="jefe_inmediato"
-              value={formData.jefe_inmediato}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-            >
-              <option value="">Seleccionar jefe inmediato...</option>
-              {jefesInmediatos.map(jefe => (
-                <option key={jefe} value={jefe}>
-                  {jefe}
-                </option>
-              ))}
-            </select>
-            {/* Opción para escribir manualmente si no está en la lista */}
-            <p className="text-xs text-gray-500 mt-1">
-              ¿No está en la lista? Escríbelo manualmente:
-            </p>
-            <input
-              type="text"
-              name="jefe_inmediato"
-              value={formData.jefe_inmediato}
-              onChange={handleChange}
-              placeholder="Escribir nombre del jefe inmediato..."
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+            <Select
+              value={currentJefeOption}
+              onChange={handleJefeChange}
+              options={employeeOptions}
+              styles={customSelectStyles}
+              placeholder="Buscar por nombre..."
+              noOptionsMessage={() => "No se encontraron empleados"}
+              isClearable
+              isSearchable
+              formatOptionLabel={({ label, cargo }) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">{label.split(' - ')[0]}</span>
+                  <span className="text-xs text-gray-500">{cargo || 'Sin Cargo'}</span>
+                </div>
+              )}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Escribe el nombre para buscar en la lista de empleados.
+            </p>
           </div>
         </div>
 
@@ -256,13 +290,13 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
           ))
         ) : (
           <div className="p-8 text-center text-gray-500">
-            {searchTerm || showPendingOnly 
-              ? 'No se encontraron empleados con esos criterios.' 
+            {searchTerm || showPendingOnly
+              ? 'No se encontraron empleados con esos criterios.'
               : 'Utiliza el buscador o el filtro para encontrar empleados.'}
           </div>
         )}
       </div>
-      
+
       <div className="flex justify-end pt-4 border-t border-gray-100 mt-auto">
         <button
           type="button"
