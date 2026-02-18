@@ -87,15 +87,15 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
   // Handler para contacto de emergencia teléfono (solo números, comienza con 3, 10 dígitos)
   const handleEmergencyPhoneChange = (e) => {
     let value = e.target.value.replace(/\D/g, ''); // Solo números
-    
+
     // Asegurar que comience con 3
     if (value.length > 0 && value[0] !== '3') {
       value = '3' + value;
     }
-    
+
     // Limitar a 10 dígitos
     value = value.substring(0, 10);
-    
+
     e.target.value = value;
     handleChange(e);
   };
@@ -111,15 +111,15 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
 
   const handleProceedToStep2 = async () => {
     setStep(1); // Asegurar que estamos en paso 1
-    
+
     // Marcar todos los campos como touched para mostrar errores
     const step1Fields = ['cedula', 'nombre', 'celular', 'correo_personal'];
-    
+
     // Validar cada campo localmente
     let validationErrors = {};
     step1Fields.forEach(field => {
       let error = null;
-      
+
       // Validar contenido
       if (!formData[field] || formData[field].trim() === '') {
         error = `Este campo es requerido`;
@@ -135,7 +135,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           error = validators.email(formData[field], 'correo personal');
         }
       }
-      
+
       if (error) {
         validationErrors[field] = error;
       }
@@ -176,17 +176,17 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
       'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos', 'contacto_emergencia_nombre',
       'contacto_emergencia_telefono'
     ];
-    
+
     // Si es Bogotá, agregar localidad
     if (formData.ciudad === 'BOGOTA') {
       step2Fields.push('localidad');
     }
-    
+
     // Validar cada campo con validadores específicos
     let validationErrors = {};
     step2Fields.forEach(field => {
       let error = null;
-      
+
       // Validar contenido
       if (!formData[field] || formData[field].toString().trim() === '') {
         error = `Este campo es requerido`;
@@ -200,7 +200,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           error = validators.fechaNacimiento(formData[field]);
         }
       }
-      
+
       if (error) {
         validationErrors[field] = error;
       }
@@ -209,7 +209,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     // Si hay errores, marcar campos y mostrar mensaje
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      
+
       // Marcar todos los campos del step 2 como touched para que se muestren los errores
       const allStep2Fields = [
         'cargo', 'area', 'fecha_ingreso', 'contrato', 'jefe_inmediato',
@@ -217,13 +217,13 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         'lugar', 'direccion_residencia', 'eps', 'fondo_pensiones', 'arl',
         'cantidad_hijos', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'
       ];
-      
+
       let touchedFields = {};
       allStep2Fields.forEach(field => {
         touchedFields[field] = true;
       });
       setTouched(touchedFields);
-      
+
       const fieldLabels = {
         cargo: 'Cargo',
         area: 'Área',
@@ -243,12 +243,12 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         contacto_emergencia_nombre: 'Contacto de Emergencia - Nombre',
         contacto_emergencia_telefono: 'Contacto de Emergencia - Teléfono',
       };
-      
+
       // Mostrar errores específicos
       const errorMessages = Object.entries(validationErrors)
         .map(([field, error]) => `❌ ${fieldLabels[field] || field}: ${error}`)
         .join('\n');
-      
+
       setSubmitError(`Por favor corrige los siguientes errores:\n${errorMessages}`);
       return;
     }
@@ -262,7 +262,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
 
   // Opciones para los selectores
   const cargos = [
-    'COORDINADOR', 'GESTOR', 'ABOGADO JUNIOR', 'ANALISTA TI', 'ANALISTA JUNIOR',
+    'COORDINADOR', 'GESTOR DE COBRANZA', 'ABOGADO JUNIOR', 'ANALISTA TI', 'ANALISTA JUNIOR',
     'ANALISTA SIG', 'ASISTENTE VENTAS', 'AUX SERVICIOS GENERALES', 'CIENTIFICO DATOS',
     'DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES',
     'GERENTE GENERAL', 'LIDER DE PROCESOS', 'SUBDIRECTOR'
@@ -426,7 +426,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     };
 
     const missingFields = [];
-    
+
     if (!formData.cargo) missingFields.push(fieldLabels.cargo);
     if (!formData.area) missingFields.push(fieldLabels.area);
     if (!formData.fecha_ingreso) missingFields.push(fieldLabels.fecha_ingreso);
@@ -507,7 +507,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         contacto_emergencia_telefono: formData.contacto_emergencia_telefono,
       });
       console.groupEnd();
-      
+
       setSubmitError('Por favor completa todos los campos requeridos correctamente');
       return;
     }
@@ -975,7 +975,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     // Mapeo de valores formateados
     const formatValue = (field, value) => {
       if (!value) return '—';
-      
+
       // Especiales: dropdowns que necesitan valores legibles
       const dropdownMaps = {
         genero: { 'M': 'Masculino', 'F': 'Femenino', 'O': 'Otro' },
@@ -991,11 +991,11 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         lugar: { 'OFICINA': 'Oficina', 'CASA': 'Casa', 'HIBRIDO': 'Híbrido' },
         contrato: { 'PLANTA': 'Planta', 'CORRETAJE': 'Corretaje', 'TEMPORAL': 'Temporal', 'CASA DE COBRO': 'Casa de Cobro' },
       };
-      
+
       if (dropdownMaps[field] && dropdownMaps[field][value]) {
         return dropdownMaps[field][value];
       }
-      
+
       // Fechas: formatear
       if ((field === 'fecha_ingreso' || field === 'fecha_nacimiento') && value) {
         try {
@@ -1004,7 +1004,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
           return value;
         }
       }
-      
+
       // Default
       return value;
     };

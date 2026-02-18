@@ -20,22 +20,22 @@ const SelectJefeInmediato = ({
   // Mapeo de cargos a roles para buscar
   const cargoToRoles = {
     // GESTORES reportan a COORDINADORES
-    'GESTOR': ['COORDINADOR'],
-    
+    'GESTOR DE COBRANZA': ['COORDINADOR DE COBRANZA'],
+
     // ANALISTAS (cualquier tipo) reportan a DIRECTORES
     'ANALISTA TI': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
     'ANALISTA JUNIOR': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
     'ANALISTA SIG': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
     'CIENTIFICO DATOS': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-    
+
     // COORDINADORES reportan a DIRECTORES
     'COORDINADOR': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-    
+
     // DIRECTORES reportan a GERENTE GENERAL o DIRECTORES superiores
     'DIRECTOR JURIDICO': ['GERENTE GENERAL', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA'],
     'DIRECTOR ADMINISTRATIVO Y FINANCIERA': ['GERENTE GENERAL', 'DIRECTORA DE OPERACIONES'],
     'DIRECTORA DE OPERACIONES': ['GERENTE GENERAL', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA'],
-    
+
     // OTROS cargos
     'ABOGADO JUNIOR': ['DIRECTOR JURIDICO'],
     'ASISTENTE VENTAS': ['COORDINADOR', 'GESTOR'],
@@ -66,11 +66,11 @@ const SelectJefeInmediato = ({
       setLoadError(null);
       try {
         console.log('Iniciando carga para cargo:', cargo);
-        
+
         // Obtener los roles permitidos para este cargo
         const rolesPermitidos = cargoToRoles[cargo] || [];
         console.log('Roles permitidos:', rolesPermitidos);
-        
+
         if (rolesPermitidos.length === 0) {
           console.log('No hay roles permitidos para este cargo');
           setOptions([]);
@@ -87,18 +87,18 @@ const SelectJefeInmediato = ({
             const response = await getEmployees({
               cargo: rolesPermitidos[i],
             });
-            
+
             console.log(`Respuesta para ${rolesPermitidos[i]}:`, response);
-            
+
             // Manejar diferentes formatos de respuesta
-            const empleados = Array.isArray(response) 
-              ? response 
+            const empleados = Array.isArray(response)
+              ? response
               : response?.items  // ← Buscar en "items" primero
-              ? response.items 
-              : response?.data 
-              ? response.data 
-              : [];
-            
+                ? response.items
+                : response?.data
+                  ? response.data
+                  : [];
+
             console.log(`Empleados parseados para ${rolesPermitidos[i]}:`, empleados);
             allEmployees = [...allEmployees, ...empleados];
           } catch (err) {
@@ -182,7 +182,7 @@ const SelectJefeInmediato = ({
         Jefe Inmediato
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      
+
       <Select
         options={options}
         value={selectedValue}
@@ -200,13 +200,13 @@ const SelectJefeInmediato = ({
         isClearable
         isSearchable
         placeholder={
-          cargo === 'GERENTE GENERAL' 
+          cargo === 'GERENTE GENERAL'
             ? 'No requiere jefe inmediato'
-            : loading 
-            ? 'Cargando empleados...' 
-            : cargo 
-            ? 'Busca el jefe inmediato' 
-            : 'Selecciona un cargo primero'
+            : loading
+              ? 'Cargando empleados...'
+              : cargo
+                ? 'Busca el jefe inmediato'
+                : 'Selecciona un cargo primero'
         }
         styles={customStyles}
         formatOptionLabel={(option) => (
@@ -223,19 +223,19 @@ const SelectJefeInmediato = ({
           return 'No hay empleados disponibles para este cargo';
         }}
       />
-      
+
       {error && (
         <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
           <AlertCircle className="h-4 w-4" /> {error}
         </p>
       )}
-      
+
       {loadError && (
         <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
           <AlertCircle className="h-4 w-4" /> Error al cargar: {loadError}
         </p>
       )}
-      
+
       {loading && (
         <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
           <Loader className="h-4 w-4 animate-spin" /> Cargando empleados...

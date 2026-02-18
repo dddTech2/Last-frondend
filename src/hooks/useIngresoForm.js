@@ -14,19 +14,19 @@ const useIngresoForm = (initialState = {}) => {
     nombre: '',
     celular: '',
     correo_personal: '',
-    
+
     // Step 2 - Datos Laborales
     cargo: '',
     area: '',
     fecha_ingreso: '',
     contrato: '',
     jefe_inmediato: '',
-    
+
     // Step 3 - Credenciales Renovar (Gestionado en Tecnología)
     // correo_renovar: '',
     // password_renovar: '',
     // password_renovar_confirm: '',
-    
+
     // Datos adicionales personales (nuevos)
     // estado: Se determina automáticamente según tipo de contrato
     estado: '',
@@ -57,9 +57,9 @@ const useIngresoForm = (initialState = {}) => {
   const determineEstadoByTipoContrato = useCallback((tipoContrato) => {
     const estadoMap = {
       'PLANTA': 'PENDIENTE_APROBACION_JURIDICO',
-      'CORRETAJE': 'EN_PROCESO_DE_CONTRATACION',
+      'CORRETAJE': 'PENDIENTE_APROBACION_JURIDICO',
       'TEMPORAL': 'EN_PROCESO_DE_CONTRATACION',
-      'CASA DE COBRO': 'EN_PROCESO_DE_CONTRATACION',
+      'CASA DE COBRO': 'PENDIENTE_APROBACION_JURIDICO',
     };
     return estadoMap[tipoContrato] || 'EN_PROCESO_DE_CONTRATACION';
   }, []);
@@ -135,7 +135,7 @@ const useIngresoForm = (initialState = {}) => {
     try {
       // getEmployeeByCedula retorna null si no existe (404)
       const employee = await api.getEmployeeByCedula(cedula);
-      
+
       if (employee) {
         // La cédula ya existe en el sistema - Mostrar toast y retornar error para bloquear
         let mensaje = '';
@@ -148,7 +148,7 @@ const useIngresoForm = (initialState = {}) => {
         } else {
           mensaje = `Esta cédula ya existe en el sistema (Estado: ${employee.estado}).`;
         }
-        
+
         // Mostrar toast de error Y retornar mensaje para bloquear el formulario
         toast.error(mensaje);
         return mensaje;
@@ -193,7 +193,7 @@ const useIngresoForm = (initialState = {}) => {
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Validar si el campo ya ha sido tocado
     if (touched[name]) {
       const error = validateField(name, value);
@@ -210,7 +210,7 @@ const useIngresoForm = (initialState = {}) => {
   const handleBlur = useCallback((e) => {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    
+
     const error = validateField(name, formData[name]);
     setErrors(prev => ({
       ...prev,
@@ -223,7 +223,7 @@ const useIngresoForm = (initialState = {}) => {
    */
   const validateCedula = useCallback(async () => {
     const basicError = validateField('cedula', formData.cedula);
-    
+
     if (basicError) {
       setErrors(prev => ({ ...prev, cedula: basicError }));
       return false;
@@ -279,7 +279,7 @@ const useIngresoForm = (initialState = {}) => {
       'eps', 'fondo_pensiones', 'arl', 'cantidad_hijos',
       'contacto_emergencia_nombre', 'contacto_emergencia_telefono',
     ];
-    
+
     // Agregar localidad a los campos tocados SOLO si es Bogotá
     if (formData.ciudad === 'BOGOTA') {
       allFieldNames.push('localidad');
@@ -307,7 +307,7 @@ const useIngresoForm = (initialState = {}) => {
    */
   const getCleanData = useCallback(() => {
     const { localidad, ...cleanData } = formData;
-    
+
     // Mapear campos que tienen nombres diferentes en el backend
     // El backend espera 'nombre_completo' no 'nombre'
     const payloadData = {
@@ -315,7 +315,7 @@ const useIngresoForm = (initialState = {}) => {
       nombre_completo: cleanData.nombre,
       tipo_contrato: cleanData.contrato,
     };
-    
+
     // Remover campos que no existen en el backend
     delete payloadData.nombre;
     delete payloadData.contrato;
@@ -324,13 +324,13 @@ const useIngresoForm = (initialState = {}) => {
     if (!payloadData.adminfo || payloadData.adminfo.trim() === '') {
       delete payloadData.adminfo;
     }
-    
+
     // Limpiar otros campos opcionales si están vacíos
     if (!payloadData.extension_3cx || payloadData.extension_3cx.trim() === '') delete payloadData.extension_3cx;
     if (!payloadData.cola || payloadData.cola.trim() === '') delete payloadData.cola;
     if (!payloadData.asignacion || payloadData.asignacion.trim() === '') delete payloadData.asignacion;
     if (!payloadData.correo_renovar || payloadData.correo_renovar.trim() === '') delete payloadData.correo_renovar;
-    
+
     return payloadData;
   }, [formData]);
 
