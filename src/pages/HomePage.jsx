@@ -38,7 +38,7 @@ const HomePage = () => {
   const allQuickAccessItems = [
     { title: "Gestionar Clientes", description: "Administra y consulta información de clientes", icon: <ManageClientsIcon />, path: "/clients", roles: ["Admin", "Coordinador", "Gestor"] },
     { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", roles: ["Admin", "Coordinador", "Directora de Operaciones"] },
-    { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", public: true, roles: ["Admin", "Coordinador", "Gestor"] },
+    { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", public: true, roles: ["Admin", "Coordinador", "Gestor", "Directora de Operaciones"] },
     { title: "Constructor de Comunicaciones", description: "Crea y configura plantillas de documentos", icon: <BuilderIcon />, path: "/communications/builder", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
     { title: "Aprobación de Plantillas", description: "Revisa y aprueba plantillas de mensajes", icon: <TemplateApprovalIcon />, path: "/templates/approval", roles: ["Admin", "Jurídico", "Directora de Operaciones"] },
     { title: "Crear Plantilla", description: "Crea nuevas plantillas de SMS, WhatsApp o Email", icon: <BuilderIcon />, path: "/templates/new", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
@@ -46,7 +46,7 @@ const HomePage = () => {
     { title: "Demográficos", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", public: true, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Directora de Operaciones", "Jurídico", "Juridico"] },
     { title: "Gestión de Usuarios", description: "Administra usuarios del sistema", icon: <UserManagementIcon />, path: "/users", roles: ["Admin"] },
     { title: "Reportes y Analítica", description: "Visualiza métricas y genera reportes", icon: <ReportsIcon />, path: "/reports", roles: ["Admin", "Coordinador"] },
-    { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", roles: ["Admin", "Coordinador", "Gestor"] },
+    { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", roles: ["Admin", "Coordinador", "Gestor", "Directora de Operaciones"] },
     { title: "Administración de Personal", description: "Gestionar altas, bajas y usuarios de proveedores", icon: <BriefcaseIcon />, path: "/administracion-personal", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico", "Tecnologia", "talento_humano", "analista"] },
   ];
 
