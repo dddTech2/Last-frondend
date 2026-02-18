@@ -63,12 +63,12 @@ export const apiRequest = async (endpoint, method = 'GET', body = null) => {
       error.status = response.status;
       throw error;
     }
-    
+
     // Si es 204 No Content, no hay body para parsear
     if (response.status === 204) {
       return null;
     }
-    
+
     const json = await response.json();
     if (isNotif) {
       const dur = (performance.now() - start).toFixed(1);
@@ -391,7 +391,7 @@ export const getCampaignHistory = (params) => {
 export const exportCampaignHistory = (filters, email) => {
   const queryParams = new URLSearchParams();
   queryParams.append('email', email);
-  
+
   // Normalizar filtros para que coincidan con el schema del backend
   const normalizedFilters = {
     start_date: filters.start_date || null,
@@ -403,12 +403,12 @@ export const exportCampaignHistory = (filters, email) => {
     skip: 0,
     limit: 50
   };
-  
+
   // Eliminar campos null para no enviarlos
   const cleanFilters = Object.fromEntries(
     Object.entries(normalizedFilters).filter(([_, v]) => v !== null && v !== '')
   );
-  
+
   return apiRequest(`/reports/campaign-history/export?${queryParams.toString()}`, 'POST', cleanFilters);
 };
 
@@ -539,7 +539,7 @@ export const updateEmployee = (cedula, employeeData) => apiRequest(`/employees/$
 export const requestRetirement = (retirementData) => apiRequest('/employees/retire', 'POST', retirementData);
 export const approveContract = (cedula) => apiRequest(`/employees/${cedula}/juridico/approve`, 'POST', {});
 export const rejectContract = (cedula, motivo) => apiRequest(`/employees/${cedula}/juridico/reject`, 'POST', { motivo });
-export const approveRetirement = (cedula) => apiRequest(`/employees/${cedula}/retire/approve`, 'POST', {});
+export const approveRetirement = (cedula, data = {}) => apiRequest(`/employees/${cedula}/retire/approve`, 'POST', data);
 export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${cedula}/retire/reject`, 'POST', { motivo_rechazo_juridico: motivo });
 
 // --- Endpoints de Credenciales de Empleados ---
@@ -727,7 +727,7 @@ export const getTemplateVariablesDetail = (templateId) => apiRequest(`/templates
 export const uploadCampaignCSV = async (formData) => {
   const token = getAuthToken();
   const headers = {};
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

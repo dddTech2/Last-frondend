@@ -23,7 +23,7 @@ const BriefcaseIcon = () => <Briefcase className="h-10 w-10 text-green-600 mb-4"
 
 const AdministracionPersonal = () => {
   const [openModal, setOpenModal] = useState(null);
-  
+
   // === HOOK DE API ===
   const {
     employees,
@@ -54,14 +54,14 @@ const AdministracionPersonal = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [allEmployees, setAllEmployees] = useState([]); // Almacena TODOS los empleados
   const [loadingAllEmployees, setLoadingAllEmployees] = useState(false);
-  
+
   const [selectedPersonal, setSelectedPersonal] = useState(null);
   const [viewDetailModal, setViewDetailModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState(null);
   const [rejectionModal, setRejectionModal] = useState({ isOpen: false, cedula: null });
   const [rejectionReason, setRejectionReason] = useState('');
-  
+
   // Nuevos estados para los modales de retiro
   const [aprobacionRetiroModal, setAprobacionRetiroModal] = useState({ isOpen: false, empleado: null });
   const [rechazoRetiroModal, setRechazoRetiroModal] = useState({ isOpen: false, empleado: null });
@@ -102,7 +102,7 @@ const AdministracionPersonal = () => {
             // Usar la función de api.js
             const data = await api.getEmployees(params);
             const items = data.items || data || [];
-            
+
             if (Array.isArray(items) && items.length > 0) {
               allEmps = [...allEmps, ...items];
             }
@@ -144,8 +144,8 @@ const AdministracionPersonal = () => {
 
 
   // === OPCIONES PARA FILTROS (Simulado, idealmente vendrían de la API) ===
-  const cargosUnicos = ['todos', 'COORDINADOR', 'GESTOR', 'ABOGADO JUNIOR','ANALISTA TI', 'ANALISTA JUNIOR', 'ANALISTA SIG', 'ASISTENTE VENTAS','AUX SERVICIOS GENERALES','CIENTIFICO DATOS','DIRECTOR JURIDICO','DIRECTOR ADMINISTRATIVO Y FINANCIERA','DIRECTORA DE OPERACIONES','GERENTE GENERAL','LIDER DE PROCESOS','SUBDIRECTOR'];
-  const areasUnicas = ['todos', 'COBRANZA', 'TI', 'SEGUROS', 'ADMINISTRATIVO', 'COLOCACION', 'GERENCIA', 'JURIDICA','RRHH'];
+  const cargosUnicos = ['todos', 'COORDINADOR', 'GESTOR', 'ABOGADO JUNIOR', 'ANALISTA TI', 'ANALISTA JUNIOR', 'ANALISTA SIG', 'ASISTENTE VENTAS', 'AUX SERVICIOS GENERALES', 'CIENTIFICO DATOS', 'DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES', 'GERENTE GENERAL', 'LIDER DE PROCESOS', 'SUBDIRECTOR'];
+  const areasUnicas = ['todos', 'COBRANZA', 'TI', 'SEGUROS', 'ADMINISTRATIVO', 'COLOCACION', 'GERENCIA', 'JURIDICA', 'RRHH'];
   const estadosUnicos = [
     { label: 'Todos', value: 'todos' },
     { label: 'Activo', value: 'ACTIVO' },
@@ -209,7 +209,7 @@ const AdministracionPersonal = () => {
         try {
           const data = await api.getEmployees(params);
           const items = data.items || data || [];
-          
+
           if (Array.isArray(items) && items.length > 0) {
             allEmps = [...allEmps, ...items];
           }
@@ -250,7 +250,7 @@ const AdministracionPersonal = () => {
         await requestRetirement(data);
       }
       // TODO: Manejar 'Proveedor'
-      
+
       setOpenModal(null);
       // Refrescar la lista
       reloadAllEmployees();
@@ -272,7 +272,7 @@ const AdministracionPersonal = () => {
 
   const handleEdit = (personal) => {
     setSelectedPersonal(personal);
-    
+
     // Función para convertir cualquier valor a string seguro
     const safeString = (val) => {
       if (val === null || val === undefined) return '';
@@ -389,8 +389,9 @@ const AdministracionPersonal = () => {
     setIsFormSubmitting(true);
     try {
       // Usamos approveRetirement o una función específica si existiera 'processRetirement'
-      // Como RetiroJuricoModal envía 'accion: PROCESAR_RETIRO_JURIDICO', asumimos que es un retiro aprobado
-      await approveRetirement(data.cedula_empleado); 
+      // Como RetiroJuricoModal envía 'estado: RETIRADO', asumimos que es un retiro aprobado
+      // Enviamos 'data' completo porque ahora approveRetirement lo soporta para enviar fecha y motivo
+      await approveRetirement(data.cedula_empleado, data);
       setRetiroJuridicoModal({ isOpen: false, empleado: null });
       reloadAllEmployees();
     } catch (error) {
@@ -571,8 +572,8 @@ const AdministracionPersonal = () => {
                 className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out text-center flex flex-col items-center"
               >
                 <LogOut className="h-10 w-10 text-orange-600 mb-4" />
-                <h2 className="text-xl font-semibold text-gray-800">Retiro Jurídico</h2>
-                <p className="text-gray-500 mt-2">Procesar retiro directamente.</p>
+                <h2 className="text-xl font-semibold text-gray-800">Retiro Sin Validación Jurídica</h2>
+                <p className="text-gray-500 mt-2">Procesar retiro inmediatamente sin flujo de aprobación.</p>
               </button>
 
               {/* Tarjeta 4: Actualización Tecnológica */}
@@ -606,7 +607,7 @@ const AdministracionPersonal = () => {
 
           {/* SECCIÓN 2: BANDEJA DE APROBACIONES */}
           {/* Las bandejas de aprobación se han movido a LegalCommunicationsApprovalPage.jsx */}
-          
+
           {/* SECCIÓN 3: GESTIÓN DE PERSONAL */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             {/* Header */}
