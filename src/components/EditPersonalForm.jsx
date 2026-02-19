@@ -232,6 +232,16 @@ const EditPersonalForm = ({ initialData, onSubmit, isSubmitting = false, onCance
 
         // Sanitize data: convert empty strings to null for optional fields
         const cleanData = Object.entries(formData).reduce((acc, [key, value]) => {
+            // Logic for localidad: only include if city is BOGOTA
+            if (key === 'localidad') {
+                if (formData.ciudad === 'BOGOTA' && value) {
+                    acc[key] = value;
+                } else {
+                    acc[key] = null; // Send null to clear it if it was set
+                }
+                return acc;
+            }
+
             if (value === '' || value === undefined) {
                 acc[key] = null;
             } else {
