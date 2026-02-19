@@ -383,6 +383,7 @@ const useIngresoForm = (initialState = {}) => {
       nombre_completo: cleanData.nombre,
       tipo_contrato: cleanData.contrato,
       temporal: cleanData.nombre_temporal, // Mapear nombre_temporal a temporal
+      localidad: formData.ciudad === 'BOGOTA' ? localidad : null,
     };
 
     // Remover campos que no existen en el backend
