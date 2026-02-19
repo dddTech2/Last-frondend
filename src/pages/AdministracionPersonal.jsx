@@ -13,8 +13,10 @@ import PersonalDetailView from '../components/PersonalDetailView';
 import { UserPlus, UserMinus, Briefcase, Search, Filter, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Download, FileText, Loader2, CheckCircle, XCircle, ShieldCheck, LogOut, Monitor, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToCSV, exportToXLSX } from '../utils/exportToCSV';
-import usePersonalAPI from '../hooks/usePersonalAPI';
 import * as api from '../services/api';
+import usePersonalAPI from '../hooks/usePersonalAPI';
+
+import EditPersonalForm from '../components/EditPersonalForm';
 
 // --- Iconos para las tarjetas de opciones (usando lucide-react) ---
 const UserPlusIcon = () => <UserPlus className="h-10 w-10 text-blue-600 mb-4" />;
@@ -33,6 +35,7 @@ const AdministracionPersonal = () => {
     fetchEmployees,
     createEmployee,
     updateEmployee,
+    updateEmployeeFull,
     requestRetirement,
     pendingApprovals,
     fetchPendingApprovals,
@@ -285,6 +288,8 @@ const AdministracionPersonal = () => {
       ...personal,
       cola: safeString(personal.cola_3cx), // Leer de cola_3cx
       usuario_red: safeString(personal.usuario_red),
+      // Asegurar campos para el formulario completo
+      cantidad_hijos: String(personal.cantidad_hijos || 0),
     });
     setEditModal(true);
   };
@@ -294,24 +299,19 @@ const AdministracionPersonal = () => {
     setOpenModal('retiro'); // Abre el modal de retiro
   };
 
-  const handleSaveEdit = async () => {
-    if (!editFormData || !selectedPersonal) return;
-
-    // La BD usa 'cola_3cx' y 'usuario_red' (no 'cola' ni 'asignacion')
-    const payload = {
-      correo_renovar: editFormData.correo_renovar,
-      extension_3cx: editFormData.extension_3cx,
-      cola_3cx: editFormData.cola, // BD usa cola_3cx
-      usuario_red: editFormData.usuario_red,
-      jefe_inmediato: editFormData.jefe_inmediato,
-    };
-
+  const handleSaveEdit = async (data) => {
+    setIsFormSubmitting(true);
     try {
-      await updateEmployee(selectedPersonal.cedula, payload);
+      // Usar el nuevo endpoint silencioso
+      await updateEmployeeFull(data.cedula, data);
       setEditModal(false);
-      refreshData();
+      toast.success('Empleado actualizado correctamente (Modo Silencioso)');
+      reloadAllEmployees();
     } catch (error) {
-      // El hook ya se encarga de mostrar el toast de error
+      console.error(error);
+      // El hook/api ya muestra toast de error si es necesario
+    } finally {
+      setIsFormSubmitting(false);
     }
   };
 
@@ -949,55 +949,17 @@ const AdministracionPersonal = () => {
         <ModernModal
           isOpen={editModal}
           onClose={() => setEditModal(false)}
-          title={`Editar - ${editFormData.nombre}`}
-          size="md"
-          actions={
-            <div className="flex gap-3">
-              <button
-                onClick={() => setEditModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors"
-              >
-                Guardar Cambios
-              </button>
-            </div>
-          }
+          // Verificamos si editFormData tiene nombre para usarlo en el título
+          title=""
+          size="lg"
+        // No pasamos actions porque el form tiene sus propios botones
         >
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                label="Correo Renovar"
-                type="email"
-                value={editFormData.correo_renovar || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, correo_renovar: v })}
-              />
-              <FormField
-                label="Jefe Inmediato"
-                value={editFormData.jefe_inmediato || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, jefe_inmediato: v })}
-              />
-              <FormField
-                label="Extensión 3CX"
-                value={editFormData.extension_3cx || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, extension_3cx: v })}
-              />
-              <FormField
-                label="Cola"
-                value={editFormData.cola || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, cola: v })}
-              />
-              <FormField
-                label="Usuario de Red"
-                value={editFormData.usuario_red || ''}
-                onChange={(v) => setEditFormData({ ...editFormData, usuario_red: v })}
-              />
-            </div>
-          </div>
+          <EditPersonalForm
+            initialData={editFormData}
+            onSubmit={handleSaveEdit}
+            isSubmitting={isFormSubmitting}
+            onCancel={() => setEditModal(false)}
+          />
         </ModernModal>
       )}
 

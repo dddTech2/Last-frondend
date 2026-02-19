@@ -536,6 +536,7 @@ export const getEmployeeByCedula = async (cedula) => {
 };
 
 export const updateEmployee = (cedula, employeeData) => apiRequest(`/employees/${cedula}`, 'PUT', employeeData);
+export const updateEmployeeFull = (cedula, employeeData) => apiRequest(`/employees/${cedula}/full`, 'PUT', employeeData);
 export const requestRetirement = (retirementData) => apiRequest('/employees/retire', 'POST', retirementData);
 export const approveContract = (cedula) => apiRequest(`/employees/${cedula}/juridico/approve`, 'POST', {});
 export const rejectContract = (cedula, motivo) => apiRequest(`/employees/${cedula}/juridico/reject`, 'POST', { motivo });

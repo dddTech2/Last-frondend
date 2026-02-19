@@ -143,7 +143,12 @@ const SelectJefeInmediato = ({
   // Actualizar el valor seleccionado
   useEffect(() => {
     if (value && options.length > 0) {
-      const selected = options.find(opt => opt.value === value || opt.cedula === value);
+      // Buscar por Cédula (value) O por Nombre (si el backend devuelve el nombre)
+      const selected = options.find(opt =>
+        opt.value === value ||
+        opt.cedula === value ||
+        (opt.nombre && value && opt.nombre.toString().toUpperCase() === value.toString().toUpperCase())
+      );
       setSelectedValue(selected || null);
     } else {
       setSelectedValue(null);

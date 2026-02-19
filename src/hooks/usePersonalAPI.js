@@ -84,6 +84,15 @@ const usePersonalAPI = () => {
     return updatedEmployee;
   }, [handleApiCall]);
 
+  const updateEmployeeFull = useCallback(async (cedula, employeeData) => {
+    const updatedEmployee = await handleApiCall(api.updateEmployeeFull, cedula, employeeData);
+    if (updatedEmployee) {
+      toast.success('Edición completa realizada con éxito.');
+      setEmployees(prev => prev.map(emp => (emp.cedula === cedula ? updatedEmployee : emp)));
+    }
+    return updatedEmployee;
+  }, [handleApiCall]);
+
   const requestRetirement = useCallback(async (retirementData) => {
     await handleApiCall(api.requestRetirement, retirementData);
     toast.success('Solicitud de retiro enviada correctamente.');
@@ -138,6 +147,7 @@ const usePersonalAPI = () => {
     fetchPendingRetirements,
     createEmployee,
     updateEmployee,
+    updateEmployeeFull,
     requestRetirement,
     approveContract,
     rejectContract,

@@ -19,10 +19,11 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
   // Usamos TODOS los empleados como posibles jefes/coordinadores
   const employeeOptions = useMemo(() => {
     return employees
-      .filter(emp => emp.nombre && emp.nombre.trim() !== '') // Filtrar vacíos
+      .filter(emp => emp && emp.nombre && emp.nombre.trim() !== '') // Filtrar vacíos y nulos
       .map(emp => ({
-        value: emp.nombre, // Usamos el nombre como valor porque así lo espera el backend actualmente
+        value: emp.cedula, // Usamos la CÉDULA como valor
         label: `${emp.nombre} - ${emp.cargo || 'Sin Cargo'}`,
+        nombre: emp.nombre, // Guardamos el nombre para búsquedas
         cargo: emp.cargo
       }))
       .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
@@ -55,23 +56,25 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
     }),
   };
 
-  // ... (filtro de empleados para búsqueda principal se mantiene igual)
+  // Filtro de empleados para búsqueda principal
   const filteredEmployees = useMemo(() => {
     if (!searchTerm && !showPendingOnly) return [];
 
-    let result = employees;
+    let result = employees || [];
 
     // Filter by pending data - sin adminfo asignado
     if (showPendingOnly) {
-      result = result.filter(emp => !emp.adminfo);
+      result = result.filter(emp => emp && !emp.adminfo);
     }
 
     // Filter by search term (Name or Cedula)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(emp =>
-        (emp.nombre || '').toLowerCase().includes(term) ||
-        (emp.cedula || '').includes(term)
+        emp && (
+          (emp.nombre || '').toLowerCase().includes(term) ||
+          (emp.cedula || '').includes(term)
+        )
       );
     }
 
@@ -90,6 +93,9 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
 
     // Leer de los campos existentes
     // Backend devuelve: adminfo, usuario_red (pero PUT acepta "asignacion")
+    // jefe_inmediato vendrá como NOMBRE desde el backend (por el cambio en repository),
+    // pero nosotros queremos enviar CÉDULA al guardar.
+    // El Select manejará la visualización buscando por nombre si es necesario.
     setFormData({
       adminfo: safeString(emp.adminfo),
       asignacion: safeString(emp.usuario_red), // Leer de usuario_red
@@ -105,7 +111,7 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
   const handleJefeChange = (option) => {
     setFormData(prev => ({
       ...prev,
-      jefe_inmediato: option ? option.value : ''
+      jefe_inmediato: option ? option.value : '' // Guarda la CÉDULA
     }));
   };
 
@@ -118,7 +124,7 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
       cedula: selectedEmployee.cedula,
       adminfo: formData.adminfo,
       asignacion: formData.asignacion, // Backend acepta "asignacion"
-      jefe_inmediato: formData.jefe_inmediato,
+      jefe_inmediato: formData.jefe_inmediato, // Envía CÉDULA
     };
 
     onSubmit(payload);
@@ -127,7 +133,11 @@ const AsignacionForm = ({ employees = [], onSubmit, onCancel, isSubmitting = fal
   // --- VIEW: EDIT FORM ---
   if (selectedEmployee) {
     // Encontrar la opción correspondiente al valor actual para mostrarla seleccionada
-    const currentJefeOption = employeeOptions.find(opt => opt.value === formData.jefe_inmediato);
+    // Puede venir una Cédula (si ya se guardó así) o un Nombre (si viene del backend)
+    const currentJefeOption = employeeOptions.find(opt =>
+      opt.value === formData.jefe_inmediato ||
+      (opt.nombre && formData.jefe_inmediato && opt.nombre.toString().toUpperCase() === formData.jefe_inmediato.toString().toUpperCase())
+    );
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
