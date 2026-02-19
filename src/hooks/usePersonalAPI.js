@@ -73,7 +73,7 @@ const usePersonalAPI = () => {
     }
     return createdEmployee;
   }, [handleApiCall]);
-  
+
   const updateEmployee = useCallback(async (cedula, employeeData) => {
     const updatedEmployee = await handleApiCall(api.updateEmployee, cedula, employeeData);
     if (updatedEmployee) {
@@ -102,8 +102,8 @@ const usePersonalAPI = () => {
     setPendingApprovals(prev => prev.filter(emp => emp.cedula !== cedula));
   }, [handleApiCall]);
 
-  const approveRetirement = useCallback(async (cedula) => {
-    await handleApiCall(api.approveRetirement, cedula);
+  const approveRetirement = useCallback(async (cedula, data = {}) => {
+    await handleApiCall(api.approveRetirement, cedula, data);
     toast.success('Retiro aprobado. El empleado ha sido retirado.');
     setPendingRetirements(prev => prev.filter(emp => emp.cedula !== cedula));
   }, [handleApiCall]);

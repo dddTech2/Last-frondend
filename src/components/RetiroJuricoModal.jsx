@@ -19,6 +19,7 @@ const RetiroJuricoModal = ({
     cedula_empleado: '',
     fecha_retiro_efectiva: '',
     motivo_retiro: 'RENUNCIA',
+    submotivo_retiro: '',
     beneficios_pendientes: '',
     cuentas_por_liquidar: '',
     observaciones: '',
@@ -64,6 +65,10 @@ const RetiroJuricoModal = ({
       newErrors.motivo_retiro = 'El motivo del retiro es requerido';
     }
 
+    if ((formData.motivo_retiro === 'RENUNCIA' || formData.motivo_retiro === 'OTRO') && (!formData.submotivo_retiro || formData.submotivo_retiro.trim() === '')) {
+      newErrors.submotivo_retiro = 'El submotivo de retiro es requerido';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -80,6 +85,7 @@ const RetiroJuricoModal = ({
       cedula_empleado: formData.cedula_empleado,
       fecha_retiro: formData.fecha_retiro_efectiva,
       motivo_retiro: formData.motivo_retiro,
+      submotivo_retiro: formData.submotivo_retiro,
       observacion_retiro: formData.observaciones,
       beneficios_pendientes: formData.beneficios_pendientes,
       cuentas_por_liquidar: formData.cuentas_por_liquidar,
@@ -100,6 +106,18 @@ const RetiroJuricoModal = ({
     { value: 'MUTUO_ACUERDO', label: 'Mutuo Acuerdo' },
     { value: 'OTRO', label: 'Otro' },
   ];
+
+  const submotivosRetiro = [
+    { value: 'Mejor Oferta laboral (Oportunidad de Crecimiento)', label: 'Mejor Oferta laboral (Oportunidad de Crecimiento)' },
+    { value: 'Incompatibilidad con el/la jefe', label: 'Incompatibilidad con el/la jefe' },
+    { value: 'Interés en estudiar', label: 'Interés en estudiar' },
+    { value: 'Remuneración', label: 'Remuneración' },
+    { value: 'Dificultades con compañeros', label: 'Dificultades con compañeros' },
+    { value: 'Horario Laboral', label: 'Horario Laboral' },
+    { value: 'Otro - ver observaciones', label: 'Otro - ver observaciones' }
+  ];
+
+  const showSubmotivo = formData.motivo_retiro === 'RENUNCIA' || formData.motivo_retiro === 'OTRO';
 
   const modalActions = (
     <>
@@ -207,6 +225,27 @@ const RetiroJuricoModal = ({
             </p>
           )}
         </div>
+
+        {showSubmotivo && (
+          <div>
+            <FormField
+              label="Submotivo del Retiro"
+              name="submotivo_retiro"
+              type="select"
+              value={formData.submotivo_retiro}
+              onChange={handleChange}
+              options={submotivosRetiro}
+              required
+              error={errors.submotivo_retiro}
+              disabled={isSubmitting}
+            />
+            {errors.submotivo_retiro && (
+              <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" /> {errors.submotivo_retiro}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Beneficios Pendientes */}
         <div>
