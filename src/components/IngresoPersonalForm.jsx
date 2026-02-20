@@ -327,6 +327,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
     { value: 'VALLEDUPAR', label: 'Valledupar' },
     { value: 'MONTERIA', label: 'Montería' },
     { value: 'SINCELEJO', label: 'Sincelejo' },
+    { value: 'SOACHA', label: 'Soacha' },
     { value: 'VILLAVICENCIO', label: 'Villavicencio' },
     { value: 'NEIVA', label: 'Neiva' },
   ];
@@ -1262,7 +1263,7 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
               <p className="text-sm text-gray-800 mt-1">{formatValue('jefe_inmediato', formData.jefe_inmediato)}</p>
             </div>
 
-            {(formData.contrato === 'PLANTA' || formData.contrato === 'CORRETAJE') && (
+            {formData.contrato === 'PLANTA' && (
               <>
                 <div className="bg-yellow-50 p-3 rounded border border-yellow-100">
                   <p className="text-xs text-yellow-700 font-semibold uppercase">Asignación Salarial</p>
