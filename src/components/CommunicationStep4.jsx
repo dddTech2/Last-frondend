@@ -135,10 +135,44 @@ const ErrorModal = ({ isOpen, onClose, error }) => {
   );
 };
 
+// Modal de Alerta para Múltiples Documentos
+const MultipleDocsAlertModal = ({ isOpen, onClose, count }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-in fade-in zoom-in duration-300 border-4 border-amber-400">
+        <div className="flex flex-col items-center text-center">
+          <div className="bg-amber-100 p-5 rounded-full mb-6 ring-4 ring-amber-200 animate-bounce">
+            <AlertCircle className="h-14 w-14 text-amber-600" />
+          </div>
+          <h2 className="text-3xl font-black text-amber-600 mb-4 uppercase tracking-wide">
+            ¡Atención!
+          </h2>
+          <div className="w-full bg-amber-50 rounded-xl p-6 mb-8 border border-amber-200 shadow-inner">
+            <p className="text-amber-900 font-bold text-lg mb-2">
+              Se han generado <span className="text-2xl font-black bg-amber-200 px-2 py-1 rounded mx-1">{count}</span> documentos.
+            </p>
+            <p className="text-amber-800 text-base font-medium mt-3">
+              Por favor, revisa <span className="underline font-bold">cada uno de ellos a detalle</span> usando las pestañas de la parte superior antes de proceder a enviarlos.
+            </p>
+          </div>
+          <button
+             onClick={onClose}
+             className="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-bold text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+          >
+            ¡Entendido, los revisaré!
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
   const { user } = useAuth();
   const [generating, setGenerating] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showMultipleDocsAlert, setShowMultipleDocsAlert] = useState(false);
   const [generatedDocs, setGeneratedDocs] = useState([]);
   const [selectedDocIndex, setSelectedDocIndex] = useState(0);
   const commId = generatedDocs[selectedDocIndex]?.id;
@@ -172,6 +206,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
     setError(null);
     setShowFullModal(false);
     setShowPasswordPrompt(false);
+    setShowMultipleDocsAlert(false);
     setSenderPassword('');
     setSending(false);
     setSendError(null);
@@ -482,6 +517,11 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
         setGeneratedDocs(docs);
         setSelectedDocIndex(0);
         console.log('Communications generated successfully:', docs);
+        
+        // Show alert if multiple documents are generated
+        if (docs.length > 1) {
+          setShowMultipleDocsAlert(true);
+        }
       } else {
         throw new Error('No se recibió ID de comunicación');
       }
@@ -911,6 +951,13 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
         isOpen={showFullModal}
         onClose={() => setShowFullModal(false)}
         previewFile={previewFile}
+      />
+
+      {/* Alerta de múltiples documentos */}
+      <MultipleDocsAlertModal
+        isOpen={showMultipleDocsAlert}
+        onClose={() => setShowMultipleDocsAlert(false)}
+        count={generatedDocs.length}
       />
 
       {/* Botones de Navegación */}
