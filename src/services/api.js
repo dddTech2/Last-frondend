@@ -725,6 +725,34 @@ export const refreshEffectivenessReport = () => {
 // --- Endpoints para Campañas por CSV ---
 export const getTemplateVariablesDetail = (templateId) => apiRequest(`/templates/${templateId}/variables-detail`);
 
+export const testCampaignCSV = async (formData) => {
+  const token = getAuthToken();
+  const headers = {};
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/whatsapp/test_campaign_csv`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Error al enviar mensaje de prueba");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error en testCampaignCSV:", error);
+    throw error;
+  }
+};
+
+
 export const uploadCampaignCSV = async (formData) => {
   const token = getAuthToken();
   const headers = {};

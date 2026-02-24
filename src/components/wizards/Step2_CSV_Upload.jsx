@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
-import { getTemplates, getTemplateVariablesDetail } from '../../services/api';
+import { getTemplates, getTemplateVariablesDetail, getTemplatePreview } from '../../services/api';
 import CSVPreviewTable from './CSVPreviewTable';
 import { Upload, FileText, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
@@ -18,12 +18,18 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
   const [csvHeaders, setCSVHeaders] = useState([]);
   const [csvRows, setCSVRows] = useState([]);
   const [templateVariables, setTemplateVariables] = useState(null);
+  const [templatePreview, setTemplatePreview] = useState(null);
   const [csvValidation, setCSVValidation] = useState({
     isValid: false,
     missingColumns: [],
     extraColumns: [],
     totalRows: 0,
   });
+
+  const renderTextWithVariables = (text) => {
+    if (!text) return "";
+    return text.replace(/\{\{(\d+)\}\}/g, "<span class=\"text-blue-500 font-semibold\">[{{$1}}]</span>");
+  };
 
   // Cargar plantillas al montar
   useEffect(() => {
@@ -68,11 +74,14 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
     const fetchTemplateVariables = async () => {
       if (!campaignData.message_template_id) {
         setTemplateVariables(null);
+        setTemplatePreview(null);
         return;
       }
 
       try {
         const variables = await getTemplateVariablesDetail(campaignData.message_template_id);
+        const preview = await getTemplatePreview(campaignData.message_template_id);
+        setTemplatePreview(preview);
         setTemplateVariables(variables);
         
         // Si ya hay CSV cargado, re-validar
@@ -118,13 +127,13 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
     });
 
     setCSVFile(file);
-    parseCSV(file);
+    parseCSV(file, file);
     
     // IMPORTANTE: Limpiar el input para permitir recargar el mismo archivo si fue modificado
     e.target.value = '';
   };
 
-  const parseCSV = (file) => {
+  const parseCSV = (file, currentFile) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -142,7 +151,7 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
 
         // Validar si ya tenemos las variables de la plantilla
         if (templateVariables) {
-          validateCSV(headers, rows, templateVariables);
+          validateCSV(headers, rows, templateVariables, currentFile);
         } else {
           // Validación básica sin plantilla
           setCSVValidation({
@@ -150,6 +159,7 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
             missingColumns: [],
             extraColumns: [],
             totalRows: rows.length,
+            csvFile: currentFile,
           });
         }
 
@@ -162,7 +172,7 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
     });
   };
 
-  const validateCSV = (headers, rows, variables) => {
+  const validateCSV = (headers, rows, variables, currentFile) => {
     if (!variables || !variables.all_required_headers) {
       return;
     }
@@ -187,12 +197,13 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
       missingColumns: missing,
       extraColumns: extras,
       totalRows: rows.length,
+            csvFile: currentFile,
     });
 
     // Guardar en estado global
     setCampaignData(prev => ({
       ...prev,
-      csvFile: csvFile,
+      csvFile: currentFile || csvFile,
       csvValidation: { isValid, missingColumns: missing },
       csvRowCount: rows.length,
     }));
@@ -257,6 +268,16 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
         </div>
 
         {/* Variables requeridas */}
+        {templatePreview && (
+          <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Contenido de la plantilla:</h4>
+            <div
+              className="text-sm text-gray-600 whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: renderTextWithVariables(templatePreview.preview_content) }}
+            />
+          </div>
+        )}
+
         {templateVariables && (
           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start gap-2">

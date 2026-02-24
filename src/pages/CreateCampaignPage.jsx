@@ -232,7 +232,11 @@ const CreateCampaignPage = () => {
       
       // Preparar FormData
       const formData = new FormData();
-      formData.append('file', campaignData.csvFile);
+      
+      // Clona el archivo para evitar el error ERR_UPLOAD_FILE_CHANGED en Chromium
+      const clonedFile = new File([await campaignData.csvFile.arrayBuffer()], campaignData.csvFile.name, { type: campaignData.csvFile.type });
+      formData.append('file', clonedFile);
+
       formData.append('template_id', campaignData.message_template_id);
       formData.append('channel', campaignData.channel.toUpperCase());
       formData.append('campaign_name', campaignData.name);
