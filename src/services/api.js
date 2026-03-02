@@ -794,3 +794,34 @@ export const getDailyActivityReport = (params) => {
 export const refreshEffectivenessViews = () => {
   return apiRequest('/reports/refresh-effectiveness-views', 'POST');
 };
+
+// --- Endpoints de BI WhatsApp Granular Dashboard ---
+export const getWhatsAppMessages = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+  return apiRequest(`/bi/whatsapp/messages?${queryParams.toString()}`);
+};
+
+export const getWhatsAppPayments = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+  return apiRequest(`/bi/whatsapp/payments?${queryParams.toString()}`);
+};
+
+export const getWhatsAppAgreements = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+  return apiRequest(`/bi/whatsapp/agreements?${queryParams.toString()}`);
+};

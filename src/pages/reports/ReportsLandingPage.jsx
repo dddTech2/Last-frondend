@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, TrendingUp } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp, MessageCircle } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick }) => (
   <div 
@@ -39,6 +39,13 @@ const ReportsLandingPage = () => {
           description="Analiza ROI de campañas SMS/WhatsApp/Email con atribución de pagos en ventana de 30 días. Comparación recordatorios vs regulares."
           icon={TrendingUp}
           onClick={() => navigate('/reports/campaign-effectiveness')}
+        />
+        
+        <ReportCard
+          title="Dashboard Granular WhatsApp"
+          description="Visualiza el embudo de conversión, distribución de errores y atribución de ingresos de WhatsApp."
+          icon={MessageCircle}
+          onClick={() => navigate('/reports/whatsapp-dashboard')}
         />
         
         {/* Placeholder for future reports */}
