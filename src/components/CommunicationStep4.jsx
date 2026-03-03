@@ -497,6 +497,7 @@ const CommunicationStep4 = ({ campaignConfig, onBack, onComplete, runId }) => {
         template_id: campaignConfig.selectedTemplateId || campaignConfig.selectedTemplate?.id || campaignConfig.template_id,
         client_id: campaignConfig.cedula,
         client_role: campaignConfig.tipoDeudor?.toUpperCase() || 'DEUDOR',
+        obligation_code: campaignConfig.obligaciones && campaignConfig.obligaciones.length > 0 ? campaignConfig.obligaciones[0] : null,
         form_data: form_data
       };
 

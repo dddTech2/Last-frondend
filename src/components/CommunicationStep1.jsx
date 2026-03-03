@@ -154,12 +154,7 @@ const CommunicationStep1 = ({ onNext, onCancel, initialData }) => {
       return;
     }
 
-    setFormData(prev => {
-      const obligaciones = prev.obligaciones.includes(obligacionId)
-        ? prev.obligaciones.filter(o => o !== obligacionId)
-        : [...prev.obligaciones, obligacionId];
-      return { ...prev, obligaciones };
-    });
+    setFormData(prev => ({ ...prev, obligaciones: [obligacionId] }));
   };
 
   const validateForm = () => {
@@ -276,7 +271,8 @@ const CommunicationStep1 = ({ onNext, onCancel, initialData }) => {
                       className={`flex items-center gap-2 ${obligacionesOptions.length === 1 ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="obligacion_seleccionada"
                         checked={formData.obligaciones.includes(obligacion.obligacion)}
                         onChange={() => handleObligacionChange(obligacion.obligacion)}
                         disabled={obligacionesOptions.length === 1}
