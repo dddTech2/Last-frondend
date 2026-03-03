@@ -22,6 +22,9 @@ import WhatsAppDashboardPage from '../pages/reports/WhatsAppDashboardPage';
 import RagManagementPage from '../pages/RagManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import UsersPage from '../pages/UsersPage';
+import TicketsListPage from '../pages/tickets/TicketsListPage';
+import TicketFormPage from '../pages/tickets/TicketFormPage';
+import TicketDetailPage from '../pages/tickets/TicketDetailPage';
 
 export const AppRouter = () => {
   return (
@@ -52,6 +55,12 @@ export const AppRouter = () => {
         <Route path="reports/campaign-effectiveness" element={<CampaignEffectivenessPage />} />
         <Route path="reports/whatsapp-dashboard" element={<WhatsAppDashboardPage />} />
         <Route path="rag-admin" element={<RagManagementPage />} />
+        
+        {/* Rutas de Tickets */}
+        <Route path="tickets" element={<TicketsListPage />} />
+        <Route path="tickets/nuevo" element={<TicketFormPage />} />
+        <Route path="tickets/:id" element={<TicketDetailPage />} />
+        
         {/* Aquí se pueden añadir más rutas protegidas */}
       </Route>
     </Routes>

@@ -825,3 +825,66 @@ export const getWhatsAppAgreements = (params) => {
   });
   return apiRequest(`/bi/whatsapp/agreements?${queryParams.toString()}`);
 };
+
+// --- Endpoints de Tickets ---
+export const getTickets = (params = {}) => {
+  const queryParams = new URLSearchParams();
+  if (params.status_filter) queryParams.append('status_filter', params.status_filter);
+  if (params.module_filter) queryParams.append('module_filter', params.module_filter);
+  if (params.type_filter) queryParams.append('type_filter', params.type_filter);
+  if (params.priority_filter) queryParams.append('priority_filter', params.priority_filter);
+  if (params.search) queryParams.append('search', params.search);
+  if (params.skip !== undefined) queryParams.append('skip', params.skip);
+  if (params.limit !== undefined) queryParams.append('limit', params.limit);
+
+  const queryString = queryParams.toString();
+  const endpoint = queryString ? `/tickets?${queryString}` : '/tickets';
+  return apiRequest(endpoint);
+};
+
+export const getTicket = (ticketId) => apiRequest(`/tickets/${ticketId}`);
+
+export const updateTicket = (ticketId, data) => apiRequest(`/tickets/${ticketId}`, 'PATCH', data);
+
+export const addTicketComment = (ticketId, content) => apiRequest(`/tickets/${ticketId}/comments`, 'POST', { content });
+
+export const createTicket = async (formData) => {
+  const token = getAuthToken();
+  const headers = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const config = {
+    method: 'POST',
+    headers,
+    body: formData, // El browser agrega Content-Type: multipart/form-data con el boundary correcto
+  };
+
+  try {
+    const response = await fetch(`${BASE_URL}/tickets`, config);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: `Error al crear ticket` }));
+      let errorMessage = `Error al crear ticket`;
+
+      if (response.status === 422 && errorData.detail) {
+        errorMessage = Array.isArray(errorData.detail)
+          ? errorData.detail.map(err => `${err.loc.join('.')} -> ${err.msg}`).join('; ')
+          : errorData.detail;
+      } else if (errorData.detail && typeof errorData.detail === 'string') {
+        errorMessage = errorData.detail;
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+
+      throw new Error(errorMessage);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error en createTicket:', error);
+    throw error;
+  }
+};
+
