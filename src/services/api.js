@@ -464,7 +464,7 @@ export const bulkSearchContacts = async (file) => {
   return response.blob();
 };
 
-export const bulkGetActiveChannels = async (file, channelType) => {
+export const bulkGetActiveChannels = async (file, channelType, filterType = 'TODOS_ACTIVOS') => {
   const token = getAuthToken();
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -472,7 +472,7 @@ export const bulkGetActiveChannels = async (file, channelType) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${BASE_URL}/client-info/channels/bulk?channel_type=${channelType}`, {
+  const response = await fetch(`${BASE_URL}/client-info/channels/bulk?channel_type=${channelType}&filter_type=${filterType}`, {
     method: 'POST',
     headers,
     body: formData,

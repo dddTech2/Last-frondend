@@ -7,10 +7,11 @@ const BulkOperations = () => {
   const [operation, setOperation] = useState('contacts-to-cedulas');
   const [selectedFile, setSelectedFile] = useState(null);
   const [channelType, setChannelType] = useState('WHATSAPP');
+  const [filterType, setFilterType] = useState('TODOS_ACTIVOS');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
+  const validateAndSetFile = (file) => {
     if (file) {
       // Validar que sea CSV
       if (!file.name.endsWith('.csv')) {
@@ -19,6 +20,32 @@ const BulkOperations = () => {
       }
       setSelectedFile(file);
       toast.success(`Archivo "${file.name}" seleccionado`);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    validateAndSetFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      validateAndSetFile(file);
+      e.dataTransfer.clearData();
     }
   };
 
@@ -41,7 +68,7 @@ const BulkOperations = () => {
         toast.success('Procesamiento completado. Descargando resultados...');
       } else {
         // Buscar contactos a partir de cédulas
-        blob = await api.bulkGetActiveChannels(selectedFile, channelType);
+        blob = await api.bulkGetActiveChannels(selectedFile, channelType, filterType);
         filename = `contactos_${channelType.toLowerCase()}.csv`;
         toast.success('Procesamiento completado. Descargando resultados...');
       }
@@ -146,27 +173,49 @@ const BulkOperations = () => {
         </div>
       </div>
 
-      {/* Selector de Canal (solo para cedulas-to-contacts) */}
+      {/* Selector de Canal y Filtro (solo para cedulas-to-contacts) */}
       {operation === 'cedulas-to-contacts' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Canal a Consultar
-          </label>
-          <select
-            value={channelType}
-            onChange={(e) => setChannelType(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="WHATSAPP">WhatsApp</option>
-            <option value="SMS">SMS</option>
-            <option value="EMAIL">Email</option>
-            <option value="CALL">Llamadas</option>
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Canal a Consultar
+            </label>
+            <select
+              value={channelType}
+              onChange={(e) => setChannelType(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="WHATSAPP">WhatsApp</option>
+              <option value="SMS">SMS</option>
+              <option value="EMAIL">Email</option>
+              <option value="CALL">Llamadas</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Filtro de Contactos
+            </label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="TODOS_ACTIVOS">Todos los Activos</option>
+              <option value="ULTIMOS_DOS_ACTIVOS">Últimos dos activos</option>
+            </select>
+          </div>
         </div>
       )}
 
       {/* Área de Carga de Archivo */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
+      <div 
+        className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+          isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <div className="text-center">
           <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <div className="mb-4">
@@ -177,6 +226,9 @@ const BulkOperations = () => {
               <Upload className="h-5 w-5 mr-2" />
               Seleccionar Archivo CSV
             </label>
+            <p className="mt-2 text-sm text-gray-600">
+              o arrastra el archivo aquí
+            </p>
             <input
               id="fileInput"
               type="file"
