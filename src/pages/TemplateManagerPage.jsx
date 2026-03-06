@@ -80,6 +80,8 @@ const TemplateManagerPage = () => {
   const [previewTemplate, setPreviewTemplate] = useState(null); // plantilla seleccionada para previsualizar
   const [activeChannel, setActiveChannel] = useState('WHATSAPP');
   const [activeStatus, setActiveStatus] = useState('ALL'); // Nuevo estado para el filtro de estado
+  const [searchTerm, setSearchTerm] = useState(''); // Estado para búsqueda por nombre
+  const [searchDate, setSearchDate] = useState(''); // Estado para búsqueda por fecha
   const [loading, setLoading] = useState(true);
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,6 +122,28 @@ const TemplateManagerPage = () => {
         filtered = filtered.filter(t => t.status === activeStatus);
       }
     }
+
+    // Filtrar por término de búsqueda (nombre de plantilla)
+    if (searchTerm) {
+      filtered = filtered.filter(t => 
+        t.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtrar por fecha de creación
+    if (searchDate) {
+      filtered = filtered.filter(t => {
+        if (!t.created_at) return false;
+        // La fecha en `created_at` viene en UTC o Z, la convertimos a fecha local y comparamos
+        const templateDate = new Date(t.created_at);
+        // Formatear al formato YYYY-MM-DD local
+        const year = templateDate.getFullYear();
+        const month = String(templateDate.getMonth() + 1).padStart(2, '0');
+        const day = String(templateDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        return formattedDate === searchDate;
+      });
+    }
     
     // Ordenamos por fecha de creación descendente
     filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -127,7 +151,7 @@ const TemplateManagerPage = () => {
   setFilteredTemplates(filtered);
   // Reiniciar a primera página cuando cambien filtros o datos
   setCurrentPage(1);
-  }, [activeChannel, activeStatus, templates]);
+  }, [activeChannel, activeStatus, searchTerm, searchDate, templates]);
 
   const getTabClasses = (channel) => {
     const base = "flex-1 flex items-center justify-center py-3 px-4 text-sm font-medium transition-colors duration-200";
@@ -182,6 +206,38 @@ const TemplateManagerPage = () => {
         <button onClick={() => setActiveStatus('APPROVED')} className={getStatusFilterClasses('APPROVED')}>Aprobadas</button>
         <button onClick={() => setActiveStatus('PENDING')} className={getStatusFilterClasses('PENDING')}>Pendientes</button>
         <button onClick={() => setActiveStatus('REJECTED')} className={getStatusFilterClasses('REJECTED')}>Rechazadas</button>
+    </div>
+
+    {/* --- Buscador --- */}
+    <div className="mb-6 flex flex-col md:flex-row gap-4">
+      <div className="flex-1">
+        <label htmlFor="search-name" className="block text-sm font-medium text-gray-700 mb-1">Buscar por nombre</label>
+        <div className="relative rounded-md shadow-sm">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="search-name"
+            className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border"
+            placeholder="Ej. recordatorio_pago"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex-1 md:max-w-xs">
+        <label htmlFor="search-date" className="block text-sm font-medium text-gray-700 mb-1">Buscar por fecha de creación</label>
+        <input
+          type="date"
+          id="search-date"
+          className="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+          value={searchDate}
+          onChange={(e) => setSearchDate(e.target.value)}
+        />
+      </div>
     </div>
 
     <TemplateList 
