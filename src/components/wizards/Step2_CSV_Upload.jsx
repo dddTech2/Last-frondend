@@ -5,6 +5,9 @@ import { getTemplates, getTemplateVariablesDetail, getTemplatePreview } from '..
 import CSVPreviewTable from './CSVPreviewTable';
 import { Upload, FileText, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
+// Variables que el backend rellena automáticamente desde la BD (no son obligatorias en el CSV)
+const STAFF_AUTO_VARS = new Set(['extension_3cx', 'cel_renovar']);
+
 const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -180,13 +183,13 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
     const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
     const normalizedRequired = variables.all_required_headers.map(r => r.toLowerCase().trim());
 
-    // Buscar columnas faltantes
-    const missing = normalizedRequired.filter(req => 
-      !normalizedHeaders.includes(req)
+    // Buscar columnas faltantes, excluyendo las que el backend rellena automáticamente
+    const missing = normalizedRequired.filter(req =>
+      !normalizedHeaders.includes(req) && !STAFF_AUTO_VARS.has(req)
     );
 
     // Buscar columnas extras (ignoradas)
-    const extras = headers.filter(h => 
+    const extras = headers.filter(h =>
       !normalizedRequired.includes(h.toLowerCase().trim())
     );
 
@@ -197,7 +200,7 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
       missingColumns: missing,
       extraColumns: extras,
       totalRows: rows.length,
-            csvFile: currentFile,
+      csvFile: currentFile,
     });
 
     // Guardar en estado global
@@ -285,15 +288,32 @@ const Step2_CSV_Upload = ({ campaignData, setCampaignData }) => {
               <div>
                 <p className="text-sm font-medium text-blue-900">Variables requeridas en el CSV:</p>
                 <div className="mt-1 flex flex-wrap gap-2">
-                  {templateVariables.all_required_headers.map((variable, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
-                    >
-                      {variable}
-                    </span>
-                  ))}
+                  {templateVariables.all_required_headers.map((variable, idx) => {
+                    const isAutoFilled = STAFF_AUTO_VARS.has(variable.toLowerCase().trim());
+                    return isAutoFilled ? (
+                      <span
+                        key={idx}
+                        title="El backend la rellena automáticamente desde la BD"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-500 text-xs font-medium border border-gray-300"
+                      >
+                        {variable}
+                        <span className="text-[10px] bg-gray-200 text-gray-500 rounded px-1">auto</span>
+                      </span>
+                    ) : (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
+                      >
+                        {variable}
+                      </span>
+                    );
+                  })}
                 </div>
+                {templateVariables.all_required_headers.some(v => STAFF_AUTO_VARS.has(v.toLowerCase().trim())) && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    <span className="font-medium">auto</span>: el backend obtiene estos datos automáticamente, no es necesario incluirlos en el CSV.
+                  </p>
+                )}
               </div>
             </div>
           </div>
