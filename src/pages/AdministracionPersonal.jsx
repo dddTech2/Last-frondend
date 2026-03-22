@@ -526,6 +526,15 @@ const AdministracionPersonal = () => {
       { key: 'asignacion_salarial', label: 'Salario' },
       { key: 'tipo_contrato_laboral', label: 'Contrato Laboral' },
       { key: 'fecha_terminacion_contrato', label: 'Fin Contrato' },
+
+      // Asignaciones operativas
+      { key: 'asignacion', label: 'Asignación' },
+
+      // Información de Retiro
+      { key: 'fecha_retiro', label: 'Fecha Retiro' },
+      { key: 'motivo_retiro', label: 'Motivo Retiro' },
+      { key: 'submotivo_retiro', label: 'Submotivo Retiro' },
+      { key: 'observacion_retiro', label: 'Observación Retiro' },
     ];
 
     const timestamp = new Date().toLocaleDateString('es-CO').replace(/\//g, '-');
@@ -586,6 +595,15 @@ const AdministracionPersonal = () => {
       { key: 'asignacion_salarial', label: 'Salario' },
       { key: 'tipo_contrato_laboral', label: 'Contrato Laboral' },
       { key: 'fecha_terminacion_contrato', label: 'Fin Contrato' },
+
+      // Asignaciones operativas
+      { key: 'asignacion', label: 'Asignación' },
+
+      // Información de Retiro
+      { key: 'fecha_retiro', label: 'Fecha Retiro' },
+      { key: 'motivo_retiro', label: 'Motivo Retiro' },
+      { key: 'submotivo_retiro', label: 'Submotivo Retiro' },
+      { key: 'observacion_retiro', label: 'Observación Retiro' },
     ];
 
     const timestamp = new Date().toLocaleDateString('es-CO').replace(/\//g, '-');
