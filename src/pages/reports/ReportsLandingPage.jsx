@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, TrendingUp, MessageCircle } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp, MessageCircle, LineChart } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick }) => (
   <div 
@@ -46,6 +46,13 @@ const ReportsLandingPage = () => {
           description="Visualiza el embudo de conversión, distribución de errores y atribución de ingresos de WhatsApp."
           icon={MessageCircle}
           onClick={() => navigate('/reports/whatsapp-dashboard')}
+        />
+        
+        <ReportCard
+          title="Dashboard Predictivo"
+          description="Monitoreo en tiempo real de marcadores predictivos, análisis de recaudo, tiempos de cola y efectividad cruzada de equipos."
+          icon={LineChart}
+          onClick={() => navigate('/reports/dashboard-predictivo')}
         />
         
         {/* Placeholder for future reports */}

@@ -19,6 +19,7 @@ import ReportsLandingPage from '../pages/reports/ReportsLandingPage';
 import EffectivenessReportPage from '../pages/reports/EffectivenessReportPage';
 import CampaignEffectivenessPage from '../pages/reports/CampaignEffectivenessPage';
 import WhatsAppDashboardPage from '../pages/reports/WhatsAppDashboardPage';
+import DashboardPredictivoPage from '../pages/DashboardPredictivo';
 import RagManagementPage from '../pages/RagManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import UsersPage from '../pages/UsersPage';
@@ -54,6 +55,7 @@ export const AppRouter = () => {
         <Route path="reports/effectiveness" element={<EffectivenessReportPage />} />
         <Route path="reports/campaign-effectiveness" element={<CampaignEffectivenessPage />} />
         <Route path="reports/whatsapp-dashboard" element={<WhatsAppDashboardPage />} />
+        <Route path="reports/dashboard-predictivo" element={<DashboardPredictivoPage />} />
         <Route path="rag-admin" element={<RagManagementPage />} />
         
         {/* Rutas de Tickets */}
