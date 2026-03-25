@@ -184,6 +184,32 @@ export default function CallsReportPage() {
     });
   }, [detailData, detailFilters.coordinador, detailFilters.contrato, detailFilters.adminfo, detailFilters.direction, detailFilters.descripcion, detailFilters.vali]);
 
+  const activeGestoresCount = useMemo(() => {
+    return new Set(filteredSharedData.map(d => d.adminfo).filter(Boolean)).size;
+  }, [filteredSharedData]);
+
+  const globalHourlyGestorAvg = useMemo(() => {
+    if (!detailFilters.adminfo) return null; // Only calculate & show when a gestor is filtered
+    
+    // Derive base data applying all filters EXCEPT adminfo
+    const baseData = detailData.filter(item => {
+      if (detailFilters.coordinador && item.adminfo_jefe_inmediato !== detailFilters.coordinador) return false;
+      if (detailFilters.contrato && item.contrato !== detailFilters.contrato) return false;
+      if (detailFilters.direction && item.direction !== detailFilters.direction) return false;
+      if (detailFilters.descripcion && item.descripcion !== detailFilters.descripcion) return false;
+      if (detailFilters.vali && String(item.vali) !== detailFilters.vali) return false;
+      return true;
+    });
+
+    if (baseData.length === 0) return null;
+    
+    const uniqueGestores = new Set(baseData.map(d => d.adminfo).filter(Boolean)).size || 1;
+    const hoursSet = new Set(baseData.map(d => new Date(d.fecha).getHours()));
+    const totalActiveHrs = hoursSet.size > 0 ? hoursSet.size : 1;
+    
+    return Math.round(baseData.length / uniqueGestores / totalActiveHrs);
+  }, [detailData, detailFilters.adminfo, detailFilters.coordinador, detailFilters.contrato, detailFilters.direction, detailFilters.descripcion, detailFilters.vali]);
+
   const filterOptions = useMemo(() => {
     const adminfos = [...new Set(detailData.map(d => d.adminfo).filter(Boolean))].sort();
     const jefes = [...new Set(detailData.map(d => d.adminfo_jefe_inmediato).filter(Boolean))].sort();
@@ -954,7 +980,9 @@ export default function CallsReportPage() {
                       {/* Fila Grand Total */}
                       {dailyPivotData.result.length > 0 && (
                         <tr className="bg-gray-800 text-white border-t-4 border-gray-900">
-                          <td className="px-4 py-3 font-bold text-sm border-r border-gray-700">∑ TOTAL CONSOLIDADO DEL DÍA</td>
+                          <td className="px-4 py-3 font-bold text-sm border-r border-gray-700">
+                            ∑ TOTAL CONSOLIDADO DEL DÍA <span className="text-[10px] font-normal text-gray-400 ml-1">({activeGestoresCount} Gestores)</span>
+                          </td>
                           {[
                              {c: dailyPivotData.grandTotal['Realizada_calls'], e: dailyPivotData.grandTotal['Realizada_efec']},
                              {c: dailyPivotData.grandTotal['Recibida_calls'], e: dailyPivotData.grandTotal['Recibida_efec']},
@@ -1033,6 +1061,9 @@ export default function CallsReportPage() {
                         <Bar yAxisId="left" dataKey="Predictivo" stackId="calls" fill="#f97316" radius={[3,3,0,0]} />
                         <Bar yAxisId="left" dataKey="Efectivas" fill="#a855f7" radius={[3,3,0,0]} barSize={8} />
                         <Line yAxisId="right" type="monotone" dataKey="PctEfec" name="% Efectividad" stroke="#ef4444" strokeWidth={2} dot={{ r: 3, fill: '#ef4444' }} connectNulls={false} />
+                        {globalHourlyGestorAvg !== null && (
+                          <ReferenceLine yAxisId="left" y={globalHourlyGestorAvg} stroke="#10b981" strokeDasharray="3 3" strokeWidth={2} label={{ position: 'insideTopLeft', value: `Media Global x Gestor: ${globalHourlyGestorAvg}/h`, fill: '#10b981', fontSize: 11, fontWeight: 'bold' }} />
+                        )}
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>
