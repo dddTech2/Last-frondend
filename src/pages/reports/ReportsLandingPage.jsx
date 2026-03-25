@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, TrendingUp, MessageCircle, LineChart } from 'lucide-react';
+import { BarChart3, FileText, TrendingUp, MessageCircle, LineChart, Phone } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick }) => (
   <div 
@@ -53,6 +53,13 @@ const ReportsLandingPage = () => {
           description="Monitoreo en tiempo real de marcadores predictivos, análisis de recaudo, tiempos de cola y efectividad cruzada de equipos."
           icon={LineChart}
           onClick={() => navigate('/reports/dashboard-predictivo')}
+        />
+        
+        <ReportCard
+          title="Informe de Llamadas 3CX"
+          description="Consolidado mensual, tendencias y detalle granular de llamadas por gestor. Exportación CSV y alertas de gestores no identificados."
+          icon={Phone}
+          onClick={() => navigate('/reports/calls')}
         />
         
         {/* Placeholder for future reports */}

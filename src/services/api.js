@@ -888,3 +888,21 @@ export const createTicket = async (formData) => {
   }
 };
 
+// ── Informe Llamadas 3CX ──────────────────────────────────
+export const getCallsDashboard = ({ anio, mes, coordinador } = {}) => {
+  const params = new URLSearchParams({ anio, mes });
+  if (coordinador) params.append('coordinador', coordinador);
+  return apiRequest(`/reports-etl/informe-llamadas/dashboard?${params}`);
+};
+
+export const getCallsDetail = ({ fecha_inicio, fecha_fin, adminfo, coordinador } = {}) => {
+  const params = new URLSearchParams({ fecha_inicio, fecha_fin });
+  if (adminfo) params.append('adminfo', adminfo);
+  if (coordinador) params.append('coordinador', coordinador);
+  return apiRequest(`/reports-etl/informe-llamadas/detalle?${params}`);
+};
+
+export const getCallsAlertsNN = () =>
+  apiRequest('/reports-etl/informe-llamadas/alertas-nn');
+
+
