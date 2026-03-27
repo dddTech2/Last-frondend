@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getTemplates, sendTemplatedMessage, getTemplatePreviewWithCedula } from '../services/api';
+import { toast } from 'sonner';
 
 const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, conversation, clientInfo, onTemplateSelect, onObligationSelect }) => {
   const [step, setStep] = useState(1);
@@ -38,7 +39,9 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
         setSelectedTemplate(whatsAppTemplates[0]);
       }
     } catch (err) {
-      setError('Error al cargar las plantillas.');
+      const message = err?.message || 'Error al cargar las plantillas';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +83,9 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
       setPreviewContent(preview.preview_content);
       setStep(3);
     } catch (err) {
-      setError('Error al generar la previsualización.');
+      const message = err?.message || 'Error al generar la previsualización';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +94,7 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
   const handleSendMessage = async () => {
     if (!selectedTemplate || !selectedObligacion) return;
     setIsLoading(true);
+    setError('');
     try {
       await sendTemplatedMessage({
         template_id: selectedTemplate.id,
@@ -96,10 +102,13 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
         cedula: conversation.client_cedula,
         obligacion: selectedObligacion,
       });
+      toast.success('Plantilla enviada correctamente');
       onConversationInitiated();
       onClose();
     } catch (err) {
-      setError('Error al enviar el mensaje.');
+      const message = err?.message || 'Error al enviar el mensaje';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

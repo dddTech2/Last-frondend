@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getTemplates, getClientActiveNumbersByCedula, sendTemplatedMessage, getTemplatePreviewWithCedula, getObligacionesByCedula } from '../services/api';
 import { debounce } from 'lodash';
+import { toast } from 'sonner';
 
 const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated }) => {
   const [step, setStep] = useState(1);
@@ -35,7 +36,9 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
         setSelectedTemplate(whatsAppTemplates[0]);
       }
     } catch (err) {
-      setError('Error al cargar las plantillas.');
+      const message = err?.message || 'Error al cargar las plantillas';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +102,9 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
       setPreviewContent(preview.preview_content);
       setStep(4);
     } catch (err) {
-      setError('Error al generar la previsualización.');
+      const message = err?.message || 'Error al generar la previsualización';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +125,9 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
         setStep(3);
       }
     } catch (err) {
-      setError('Error al obtener las obligaciones.');
+      const message = err?.message || 'Error al obtener las obligaciones';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -133,6 +140,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
   const handleSendMessage = async () => {
     if (!selectedTemplate || !selectedPhone || !selectedObligacion) return;
     setIsLoading(true);
+    setError('');
     try {
       await sendTemplatedMessage({
         template_id: selectedTemplate.id,
@@ -140,10 +148,13 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
         cedula,
         obligacion: selectedObligacion,
       });
+      toast.success('Plantilla enviada correctamente');
       onConversationInitiated();
       onClose();
     } catch (err) {
-      setError('Error al enviar el mensaje.');
+      const message = err?.message || 'Error al enviar el mensaje';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

@@ -4,6 +4,7 @@ import WppConversationList from './WppConversationList';
 import InitiateConversationModal from './InitiateConversationModal';
 import WppTagInputModal from './WppTagInputModal';
 import { addTagToConversation, markConversationAsUnread } from '../services/api';
+import { toast } from 'sonner';
 
 const formatUserLabel = (user) =>
   user.extension_3cx ? `${user.full_name} (${user.extension_3cx})` : user.full_name;
@@ -107,7 +108,7 @@ const WppConversationSidebar = ({
       await addTagToConversation(taggingConversationId, tagName);
       onConversationInitiated(); // Re-fetch all conversations
     } catch (error) {
-      alert('Error al agregar etiqueta: ' + error.message);
+      toast.error('Error al agregar etiqueta: ' + error.message);
     } finally {
       setIsTagModalOpen(false);
       setTaggingConversationId(null);
@@ -119,7 +120,7 @@ const WppConversationSidebar = ({
       await markConversationAsUnread(conversationId);
       onConversationInitiated(); // Re-fetch all conversations
     } catch (error) {
-      alert('Error al marcar como no leído: ' + error.message);
+      toast.error('Error al marcar como no leído: ' + error.message);
     } finally {
       setContextMenu(null);
     }

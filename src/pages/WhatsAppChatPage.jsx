@@ -623,7 +623,7 @@ const WhatsAppChatPage = () => {
     }
   }, [handleScroll]);
 
-  const handleSendMessage = async () => {
+    const handleSendMessage = async () => {
     if (selectedTemplate) {
       if (!selectedConversation || !selectedObligation) return;
       try {
@@ -633,12 +633,13 @@ const WhatsAppChatPage = () => {
           cedula: selectedConversation.client_cedula,
           obligacion: selectedObligation,
         });
+        toast.success('Plantilla enviada correctamente');
         setSelectedTemplate(null);
         setSelectedObligation(null);
-        fetchConversations();
+        fetchAllConversations();
       } catch (error) {
-        console.error('Error sending template message:', error);
-        alert('Error al enviar la plantilla: ' + error.message);
+        const message = error?.message || 'Error al enviar la plantilla';
+        toast.error(message);
       }
     } else {
       if (newMessage.trim() === '' || !selectedConversation) return;
@@ -696,7 +697,7 @@ const WhatsAppChatPage = () => {
           )
         );
         if (error.message && !error.message.includes('CORS') && !error.message.includes('Failed to fetch')) {
-          alert('Error al enviar el mensaje: ' + error.message);
+          toast.error('Error al enviar el mensaje: ' + error.message);
         }
       }
     }
@@ -833,7 +834,7 @@ const WhatsAppChatPage = () => {
       );
       console.error('Error sending media:', error);
       if (error.message && !error.message.includes('CORS') && !error.message.includes('Failed to fetch')) {
-        alert('Error al enviar el medio: ' + error.message);
+        toast.error('Error al enviar el medio: ' + error.message);
       }
     } finally {
       setIsUploadingMedia(false);
