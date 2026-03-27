@@ -462,30 +462,15 @@ const CommunicationStep1 = ({ onNext, onCancel, initialData }) => {
                   </label>
                 ))}
               </div>
-            ) : formData.canalComunicacion === 'email' ? (
+            ) : (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
-                <span>No se encontraron correos registrados. No es posible continuar por este canal.</span>
+                <span>No se encontraron contactos registrados para este canal. No es posible continuar.</span>
               </div>
-            ) : (
-              <input
-                type="tel"
-                name="contactValue"
-                value={formData.contactValue}
-                onChange={handleChange}
-                placeholder="3001234567"
-                className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.contactValue ? 'border-red-500 bg-red-50' : 'border-green-200 bg-white'
-                  }`}
-              />
             )}
-            {errors.contactValue && (availableContacts.length > 0 || formData.canalComunicacion !== 'email') && (
+            {errors.contactValue && availableContacts.length > 0 && (
               <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" /> {errors.contactValue}
-              </p>
-            )}
-            {!loadingContacts && availableContacts.length === 0 && formData.canalComunicacion !== 'email' && (
-              <p className="text-[11px] text-gray-500 mt-1">
-                No encontramos contactos registrados para este canal. Ingresa uno manualmente.
               </p>
             )}
           </div>
