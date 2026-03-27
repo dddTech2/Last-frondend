@@ -294,12 +294,24 @@ export const uploadMediaFromGCS = (storage_object, mime_type = null) =>
 export const getSignedUploadForMedia = (conversation_id, content_type, kind, original_filename) =>
   apiRequest('/conversations/signed-upload', 'POST', { conversation_id, content_type, kind, original_filename });
 
+// --- Endpoints de Usuarios (Filtros de Conversaciones) ---
+export const getMyTeam = (coordinatorId) => {
+  const queryParams = new URLSearchParams();
+  if (coordinatorId) queryParams.append('coordinator_id', coordinatorId);
+  const queryString = queryParams.toString();
+  return apiRequest(queryString ? `/users/my-team?${queryString}` : '/users/my-team');
+};
+
+export const getCoordinators = () => apiRequest('/users/coordinators');
+
 // --- Endpoints de Conversaciones ---
 export const getConversations = (params = {}) => {
   const queryParams = new URLSearchParams();
   if (params.limit) queryParams.append('limit', params.limit);
   if (params.offset) queryParams.append('offset', params.offset);
-  if (params.search) queryParams.append('search', params.search); // Añadir parámetro de búsqueda
+  if (params.search) queryParams.append('search', params.search);
+  if (params.filter) queryParams.append('filter', params.filter);
+  if (params.coordinator_id) queryParams.append('coordinator_id', params.coordinator_id);
 
   const queryString = queryParams.toString();
   const endpoint = queryString

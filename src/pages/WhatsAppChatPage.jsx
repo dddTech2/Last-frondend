@@ -12,7 +12,9 @@ import {
   sendDocumentFromGCS,
   sendStickerFromGCS,
   sendTemplatedMessage,
-  markConversationAsRead
+  markConversationAsRead,
+  getMyTeam,
+  getCoordinators,
 } from '../services/api';
 import DocumentPreviewModal from '../components/DocumentPreviewModal';
 import useDebounce from '../hooks/useDebounce';
@@ -29,7 +31,25 @@ import { toast } from 'sonner';
 const WhatsAppChatPage = () => {
   const { subscribe } = useNotifications();
   const { user, logout } = useAuth();
-  const userRole = user?.decoded?.role || user?.decoded?.roles?.[0] || 'gestor'; // Default to gestor if not set
+  const userRole = user?.decoded?.role || user?.decoded?.roles?.[0] || 'gestor';
+
+  const resolvedRoles = useMemo(() => {
+    if (Array.isArray(user?.decoded?.roles)) return user.decoded.roles;
+    return user?.decoded?.role ? [user.decoded.role] : [];
+  }, [user]);
+
+  const roleMatches = (target) =>
+    resolvedRoles.some(r => r.toLowerCase() === target.toLowerCase());
+
+  const showFilters = roleMatches('Coordinador') || roleMatches('Admin') || roleMatches('Gerente') || roleMatches('Super Administrador');
+  const showCoordinatorDropdown = roleMatches('Admin') || roleMatches('Gerente') || roleMatches('Super Administrador');
+
+  // Server-side filter state
+  const [serverFilter, setServerFilter] = useState(null);
+  const [coordinatorFilter, setCoordinatorFilter] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [coordinators, setCoordinators] = useState([]);
+  const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const { play: playNotificationSound, init: initNotificationSound } = useSound('/new-notificationWpp.mp3');
 
   const [allConversations, setAllConversations] = useState([]);
@@ -331,14 +351,50 @@ const WhatsAppChatPage = () => {
   const fetchAllConversations = useCallback(async () => {
     setIsLoadingConversations(true);
     try {
-      const conversationsData = await getConversations({ limit: 10000 });
+      const params = { limit: 10000 };
+      if (serverFilter) params.filter = serverFilter;
+      if (coordinatorFilter) params.coordinator_id = coordinatorFilter;
+      const conversationsData = await getConversations(params);
       setAllConversations(conversationsData);
     } catch (error) {
       console.error('Error fetching conversations:', error);
+      if (error.message?.includes('403')) {
+        toast.error('No tienes acceso a este gestor');
+      } else if (error.message?.includes('400')) {
+        toast.error('Filtro no valido');
+      } else if (error.message?.includes('404')) {
+        toast.error('Coordinador no encontrado');
+      }
     } finally {
       setIsLoadingConversations(false);
     }
-  }, []);
+  }, [serverFilter, coordinatorFilter]);
+
+  // Fetch coordinators once on mount (Admin/Gerente only)
+  useEffect(() => {
+    if (!showFilters || !showCoordinatorDropdown) return;
+
+    setIsLoadingFilters(true);
+    getCoordinators()
+      .then(data => setCoordinators(data || []))
+      .catch(() => setCoordinators([]))
+      .finally(() => setIsLoadingFilters(false));
+  }, [showFilters, showCoordinatorDropdown]);
+
+  // Fetch team members: when coordinator changes (Admin/Gerente) or on mount (Coordinador)
+  useEffect(() => {
+    if (!showFilters) return;
+
+    setIsLoadingFilters(true);
+    const teamPromise = coordinatorFilter
+      ? getMyTeam(coordinatorFilter)
+      : getMyTeam();
+
+    teamPromise
+      .then(data => setTeamMembers(data || []))
+      .catch(() => setTeamMembers([]))
+      .finally(() => setIsLoadingFilters(false));
+  }, [showFilters, coordinatorFilter]);
 
   useEffect(() => {
     fetchAllConversations();
@@ -799,6 +855,18 @@ const WhatsAppChatPage = () => {
         onFilterChange={setActiveFilter}
         onLoadMore={handleLoadMoreConversations}
         hasMore={hasMoreConversations}
+        showFilters={showFilters}
+        showCoordinatorDropdown={showCoordinatorDropdown}
+        teamMembers={teamMembers}
+        coordinators={coordinators}
+        serverFilter={serverFilter}
+        onServerFilterChange={setServerFilter}
+        coordinatorFilter={coordinatorFilter}
+        onCoordinatorFilterChange={(val) => {
+          setCoordinatorFilter(val);
+          setServerFilter(null);
+        }}
+        isLoadingFilters={isLoadingFilters}
       />
 
       <WppChatArea
