@@ -143,7 +143,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
       onConversationInitiated();
       onClose();
     } catch (err) {
-      setError('Error al enviar el mensaje.');
+      setError(err.message || 'Error al enviar el mensaje.');
     } finally {
       setIsLoading(false);
     }
@@ -251,6 +251,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
         return (
           <div>
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Confirmar Envío</h2>
+            {error && <p className="text-red-500 mb-4 font-semibold">{error}</p>}
             <div className="p-4 border rounded-lg bg-gray-50">
               <p className="font-semibold">Destinatario:</p>
               <p>{selectedPhone}</p>
