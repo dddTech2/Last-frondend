@@ -9,8 +9,6 @@ const WppChatHeader = ({
   showClientInfo,
   onBack
 }) => {
-  const isEvolution = selectedConversation?.active_channel === 'EVOLUTION' || selectedConversation?.active_channel?.value === 'EVOLUTION';
-
   return (
     <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between h-20 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
@@ -30,11 +28,6 @@ const WppChatHeader = ({
                 <span className="whitespace-normal break-words leading-tight">{selectedConversation.chat_title}</span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="font-normal text-sm text-gray-500">{selectedConversation.customer_phone_number}</span>
-                  {isEvolution && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                      EVO {selectedConversation.system_phone_number ? `- ${selectedConversation.system_phone_number}` : ''}
-                    </span>
-                  )}
                 </div>
               </div>
             ) : 'Seleccione una conversación'}

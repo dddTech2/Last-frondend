@@ -256,7 +256,7 @@ const WppMessageList = ({
                     />
                     <div className={`flex items-center justify-end text-xs mt-1 ${isIncoming ? 'text-gray-500' : 'text-green-100'}`}>
                       {!isIncoming && (!msg.status || msg.status === 'sending') ? null : (
-                        <span className={`mr-2 px-2 py-0.5 rounded border font-extrabold text-[11px] tracking-wider uppercase shadow-sm ${(msg.channel || selectedConversation?.active_channel) === 'EVOLUTION' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-blue-100 text-blue-800 border-blue-300'}`}>
+                        <span className={`mr-2 px-1.5 py-[1px] rounded border font-bold text-[9px] tracking-wide uppercase shadow-sm ${(msg.channel || selectedConversation?.active_channel) === 'EVOLUTION' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-blue-100 text-blue-800 border-blue-300'}`}>
                           {(msg.channel || selectedConversation?.active_channel) === 'EVOLUTION' ? `EVO ${msg.system_phone_number ? `${msg.system_phone_number}` : ''}` : (msg.channel || selectedConversation?.active_channel || 'META')}
                         </span>
                       )}
