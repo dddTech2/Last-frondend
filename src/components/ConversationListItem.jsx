@@ -89,11 +89,6 @@ const ConversationListItem = ({ conversation, isSelected, onSelect, userRole, on
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className={`font-semibold truncate text-base ${isUnread ? 'text-green-700 font-bold' : 'text-gray-700'}`}>{conversation.chat_title}</h3>
-            {isEvolution && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                EVO
-              </span>
-            )}
           </div>
           <p className={`text-sm truncate ${isUnread ? 'text-green-800' : 'text-gray-500'}`}>{conversation.customer_phone_number}</p>
         </div>
