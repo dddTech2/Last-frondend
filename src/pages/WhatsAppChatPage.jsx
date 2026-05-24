@@ -313,33 +313,9 @@ const WhatsAppChatPage = () => {
         }
       })();
 
-      if (!matchesFilter) {
-        return false;
-      }
-
-      if (!hasTerm) {
-        return true;
-      }
-
-      const lastMessage = conversation.messages && conversation.messages.length > 0 ? conversation.messages[0] : null;
-      const searchPool = [
-        conversation.chat_title,
-        conversation.customer_phone_number,
-        conversation.client_cedula,
-        conversation.client_name,
-        conversation.customer_name,
-        resolveMessageBody(lastMessage),
-        resolveMessageType(lastMessage),
-      ];
-
-      const basicMatch = searchPool.some((value) => normalize(value).includes(term));
-      const tagsMatch = Array.isArray(conversation.tags)
-        ? conversation.tags.some((tag) => normalize(tag.name).includes(term))
-        : false;
-
-      return basicMatch || tagsMatch;
+      return matchesFilter;
     });
-  }, [allConversations, debouncedSearchTerm, activeFilter]);
+  }, [allConversations, activeFilter]);
 
   useEffect(() => {
     const initialPage = filteredConversations.slice(0, CONVERSATION_PAGE_SIZE);
@@ -354,6 +330,7 @@ const WhatsAppChatPage = () => {
       const params = { limit: 10000 };
       if (serverFilter) params.filter = serverFilter;
       if (coordinatorFilter) params.coordinator_id = coordinatorFilter;
+      if (debouncedSearchTerm.trim() !== '') params.search = debouncedSearchTerm.trim();
       const conversationsData = await getConversations(params);
       setAllConversations(conversationsData);
     } catch (error) {
@@ -368,7 +345,7 @@ const WhatsAppChatPage = () => {
     } finally {
       setIsLoadingConversations(false);
     }
-  }, [serverFilter, coordinatorFilter]);
+  }, [serverFilter, coordinatorFilter, debouncedSearchTerm]);
 
   // Fetch coordinators once on mount (Admin/Gerente only)
   useEffect(() => {
@@ -418,26 +395,39 @@ const WhatsAppChatPage = () => {
   }, [conversationPage, hasMoreConversations, isLoadingConversations, filteredConversations]);
 
   const handleSelectConversation = useCallback(async (convo) => {
+    if (selectedConversationRef.current?.id === convo.id) return;
+    
+    // Clear messages instantly to give immediate visual feedback and unmount old message tree
+    setMessages([]);
+    setIsLoadingMessages(true);
+
     if (convo.read_status === 'sent') {
-      try {
-        await markConversationAsRead(convo.id);
-        const updateConversations = (conversations) =>
-          conversations.map(c =>
-            c.id === convo.id ? { ...c, read_status: 'read' } : c
-          );
-        setAllConversations(updateConversations);
-      } catch (error) {
+      // Optmistic UI update without blocking
+      setAllConversations(conversations => {
+        const index = conversations.findIndex(c => c.id === convo.id);
+        if (index === -1) return conversations;
+        const newConvos = [...conversations];
+        newConvos[index] = { ...newConvos[index], read_status: 'read' };
+        return newConvos;
+      });
+
+      // Fire and forget the API call
+      markConversationAsRead(convo.id).catch(error => {
         console.error("Error marking conversation as read", error);
-      }
+      });
     }
+    
     setSelectedConversation(convo);
   }, []);
 
+  const selectedConversationId = selectedConversation?.id;
+  const selectedConversationLastClientMessageAt = selectedConversation?.last_client_message_at;
+
   // Efecto para cargar los mensajes iniciales de una conversación
   useEffect(() => {
-    if (selectedConversation) {
+    if (selectedConversationId) {
       const now = new Date();
-      const lastMessageTime = new Date(selectedConversation.last_client_message_at);
+      const lastMessageTime = new Date(selectedConversationLastClientMessageAt);
       const diff = now - lastMessageTime;
       const hours = diff / (1000 * 60 * 60);
       setIsSessionExpired(hours > 24);
@@ -448,9 +438,10 @@ const WhatsAppChatPage = () => {
         if (cachedMessages) {
           setMessages(cachedMessages);
           setIsLoadingMessages(false);
-          setTimeout(() => scrollToBottom(), 100);
-        } else {
-          setIsLoadingMessages(true);
+          // Usamos requestAnimationFrame para asegurar que se renderice antes de hacer scroll
+          requestAnimationFrame(() => {
+            setTimeout(() => scrollToBottom(), 50);
+          });
         }
 
         try {
@@ -465,12 +456,12 @@ const WhatsAppChatPage = () => {
             const apiMessages = conversationData.messages;
 
             setMessagesCache(prevCache => {
-              const cachedMsgs = prevCache[selectedConversation.id] || [];
-              const messageMap = new Map(cachedMsgs.map(m => [m.id || m.message_id, m]));
+              const cachedMsgs = prevCache[selectedConversationId] || [];
+              const messageMap = new Map(cachedMsgs.map(m => [m.id || m.incoming_id || m.message_id, m]));
 
               // Update map with API messages, but don't overwrite cached ones
               apiMessages.forEach(apiMsg => {
-                const id = apiMsg.id || apiMsg.message_id;
+                const id = apiMsg.id || apiMsg.incoming_id || apiMsg.message_id;
                 if (!messageMap.has(id)) {
                   messageMap.set(id, apiMsg);
                 }
@@ -524,7 +515,7 @@ const WhatsAppChatPage = () => {
       setIsLoadingMessages(false);
       setTotalMessages(0);
     }
-  }, [selectedConversation, scrollToBottom]);
+  }, [selectedConversationId, selectedConversationLastClientMessageAt, scrollToBottom]);
 
   // Memoized WebSocket message handler
   useEffect(() => {
@@ -546,6 +537,9 @@ const WhatsAppChatPage = () => {
           updated_at: newMessage.timestamp,
           last_client_message_at: newMessage.direction === 'inbound' ? newMessage.timestamp : prev[convoIndex].last_client_message_at,
           read_status: isConversationSelected ? 'read' : 'sent',
+          ...(newMessage.channel && { active_channel: newMessage.channel }),
+          ...(newMessage.system_phone_number && { system_phone_number: newMessage.system_phone_number }),
+          ...(newMessage.evolution_instance_id && { evolution_instance_id: newMessage.evolution_instance_id })
         };
 
         const newConversations = [...prev];
@@ -557,7 +551,11 @@ const WhatsAppChatPage = () => {
 
       setMessagesCache(prevCache => {
         const currentMessages = prevCache[newMessage.conversation_id] || [];
-        if (!currentMessages.some(msg => (msg.id || msg.message_id) === (newMessage.id || newMessage.message_id))) {
+        if (!currentMessages.some(msg => 
+          (msg.message_id && newMessage.message_id && msg.message_id === newMessage.message_id) || 
+          (msg.id && (newMessage.id || newMessage.incoming_id) && msg.id === (newMessage.id || newMessage.incoming_id)) ||
+          (msg.id === newMessage.id)
+        )) {
           const updatedMessages = [...currentMessages, newMessage].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
           return { ...prevCache, [newMessage.conversation_id]: updatedMessages };
         }
@@ -566,12 +564,23 @@ const WhatsAppChatPage = () => {
 
       if (selectedConversationRef.current?.id === newMessage.conversation_id) {
         setMessages(prevMessages => {
-          if (!prevMessages.some(msg => (msg.id || msg.message_id) === (newMessage.id || newMessage.message_id))) {
+          if (!prevMessages.some(msg => 
+            (msg.message_id && newMessage.message_id && msg.message_id === newMessage.message_id) || 
+            (msg.id && (newMessage.id || newMessage.incoming_id) && msg.id === (newMessage.id || newMessage.incoming_id)) ||
+            (msg.id === newMessage.id)
+          )) {
             const updatedMessages = [...prevMessages, newMessage];
             return updatedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
           }
           return prevMessages;
         });
+        
+        setSelectedConversation(prev => ({
+          ...prev,
+          ...(newMessage.channel && { active_channel: newMessage.channel }),
+          ...(newMessage.system_phone_number && { system_phone_number: newMessage.system_phone_number }),
+          ...(newMessage.evolution_instance_id && { evolution_instance_id: newMessage.evolution_instance_id })
+        }));
 
         if (isNearBottomRef.current) {
           setTimeout(scrollToBottom, 100);
@@ -582,7 +591,11 @@ const WhatsAppChatPage = () => {
     const handleMessageUpdate = (updatedMessage) => {
       setMessagesCache(prevCache => {
         const currentMessages = prevCache[updatedMessage.conversation_id] || [];
-        const messageIndex = currentMessages.findIndex(msg => (msg.id || msg.message_id) === (updatedMessage.id || updatedMessage.message_id));
+        const messageIndex = currentMessages.findIndex(msg => 
+          (msg.message_id && updatedMessage.message_id && msg.message_id === updatedMessage.message_id) || 
+          (msg.id && (updatedMessage.id || updatedMessage.incoming_id) && msg.id === (updatedMessage.id || updatedMessage.incoming_id)) ||
+          (msg.id === updatedMessage.id)
+        );
 
         if (messageIndex !== -1) {
           const updatedMessages = [...currentMessages];
@@ -594,7 +607,11 @@ const WhatsAppChatPage = () => {
 
       if (selectedConversationRef.current?.id === updatedMessage.conversation_id) {
         setMessages(prevMessages => {
-          const messageIndex = prevMessages.findIndex(msg => (msg.id || msg.message_id) === (updatedMessage.id || updatedMessage.message_id));
+          const messageIndex = prevMessages.findIndex(msg => 
+            (msg.message_id && updatedMessage.message_id && msg.message_id === updatedMessage.message_id) || 
+            (msg.id && (updatedMessage.id || updatedMessage.incoming_id) && msg.id === (updatedMessage.id || updatedMessage.incoming_id)) ||
+            (msg.id === updatedMessage.id)
+          );
           if (messageIndex !== -1) {
             const updatedMessages = [...prevMessages];
             updatedMessages[messageIndex] = { ...updatedMessages[messageIndex], ...updatedMessage };
@@ -702,6 +719,11 @@ const WhatsAppChatPage = () => {
     }
   };
 
+  const handleSendAudioBlob = async (audioBlob) => {
+    const audioFile = new File([audioBlob], `voicenote_${new Date().getTime()}.webm`, { type: 'audio/webm' });
+    await handleSendMedia(audioFile, 'audio');
+  };
+
   const handleViewInAdminfo = () => {
     if (adminfoData.url) {
       window.open(adminfoData.url, '_blank');
@@ -730,11 +752,14 @@ const WhatsAppChatPage = () => {
 
 
 
-  const handleSendMedia = async () => {
-    if (!selectedMediaFile || !selectedConversation || !mediaType) return;
+  const handleSendMedia = async (overrideFile = null, overrideType = null) => {
+    const fileToSend = overrideFile instanceof File ? overrideFile : selectedMediaFile;
+    const typeToSend = overrideType && typeof overrideType === 'string' ? overrideType : mediaType;
+
+    if (!fileToSend || !selectedConversation || !typeToSend) return;
 
     const temporaryId = -Date.now();
-    const localMediaUrl = URL.createObjectURL(selectedMediaFile);
+    const localMediaUrl = URL.createObjectURL(fileToSend);
 
     const optimisticMessage = {
       id: temporaryId,
@@ -742,14 +767,18 @@ const WhatsAppChatPage = () => {
       timestamp: new Date().toISOString(),
       from_phone_number: 'me',
       status: 'pending',
-      message_type: mediaType,
+      message_type: typeToSend,
       localMediaUrl: localMediaUrl, // <-- LA PROPIEDAD CLAVE
-      body: selectedMediaFile.name,
+      body: typeToSend === 'audio' ? 'Nota de voz' : fileToSend.name,
     };
 
     setMessages(prevMessages => [...prevMessages, optimisticMessage]);
-    setSelectedMediaFile(null);
-    setMediaType('');
+    
+    // Solo limpiar si no se está usando un override (flujo normal)
+    if (!(overrideFile instanceof File)) {
+      setSelectedMediaFile(null);
+      setMediaType('');
+    }
     setTimeout(scrollToBottom, 100);
 
     setIsUploadingMedia(true);
@@ -757,8 +786,8 @@ const WhatsAppChatPage = () => {
 
     try {
       // Determinar el tipo MIME correcto
-      let mimeType = selectedMediaFile.type;
-      if (mediaType === 'audio' && !mimeType) {
+      let mimeType = fileToSend.type;
+      if (typeToSend === 'audio' && !mimeType) {
         mimeType = 'audio/mpeg';
       } else if (!mimeType) {
         mimeType = 'application/octet-stream';
@@ -769,14 +798,14 @@ const WhatsAppChatPage = () => {
       const signedUploadResponse = await getSignedUploadUrl(
         parseInt(selectedConversation.id),
         mimeType,
-        mediaType === 'audio' ? 'audio' : 'media'
+        typeToSend === 'audio' ? 'audio' : 'media'
       );
 
       // Paso 2: Subir archivo directamente a GCS usando la URL firmada
       // Nota: El backend devuelve 'signed_url' y 'gcs_object_name'
       const uploadResponse = await fetch(signedUploadResponse.signed_url, {
         method: 'PUT',
-        body: selectedMediaFile,
+        body: fileToSend,
         headers: {
           'Content-Type': mimeType,
         },
@@ -792,10 +821,9 @@ const WhatsAppChatPage = () => {
 
       // Intentar subir a Meta (esto devuelve el media_id si es necesario, 
       // o el backend se encarga de procesar el storage_object en los reply endpoints)
-      // Según Untitled-1.json, los endpoints de reply esperan el storage_object
-
+      // Según Untitled-1.json, los endpoints       let response;
       let response;
-      switch (mediaType) {
+      switch (typeToSend) {
         case 'image':
           response = await sendImageFromGCS(selectedConversation.id, storageObject);
           break;
@@ -806,23 +834,26 @@ const WhatsAppChatPage = () => {
           response = await sendAudioFromGCS(selectedConversation.id, storageObject);
           break;
         case 'document':
-          response = await sendDocumentFromGCS(selectedConversation.id, storageObject, selectedMediaFile.name);
+          response = await sendDocumentFromGCS(selectedConversation.id, storageObject, fileToSend.name);
           break;
         case 'sticker':
           response = await sendStickerFromGCS(selectedConversation.id, storageObject);
           break;
         default:
-          throw new Error('Tipo de medio no soportado');
+          throw new Error('Tipo de archivo no soportado para envío por GCS');
       }
 
       if (response) {
-        // Al recibir la respuesta, reemplazamos el mensaje.
-        // El nuevo objeto 'response' NO tendrá 'localMediaUrl',
-        // por lo que WppMessageContent usará la carga diferida normal.
         setMessages(prevMessages =>
-          prevMessages.map(msg =>
-            msg.id === temporaryId ? response : msg
-          )
+          prevMessages.map(msg => {
+            if (msg.id === temporaryId) {
+               const realMessageId = response.messages && response.messages.length > 0 
+                  ? response.messages[0].id 
+                  : (response.id || temporaryId);
+               return { ...msg, id: realMessageId, message_id: realMessageId, status: 'sent', localMediaUrl: undefined };
+            }
+            return msg;
+          })
         );
       }
     } catch (error) {
@@ -878,6 +909,7 @@ const WhatsAppChatPage = () => {
         handleMediaFileSelect={handleMediaFileSelect}
         selectedMediaFile={selectedMediaFile}
         handleSendMedia={handleSendMedia}
+        handleSendAudioBlob={handleSendAudioBlob}
         handleCancelMedia={handleCancelMedia}
         isUploadingMedia={isUploadingMedia}
         onDocumentClick={setPreviewFileUrl}

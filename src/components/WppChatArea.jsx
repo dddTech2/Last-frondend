@@ -12,6 +12,7 @@ const WppChatArea = ({
   handleMediaFileSelect,
   selectedMediaFile,
   handleSendMedia,
+  handleSendAudioBlob,
   handleCancelMedia,
   isUploadingMedia,
   onDocumentClick,
@@ -61,6 +62,7 @@ const WppChatArea = ({
         handleMediaFileSelect={handleMediaFileSelect}
         selectedMediaFile={selectedMediaFile}
         handleSendMedia={handleSendMedia}
+        handleSendAudioBlob={handleSendAudioBlob}
         handleCancelMedia={handleCancelMedia}
         isUploadingMedia={isUploadingMedia}
         selectedConversation={selectedConversation}

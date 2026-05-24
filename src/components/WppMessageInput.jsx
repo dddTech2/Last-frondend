@@ -8,7 +8,8 @@ import {
   Smile,
   Send,
   X,
-  Sticker
+  Sticker,
+  Mic
 } from 'lucide-react';
 
 const WppMessageInput = ({
@@ -24,12 +25,20 @@ const WppMessageInput = ({
   onOpenExpiredSessionModal,
   selectedTemplate,
   selectedObligation,
-  handleCancelMedia // Nueva prop para cancelar selección
+  handleCancelMedia, // Nueva prop para cancelar selección
+  handleSendAudioBlob // Prop para notas de voz
 }) => {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  
   const textareaRef = useRef(null);
   const menuRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingIntervalRef = useRef(null);
+  const streamRef = useRef(null);
 
   // Referencias a los inputs ocultos
   const imageInputRef = useRef(null);
@@ -100,6 +109,70 @@ const WppMessageInput = ({
       ref.current.click();
     }
     handleFileClick();
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      // Fallback: Si el usuario deniega o no hay micrófono
+    }
+  };
+
+  const stopRecording = (cancel = false) => {
+    if (!isRecording || !mediaRecorderRef.current) return;
+
+    mediaRecorderRef.current.onstop = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (!cancel && audioChunksRef.current.length > 0) {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (handleSendAudioBlob) {
+          handleSendAudioBlob(audioBlob);
+        }
+      }
+      audioChunksRef.current = [];
+    };
+
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    clearInterval(recordingIntervalRef.current);
+    setRecordingDuration(0);
+  };
+
+  const handleCancelRecording = () => {
+    stopRecording(true);
+  };
+
+  const handleSendRecording = () => {
+    stopRecording(false);
   };
 
   // Renderizado del panel de previsualización
@@ -234,21 +307,36 @@ const WppMessageInput = ({
           </button>
         </div>
 
-        {/* Input de Texto */}
+        {/* Input de Texto o Ui de Grabación */}
         <div className="flex-1 bg-white rounded-2xl border border-gray-300 focus-within:border-white focus-within:ring-2 focus-within:ring-[#00a884] transition-all py-2 px-4 min-h-[44px] flex items-center">
-          <textarea
-            ref={textareaRef}
-            placeholder="Escribe un mensaje"
-            className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-500 resize-none max-h-[120px] leading-relaxed py-1"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={!selectedConversation}
-            rows={1}
-          />
+          {isRecording ? (
+            <div className="w-full flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                <span className="text-red-500 text-base font-semibold ml-2">{formatDuration(recordingDuration)}</span>
+              </div>
+              <button 
+                onClick={handleCancelRecording}
+                className="text-gray-500 hover:text-red-500 font-medium text-sm flex items-center gap-1 transition-colors"
+              >
+                <X className="w-4 h-4" /> Cancelar
+              </button>
+            </div>
+          ) : (
+            <textarea
+              ref={textareaRef}
+              placeholder="Escribe un mensaje"
+              className="w-full bg-transparent border-none outline-none text-gray-800 placeholder-gray-500 resize-none max-h-[120px] leading-relaxed py-1"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={!selectedConversation}
+              rows={1}
+            />
+          )}
         </div>
 
-        {/* Botón de Enviar */}
+        {/* Botón de Enviar o Micrófono */}
         <div className="pb-1">
           {selectedMediaFile ? (
             <button
@@ -266,16 +354,32 @@ const WppMessageInput = ({
                 <Send className="w-5 h-5 ml-0.5" />
               )}
             </button>
-          ) : (
+          ) : isRecording ? (
             <button
-              className={`p-3 rounded-full shadow-sm transition-all transform active:scale-95 flex items-center justify-center
-                ${!selectedConversation || !newMessage.trim()
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-[#00a884] text-white hover:bg-[#008f6f] shadow-md'}`}
-              onClick={handleSendMessage}
-              disabled={!selectedConversation || !newMessage.trim()}
+              className="p-3 rounded-full shadow-lg transition-all flex items-center justify-center bg-[#00a884] text-white hover:bg-[#008f6f] scale-110"
+              onClick={handleSendRecording}
+              title="Enviar nota de voz"
             >
               <Send className="w-5 h-5 ml-0.5" />
+            </button>
+          ) : newMessage.trim() ? (
+            <button
+              className={`p-3 rounded-full shadow-sm transition-all transform active:scale-95 flex items-center justify-center bg-[#00a884] text-white hover:bg-[#008f6f] shadow-md`}
+              onClick={handleSendMessage}
+            >
+              <Send className="w-5 h-5 ml-0.5" />
+            </button>
+          ) : (
+            <button
+              className={`p-3 rounded-full shadow-sm transition-all flex items-center justify-center touch-none select-none
+                ${!selectedConversation 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-[#00a884] text-white hover:bg-[#008f6f]'}`}
+              onClick={() => { if(selectedConversation) startRecording(); }}
+              disabled={!selectedConversation}
+              title="Haz clic para grabar audio"
+            >
+              <Mic className="w-5 h-5" />
             </button>
           )}
         </div>
