@@ -23,14 +23,17 @@ const WppChatArea = ({
   isLoadingMessages,
   isLoadingOlderMessages,
   hasMoreMessages,
-  onLoadOlderMessages, // <-- Añadir nueva prop
+  onLoadOlderMessages,
   isSessionExpired,
   onOpenExpiredSessionModal,
   selectedTemplate,
   selectedObligation,
   onCancelTemplate,
   adminfoData,
-  handleViewInAdminfo
+  handleViewInAdminfo,
+  toggleClientInfo,
+  showClientInfo,
+  onBack
 }) => {
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-transparent" style={{ background: 'transparent' }}>
@@ -38,6 +41,9 @@ const WppChatArea = ({
         selectedConversation={selectedConversation}
         adminfoData={adminfoData}
         handleViewInAdminfo={handleViewInAdminfo}
+        toggleClientInfo={toggleClientInfo}
+        showClientInfo={showClientInfo}
+        onBack={onBack}
       />
 
       <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto">

@@ -80,6 +80,21 @@ const WhatsAppChatPage = () => {
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [isExpiredSessionModalOpen, setIsExpiredSessionModalOpen] = useState(false);
 
+  // Responsive state for client info panel
+  const [showClientInfo, setShowClientInfo] = useState(window.innerWidth >= 1200);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1200) {
+        setShowClientInfo(false);
+      } else {
+        setShowClientInfo(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Estados para paginación
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
@@ -872,70 +887,83 @@ const WhatsAppChatPage = () => {
     }
   };
   return (
-    <div className="flex h-full min-h-0 bg-transparent overflow-hidden" style={{ background: 'transparent' }}>
-      <WppConversationSidebar
-        conversations={visibleConversations}
-        isLoading={isLoadingConversations}
-        selectedConversation={selectedConversation}
-        onSelectConversation={handleSelectConversation}
-        userRole={userRole}
-        onConversationInitiated={() => fetchAllConversations()}
-        onSearch={setSearchTerm}
-        searchTerm={searchTerm}
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        onLoadMore={handleLoadMoreConversations}
-        hasMore={hasMoreConversations}
-        showFilters={showFilters}
-        showCoordinatorDropdown={showCoordinatorDropdown}
-        teamMembers={teamMembers}
-        coordinators={coordinators}
-        serverFilter={serverFilter}
-        onServerFilterChange={setServerFilter}
-        coordinatorFilter={coordinatorFilter}
-        onCoordinatorFilterChange={(val) => {
-          setCoordinatorFilter(val);
-          setServerFilter(null);
-        }}
-        isLoadingFilters={isLoadingFilters}
-      />
-
-      <WppChatArea
-        selectedConversation={selectedConversation}
-        messages={messages}
-        newMessage={newMessage}
-        setNewMessage={setNewMessage}
-        handleSendMessage={handleSendMessage}
-        handleMediaFileSelect={handleMediaFileSelect}
-        selectedMediaFile={selectedMediaFile}
-        handleSendMedia={handleSendMedia}
-        handleSendAudioBlob={handleSendAudioBlob}
-        handleCancelMedia={handleCancelMedia}
-        isUploadingMedia={isUploadingMedia}
-        onDocumentClick={setPreviewFileUrl}
-        messagesEndRef={messagesEndRef}
-        messagesContainerRef={messagesContainerRef}
-        showScrollButton={showScrollButton}
-        scrollToBottom={scrollToBottom}
-        isLoadingMessages={isLoadingMessages}
-        isLoadingOlderMessages={isLoadingOlderMessages}
-        hasMoreMessages={hasMoreMessages}
-        onLoadOlderMessages={loadOlderMessages}
-        isSessionExpired={isSessionExpired}
-        onOpenExpiredSessionModal={() => setIsExpiredSessionModalOpen(true)}
-        selectedTemplate={selectedTemplate}
-        onCancelTemplate={() => setSelectedTemplate(null)}
-        adminfoData={adminfoData}
-        handleViewInAdminfo={handleViewInAdminfo}
-      />
-
-      {userRole !== 'administrador' && (
-        <WppClientInfo
+    <div className="flex h-full min-h-0 bg-transparent overflow-hidden relative" style={{ background: 'transparent' }}>
+      {/* Sidebar: hidden on mobile when a conversation is selected */}
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-shrink-0 h-full flex-col min-h-0`}>
+        <WppConversationSidebar
+          conversations={visibleConversations}
+          isLoading={isLoadingConversations}
           selectedConversation={selectedConversation}
+          onSelectConversation={handleSelectConversation}
           userRole={userRole}
-          setClientInfo={setClientInfo}
-          onAdminfoUrlChange={setAdminfoData}
+          onConversationInitiated={() => fetchAllConversations()}
+          onSearch={setSearchTerm}
+          searchTerm={searchTerm}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          onLoadMore={handleLoadMoreConversations}
+          hasMore={hasMoreConversations}
+          showFilters={showFilters}
+          showCoordinatorDropdown={showCoordinatorDropdown}
+          teamMembers={teamMembers}
+          coordinators={coordinators}
+          serverFilter={serverFilter}
+          onServerFilterChange={setServerFilter}
+          coordinatorFilter={coordinatorFilter}
+          onCoordinatorFilterChange={(val) => {
+            setCoordinatorFilter(val);
+            setServerFilter(null);
+          }}
+          isLoadingFilters={isLoadingFilters}
         />
+      </div>
+
+      {/* Chat Area: hidden on mobile when NO conversation is selected */}
+      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-1 h-full min-w-0 flex-col`}>
+        <WppChatArea
+          selectedConversation={selectedConversation}
+          messages={messages}
+          newMessage={newMessage}
+          setNewMessage={setNewMessage}
+          handleSendMessage={handleSendMessage}
+          handleMediaFileSelect={handleMediaFileSelect}
+          selectedMediaFile={selectedMediaFile}
+          handleSendMedia={handleSendMedia}
+          handleSendAudioBlob={handleSendAudioBlob}
+          handleCancelMedia={handleCancelMedia}
+          isUploadingMedia={isUploadingMedia}
+          onDocumentClick={setPreviewFileUrl}
+          messagesEndRef={messagesEndRef}
+          messagesContainerRef={messagesContainerRef}
+          showScrollButton={showScrollButton}
+          scrollToBottom={scrollToBottom}
+          isLoadingMessages={isLoadingMessages}
+          isLoadingOlderMessages={isLoadingOlderMessages}
+          hasMoreMessages={hasMoreMessages}
+          onLoadOlderMessages={loadOlderMessages}
+          isSessionExpired={isSessionExpired}
+          onOpenExpiredSessionModal={() => setIsExpiredSessionModalOpen(true)}
+          selectedTemplate={selectedTemplate}
+          onCancelTemplate={() => setSelectedTemplate(null)}
+          adminfoData={adminfoData}
+          handleViewInAdminfo={handleViewInAdminfo}
+          toggleClientInfo={() => setShowClientInfo(prev => !prev)}
+          showClientInfo={showClientInfo}
+          onBack={() => setSelectedConversation(null)}
+        />
+      </div>
+
+      {/* Client Info Panel: toggled on/off, overlays on mobile/tablet, static columns on desktop */}
+      {userRole !== 'administrador' && selectedConversation && showClientInfo && (
+        <div className="fixed inset-y-0 right-0 z-50 w-80 max-w-full bg-white shadow-2xl border-l border-gray-200 md:w-96 lg:static lg:w-96 lg:shadow-none lg:z-auto flex flex-col h-full min-h-0">
+          <WppClientInfo
+            selectedConversation={selectedConversation}
+            userRole={userRole}
+            setClientInfo={setClientInfo}
+            onAdminfoUrlChange={setAdminfoData}
+            onClose={() => setShowClientInfo(false)}
+          />
+        </div>
       )}
 
       <DocumentPreviewModal fileUrl={previewFileUrl} onClose={() => setPreviewFileUrl(null)} />
