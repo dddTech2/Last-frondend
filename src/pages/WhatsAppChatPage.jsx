@@ -437,6 +437,7 @@ const WhatsAppChatPage = () => {
 
   const selectedConversationId = selectedConversation?.id;
   const selectedConversationLastClientMessageAt = selectedConversation?.last_client_message_at;
+  const selectedConversationIsEvolution = selectedConversation?.active_channel === 'EVOLUTION' || (selectedConversation?.active_channel && selectedConversation?.active_channel.value === 'EVOLUTION') || !!selectedConversation?.evolution_instance_id || !!selectedConversation?.is_evolution;
 
   // Efecto para cargar los mensajes iniciales de una conversación
   useEffect(() => {
@@ -445,7 +446,7 @@ const WhatsAppChatPage = () => {
       const lastMessageTime = new Date(selectedConversationLastClientMessageAt);
       const diff = now - lastMessageTime;
       const hours = diff / (1000 * 60 * 60);
-      setIsSessionExpired(hours > 24);
+      setIsSessionExpired(!selectedConversationIsEvolution && hours > 24);
 
       const fetchMessages = async () => {
         const cachedMessages = messagesCache[selectedConversation.id];
@@ -530,7 +531,7 @@ const WhatsAppChatPage = () => {
       setIsLoadingMessages(false);
       setTotalMessages(0);
     }
-  }, [selectedConversationId, selectedConversationLastClientMessageAt, scrollToBottom]);
+  }, [selectedConversationId, selectedConversationLastClientMessageAt, selectedConversationIsEvolution, scrollToBottom]);
 
   // Memoized WebSocket message handler
   useEffect(() => {

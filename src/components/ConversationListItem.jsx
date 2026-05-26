@@ -96,7 +96,7 @@ const ConversationListItem = ({ conversation, isSelected, onSelect, userRole, on
           <span className="text-xs text-gray-400">
             {formatDate(displayTimestamp)}
           </span>
-          <WppWindowCounter lastClientMessageAt={conversation.last_client_message_at} />
+          <WppWindowCounter lastClientMessageAt={conversation.last_client_message_at} isEvolution={isEvolution} />
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
