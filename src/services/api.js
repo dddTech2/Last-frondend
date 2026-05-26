@@ -917,4 +917,20 @@ export const getCallsDetail = ({ fecha_inicio, fecha_fin, adminfo, coordinador }
 export const getCallsAlertsNN = () =>
   apiRequest('/reports-etl/informe-llamadas/alertas-nn');
 
+// --- Endpoints de Instancias de Evolution API ---
+export const getEvolutionInstances = () => apiRequest('/whatsapp/evolution-instances/');
+export const createEvolutionInstance = (data) => apiRequest('/whatsapp/evolution-instances/', 'POST', data);
+export const getEvolutionInstanceQR = (instanceId) => apiRequest(`/whatsapp/evolution-instances/${instanceId}/qr`);
+export const restartEvolutionInstance = (instanceId) => apiRequest(`/whatsapp/evolution-instances/${instanceId}/restart`, 'POST');
+export const syncEvolutionInstanceProfile = (instanceId) => apiRequest(`/whatsapp/evolution-instances/${instanceId}/sync_profile`, 'POST');
+export const configureEvolutionInstanceWebhook = (instanceId, webhookUrl = null) => {
+  const endpoint = webhookUrl 
+    ? `/whatsapp/evolution-instances/${instanceId}/configure_webhook?webhook_url=${encodeURIComponent(webhookUrl)}`
+    : `/whatsapp/evolution-instances/${instanceId}/configure_webhook`;
+  return apiRequest(endpoint, 'POST');
+};
+export const updateEvolutionInstanceSettings = (instanceId, data) => apiRequest(`/whatsapp/evolution-instances/${instanceId}`, 'PUT', data);
+export const deleteEvolutionInstance = (instanceId) => apiRequest(`/whatsapp/evolution-instances/${instanceId}`, 'DELETE');
+
+
 
