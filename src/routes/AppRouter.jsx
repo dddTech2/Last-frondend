@@ -21,6 +21,7 @@ import CampaignEffectivenessPage from '../pages/reports/CampaignEffectivenessPag
 import WhatsAppDashboardPage from '../pages/reports/WhatsAppDashboardPage';
 import DashboardPredictivoPage from '../pages/DashboardPredictivo';
 import CallsReportPage from '../pages/reports/CallsReportPage';
+import ProductivityReportPage from '../pages/reports/ProductivityReportPage';
 import RagManagementPage from '../pages/RagManagementPage';
 import ProtectedRoute from './ProtectedRoute';
 import UsersPage from '../pages/UsersPage';
@@ -58,6 +59,7 @@ export const AppRouter = () => {
         <Route path="reports/whatsapp-dashboard" element={<WhatsAppDashboardPage />} />
         <Route path="reports/dashboard-predictivo" element={<DashboardPredictivoPage />} />
         <Route path="reports/calls" element={<CallsReportPage />} />
+        <Route path="reports/productivity" element={<ProductivityReportPage />} />
         <Route path="rag-admin" element={<RagManagementPage />} />
         
         {/* Rutas de Tickets */}

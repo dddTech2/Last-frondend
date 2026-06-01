@@ -1,6 +1,6 @@
 // La URL se toma de la variable de entorno VITE_API_URL si existe,
 // de lo contrario usa la URL de producción por defecto.
-export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 
 // Función para obtener el token de autenticación
@@ -918,3 +918,72 @@ export const getCallsAlertsNN = () =>
   apiRequest('/reports-etl/informe-llamadas/alertas-nn');
 
 
+// --- Endpoints de Productividad ---
+export const getProductividadDinamica = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+  return apiRequest(`/reports-etl/productividad/dinamica?${queryParams.toString()}`);
+};
+
+export const getProductividadDiaADia = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+  return apiRequest(`/reports-etl/productividad/dia-a-dia?${queryParams.toString()}`);
+};
+
+export const uploadProductividadPagos = (file) => {
+  return apiRequestWithFile('/reports-etl/productividad/pagos/upload', 'POST', file);
+};
+
+export const getInasistencias = (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+  const queryString = queryParams.toString();
+  return apiRequest(queryString ? `/reports-etl/productividad/inasistencias?${queryString}` : '/reports-etl/productividad/inasistencias');
+};
+
+export const createInasistencia = (inasistenciaData) => {
+  return apiRequest('/reports-etl/productividad/inasistencias', 'POST', inasistenciaData);
+};
+
+export const deleteInasistencia = (id) => {
+  return apiRequest(`/reports-etl/productividad/inasistencias/${id}`, 'DELETE');
+};
+
+export const downloadProductividadDesagregadoExcel = async (params) => {
+  const queryParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+
+  const token = getAuthToken();
+  const headers = {
+    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${BASE_URL}/reports-etl/productividad/desagregado/excel?${queryParams.toString()}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.message || `Error ${response.status}`);
+  }
+  return response.blob();
+};

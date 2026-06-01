@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, TrendingUp, MessageCircle, LineChart, Phone } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { BarChart3, FileText, TrendingUp, MessageCircle, LineChart, Phone, Award } from 'lucide-react';
 
 const ReportCard = ({ title, description, icon: Icon, onClick }) => (
   <div 
@@ -18,6 +19,17 @@ const ReportCard = ({ title, description, icon: Icon, onClick }) => (
 
 const ReportsLandingPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const resolvedRoles = Array.isArray(user?.decoded?.roles)
+    ? user.decoded.roles
+    : user?.decoded?.role
+      ? [user.decoded.role]
+      : [];
+
+  const isAuthorizedForProductivity = resolvedRoles.some(role => 
+    ['Admin', 'Super Administrador', 'Coordinador', 'Directora de Operaciones'].includes(role)
+  );
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -61,6 +73,15 @@ const ReportsLandingPage = () => {
           icon={Phone}
           onClick={() => navigate('/reports/calls')}
         />
+
+        {isAuthorizedForProductivity && (
+          <ReportCard
+            title="Reporte de Productividad"
+            description="Dashboard de productividad dinámica de gestores, rankings, cumplimiento de metas, tendencias temporales y administración de pagos/inasistencias."
+            icon={Award}
+            onClick={() => navigate('/reports/productivity')}
+          />
+        )}
         
         {/* Placeholder for future reports */}
         <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center text-gray-400">
