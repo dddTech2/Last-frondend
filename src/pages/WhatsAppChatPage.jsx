@@ -15,6 +15,8 @@ import {
   markConversationAsRead,
   getMyTeam,
   getCoordinators,
+  fetchWhatsAppProfile,
+  fetchWhatsAppProfilePicture,
 } from '../services/api';
 import DocumentPreviewModal from '../components/DocumentPreviewModal';
 import useDebounce from '../hooks/useDebounce';
@@ -79,6 +81,11 @@ const WhatsAppChatPage = () => {
 
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [isExpiredSessionModalOpen, setIsExpiredSessionModalOpen] = useState(false);
+
+  // Estados para validación de perfil WhatsApp
+  const [wppProfileData, setWppProfileData] = useState(null);
+  const [isLoadingWppProfile, setIsLoadingWppProfile] = useState(false);
+  const wppProfileCacheRef = useRef({}); // Caché de sesión local: { [phone_number]: { name, status, profilePic } }
 
   // Estados para paginación
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -432,6 +439,64 @@ const WhatsAppChatPage = () => {
     }
     setSelectedConversation(convo);
   }, []);
+
+  // Efecto para cargar el perfil de WhatsApp bajo demanda con caché de sesión
+  useEffect(() => {
+    if (!selectedConversation) {
+      setWppProfileData(null);
+      return;
+    }
+
+    const phone = selectedConversation.customer_phone_number;
+
+    // Verificar si ya existe en la caché
+    if (wppProfileCacheRef.current[phone]) {
+      setWppProfileData(wppProfileCacheRef.current[phone]);
+      return;
+    }
+
+    const loadProfileInfo = async () => {
+      setIsLoadingWppProfile(true);
+      let resolvedName = selectedConversation.chat_title || `WhatsApp (${phone})`;
+      let statusText = '';
+      let picUrl = '';
+
+      try {
+        const [profileRes, picRes] = await Promise.allSettled([
+          fetchWhatsAppProfile(phone),
+          fetchWhatsAppProfilePicture(phone)
+        ]);
+
+        if (profileRes.status === 'fulfilled' && profileRes.value) {
+          const data = profileRes.value;
+          if (data.exists) {
+            resolvedName = data.pushName || data.verifiedName || resolvedName;
+            if (data.status) {
+              statusText = data.status;
+            }
+          }
+        }
+
+        if (picRes.status === 'fulfilled' && picRes.value) {
+          picUrl = picRes.value.profilePictureUrl || '';
+        }
+      } catch (error) {
+        console.error('Error al cargar perfil de WhatsApp:', error);
+      }
+
+      const resultProfile = {
+        name: resolvedName,
+        status: statusText,
+        profilePic: picUrl
+      };
+
+      wppProfileCacheRef.current[phone] = resultProfile;
+      setWppProfileData(resultProfile);
+      setIsLoadingWppProfile(false);
+    };
+
+    loadProfileInfo();
+  }, [selectedConversation]);
 
   // Efecto para cargar los mensajes iniciales de una conversación
   useEffect(() => {
@@ -895,6 +960,8 @@ const WhatsAppChatPage = () => {
         onCancelTemplate={() => setSelectedTemplate(null)}
         adminfoData={adminfoData}
         handleViewInAdminfo={handleViewInAdminfo}
+        wppProfileData={wppProfileData}
+        isLoadingWppProfile={isLoadingWppProfile}
       />
 
       {userRole !== 'administrador' && (
