@@ -15,6 +15,8 @@ import {
   markConversationAsRead,
   getMyTeam,
   getCoordinators,
+  fetchWhatsAppProfile,
+  fetchWhatsAppProfilePicture,
 } from '../services/api';
 import DocumentPreviewModal from '../components/DocumentPreviewModal';
 import useDebounce from '../hooks/useDebounce';
@@ -94,6 +96,11 @@ const WhatsAppChatPage = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Estados para validación de perfil WhatsApp
+  const [wppProfileData, setWppProfileData] = useState(null);
+  const [isLoadingWppProfile, setIsLoadingWppProfile] = useState(false);
+  const wppProfileCacheRef = useRef({}); // Caché de sesión local: { [phone_number]: { name, status, profilePic } }
 
   // Estados para paginación
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -438,6 +445,64 @@ const WhatsAppChatPage = () => {
   const selectedConversationId = selectedConversation?.id;
   const selectedConversationLastClientMessageAt = selectedConversation?.last_client_message_at;
   const selectedConversationIsEvolution = selectedConversation?.active_channel === 'EVOLUTION' || (selectedConversation?.active_channel && selectedConversation?.active_channel.value === 'EVOLUTION') || !!selectedConversation?.evolution_instance_id || !!selectedConversation?.is_evolution;
+
+  // Efecto para cargar el perfil de WhatsApp bajo demanda con caché de sesión
+  useEffect(() => {
+    if (!selectedConversation) {
+      setWppProfileData(null);
+      return;
+    }
+
+    const phone = selectedConversation.customer_phone_number;
+
+    // Verificar si ya existe en la caché
+    if (wppProfileCacheRef.current[phone]) {
+      setWppProfileData(wppProfileCacheRef.current[phone]);
+      return;
+    }
+
+    const loadProfileInfo = async () => {
+      setIsLoadingWppProfile(true);
+      let resolvedName = selectedConversation.chat_title || `WhatsApp (${phone})`;
+      let statusText = '';
+      let picUrl = '';
+
+      try {
+        const [profileRes, picRes] = await Promise.allSettled([
+          fetchWhatsAppProfile(phone),
+          fetchWhatsAppProfilePicture(phone)
+        ]);
+
+        if (profileRes.status === 'fulfilled' && profileRes.value) {
+          const data = profileRes.value;
+          if (data.exists) {
+            resolvedName = data.pushName || data.verifiedName || resolvedName;
+            if (data.status) {
+              statusText = data.status;
+            }
+          }
+        }
+
+        if (picRes.status === 'fulfilled' && picRes.value) {
+          picUrl = picRes.value.profilePictureUrl || '';
+        }
+      } catch (error) {
+        console.error('Error al cargar perfil de WhatsApp:', error);
+      }
+
+      const resultProfile = {
+        name: resolvedName,
+        status: statusText,
+        profilePic: picUrl
+      };
+
+      wppProfileCacheRef.current[phone] = resultProfile;
+      setWppProfileData(resultProfile);
+      setIsLoadingWppProfile(false);
+    };
+
+    loadProfileInfo();
+  }, [selectedConversation]);
 
   // Efecto para cargar los mensajes iniciales de una conversación
   useEffect(() => {
@@ -951,6 +1016,8 @@ const WhatsAppChatPage = () => {
           toggleClientInfo={() => setShowClientInfo(prev => !prev)}
           showClientInfo={showClientInfo}
           onBack={() => setSelectedConversation(null)}
+          wppProfileData={wppProfileData}
+          isLoadingWppProfile={isLoadingWppProfile}
         />
       </div>
 

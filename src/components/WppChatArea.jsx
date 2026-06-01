@@ -33,7 +33,9 @@ const WppChatArea = ({
   handleViewInAdminfo,
   toggleClientInfo,
   showClientInfo,
-  onBack
+  onBack,
+  wppProfileData,
+  isLoadingWppProfile
 }) => {
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-transparent" style={{ background: 'transparent' }}>
@@ -44,6 +46,8 @@ const WppChatArea = ({
         toggleClientInfo={toggleClientInfo}
         showClientInfo={showClientInfo}
         onBack={onBack}
+        wppProfileData={wppProfileData}
+        isLoadingWppProfile={isLoadingWppProfile}
       />
 
       <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto">
