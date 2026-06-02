@@ -71,6 +71,16 @@ const HomePage = () => {
     <div className="p-8 bg-gray-50 min-h-screen">
       <WelcomeHeader name={user ? user.name : 'Invitado'} />
 
+      {/* Banner de Mantenimiento de WhatsApp */}
+      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 flex items-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <span className="font-semibold">Atención:</span> El servicio de WhatsApp se encuentra actualmente en mantenimiento. Por favor, evite utilizar este módulo hasta que se restablezca el servicio.
+        </div>
+      </div>
+
       {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard title="Cartera Asignada" value="$15,230.50" icon={<WalletIcon />} />
         <MetricCard title="Recuperación del Mes" value="$8,450.30" icon={<RecoveryIcon />} />
