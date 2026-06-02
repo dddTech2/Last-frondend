@@ -504,6 +504,8 @@ export const calculateCondonation = (obligation_ids) => apiRequest('/condonation
 // --- Endpoints de WhatsApp ---
 export const getClientActiveNumbersByCedula = (cedula) => apiRequest('/whatsapp/initiate', 'POST', { cedula });
 export const sendTemplatedMessage = (data) => apiRequest('/whatsapp/send_from_template', 'POST', data);
+export const checkRoutingChannel = (phoneNumber) => apiRequest(`/whatsapp/routing/${phoneNumber}`, 'GET');
+export const sendDirectWhatsAppMessage = (data) => apiRequest('/whatsapp/send', 'POST', { ...data, messaging_product: 'whatsapp' });
 export const fetchWhatsAppProfile = (phoneNumber, instanceName = null) =>
   apiRequest('/whatsapp/fetch_profile', 'POST', { phone_number: phoneNumber, instance_name: instanceName });
 export const fetchWhatsAppProfilePicture = (phoneNumber, instanceName = null) =>
