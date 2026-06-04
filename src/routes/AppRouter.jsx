@@ -28,6 +28,7 @@ import UsersPage from '../pages/UsersPage';
 import TicketsListPage from '../pages/tickets/TicketsListPage';
 import TicketFormPage from '../pages/tickets/TicketFormPage';
 import TicketDetailPage from '../pages/tickets/TicketDetailPage';
+import EvolutionInstancesPage from '../pages/EvolutionInstancesPage';
 
 export const AppRouter = () => {
   return (
@@ -61,6 +62,7 @@ export const AppRouter = () => {
         <Route path="reports/calls" element={<CallsReportPage />} />
         <Route path="reports/productivity" element={<ProductivityReportPage />} />
         <Route path="rag-admin" element={<RagManagementPage />} />
+        <Route path="whatsapp/evolution" element={<EvolutionInstancesPage />} />
         
         {/* Rutas de Tickets */}
         <Route path="tickets" element={<TicketsListPage />} />

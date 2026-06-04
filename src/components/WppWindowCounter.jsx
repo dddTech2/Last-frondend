@@ -1,8 +1,8 @@
 import React from 'react';
 import { useWindowCounter } from '../hooks/useWindowCounter';
 
-const WppWindowCounter = ({ lastClientMessageAt }) => {
-  const counterText = useWindowCounter(lastClientMessageAt);
+const WppWindowCounter = ({ lastClientMessageAt, isEvolution }) => {
+  const counterText = useWindowCounter(lastClientMessageAt, isEvolution);
 
   if (!counterText) return null;
 

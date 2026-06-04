@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 
-export const useWindowCounter = (lastClientMessageAt) => {
+export const useWindowCounter = (lastClientMessageAt, isEvolution = false) => {
   const [counterText, setCounterText] = useState('');
 
   useEffect(() => {
-    if (!lastClientMessageAt) {
+    if (!lastClientMessageAt || isEvolution) {
       setCounterText('');
       return;
     }

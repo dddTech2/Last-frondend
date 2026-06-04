@@ -73,6 +73,7 @@ const ConversationListItem = ({ conversation, isSelected, onSelect, userRole, on
 
   const displayTimestamp = lastMessage?.timestamp || conversation.updated_at;
   const isUnread = conversation.read_status === 'sent';
+  const isEvolution = conversation.active_channel === 'EVOLUTION' || (conversation.active_channel && conversation.active_channel.value === 'EVOLUTION');
 
   return (
     <div
@@ -86,14 +87,16 @@ const ConversationListItem = ({ conversation, isSelected, onSelect, userRole, on
     >
       <div className="flex justify-between items-start mb-1">
         <div className="flex-1 min-w-0">
-          <h3 className={`font-semibold truncate text-base ${isUnread ? 'text-green-700 font-bold' : 'text-gray-700'}`}>{conversation.chat_title}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className={`font-semibold truncate text-base ${isUnread ? 'text-green-700 font-bold' : 'text-gray-700'}`}>{conversation.chat_title}</h3>
+          </div>
           <p className={`text-sm truncate ${isUnread ? 'text-green-800' : 'text-gray-500'}`}>{conversation.customer_phone_number}</p>
         </div>
         <div className="flex flex-col items-end ml-2 flex-shrink-0">
           <span className="text-xs text-gray-400">
             {formatDate(displayTimestamp)}
           </span>
-          <WppWindowCounter lastClientMessageAt={conversation.last_client_message_at} />
+          <WppWindowCounter lastClientMessageAt={conversation.last_client_message_at} isEvolution={isEvolution} />
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">

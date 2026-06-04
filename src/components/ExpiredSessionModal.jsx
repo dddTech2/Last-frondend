@@ -183,6 +183,7 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
         return (
           <div>
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Confirmar Envío</h2>
+            {error && <p className="text-red-500 mb-4 font-semibold">{error}</p>}
             <div className="p-4 border rounded-lg bg-gray-50">
               <p className="font-semibold">Destinatario:</p>
               <p>{conversation.customer_phone_number}</p>

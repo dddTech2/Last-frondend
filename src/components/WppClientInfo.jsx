@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import { X } from 'lucide-react';
 import { getResultadoGestor, getCompromisos, getObligaciones, getObligationUrlByCedula, calculateCondonation, reverseSearchContact } from '../services/api';
 
 const Tooltip = ({ targetRef, content }) => {
@@ -463,7 +464,7 @@ const AmbiguousContactPanel = ({ phoneNumber, userRole, onAdminfoUrlChange, setP
 // ──────────────────────────────────────────────────────────────────────────
 // Componente principal WppClientInfo
 // ──────────────────────────────────────────────────────────────────────────
-const WppClientInfo = ({ selectedConversation, userRole, setClientInfo: setParentClientInfo, onAdminfoUrlChange }) => {
+const WppClientInfo = ({ selectedConversation, userRole, setClientInfo: setParentClientInfo, onAdminfoUrlChange, onClose }) => {
     const scrollContainerRef = useRef(null);
 
     // Detectar si es conversación con contacto ambiguo:
@@ -477,9 +478,18 @@ const WppClientInfo = ({ selectedConversation, userRole, setClientInfo: setParen
     const clientCedula = selectedConversation?.client_cedula || null;
 
     return (
-        <div className="w-100 bg-white border-l border-gray-200 flex flex-col h-full min-h-0">
-            <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+        <div className="w-100 bg-white border-l border-gray-200 flex flex-col h-full min-h-0 max-w-full">
+            <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-10 flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-800">Información del Cliente</h2>
+                {onClose && (
+                    <button 
+                        onClick={onClose}
+                        className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 lg:hidden flex items-center justify-center transition-colors"
+                        title="Cerrar panel"
+                    >
+                        <X className="w-5.5 h-5.5" />
+                    </button>
+                )}
             </div>
 
             <div ref={scrollContainerRef} className="flex-1 min-h-0 p-4 space-y-4 overflow-y-auto">

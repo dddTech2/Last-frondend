@@ -38,12 +38,22 @@ export class NotificationsSocket {
     this.getToken = getToken;
     this.onMessage = onMessage;
     this.onAuthFailure = onAuthFailure;
+    
+    this.handleOnline = () => {
+      console.log('[NotificationsSocket] Browser came online. Triggering immediate reconnect.');
+      if ((!this.ws || this.ws.readyState === WebSocket.CLOSED) && this.baseUrl) {
+        this.backoffMs = 1000;
+        this.connect(this.baseUrl);
+      }
+    };
+    window.addEventListener('online', this.handleOnline);
   }
 
   /**
    * @param {string} baseUrl
    */
   async connect(baseUrl) {
+    this.baseUrl = baseUrl;
     const token = await this.getToken();
     const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
     // The BASE_URL already includes /api/v1, so we just need to replace the protocol and append the path.
@@ -137,5 +147,6 @@ export class NotificationsSocket {
     if (this.pingTimer) clearInterval(this.pingTimer);
     this.ws?.close();
     this.ws = undefined;
+    window.removeEventListener('online', this.handleOnline);
   }
 }
