@@ -349,7 +349,7 @@ const WhatsAppChatPage = () => {
   const fetchAllConversations = useCallback(async () => {
     setIsLoadingConversations(true);
     try {
-      const params = { limit: 10000 };
+      const params = { limit: 100 };
       if (serverFilter) params.filter = serverFilter;
       if (coordinatorFilter) params.coordinator_id = coordinatorFilter;
       if (debouncedSearchTerm.trim() !== '') params.search = debouncedSearchTerm.trim();
