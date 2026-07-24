@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getTemplates, sendTemplatedMessage, getTemplatePreviewWithCedula } from '../services/api';
+import { getTemplates, sendTemplatedMessage, getTemplatePreviewWithCedula, getTemplateVariablesDetail } from '../services/api';
 import { toast } from 'sonner';
+import TemplateVariableForm from './TemplateVariableForm';
 
 const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, conversation, clientInfo, onTemplateSelect, onObligationSelect }) => {
   const [step, setStep] = useState(1);
@@ -11,6 +12,8 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [previewContent, setPreviewContent] = useState('');
+  const [detectedVariables, setDetectedVariables] = useState([]);
+  const [customParams, setCustomParams] = useState({});
 
   useEffect(() => {
     if (isOpen) {
@@ -56,6 +59,8 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
     setIsLoading(false);
     setError('');
     setPreviewContent('');
+    setDetectedVariables([]);
+    setCustomParams({});
   };
 
   const handleTemplateSelect = (template) => {
@@ -79,8 +84,17 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
     if (!selectedTemplate || !conversation.client_cedula) return;
     setIsLoading(true);
     try {
-      const preview = await getTemplatePreviewWithCedula(selectedTemplate.id, conversation.client_cedula, obligacion);
+      const [preview, variablesRes] = await Promise.all([
+        getTemplatePreviewWithCedula(selectedTemplate.id, conversation.client_cedula, obligacion),
+        getTemplateVariablesDetail(selectedTemplate.id).catch(() => null),
+      ]);
       setPreviewContent(preview.preview_content);
+      if (variablesRes?.detected_variables) {
+        setDetectedVariables(variablesRes.detected_variables);
+      } else {
+        setDetectedVariables([]);
+      }
+      setCustomParams({});
       setStep(3);
     } catch (err) {
       const message = err?.message || 'Error al generar la previsualización';
@@ -91,16 +105,31 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
     }
   };
 
+  const handleCustomParamChange = (varName, value) => {
+    setCustomParams((prev) => ({
+      ...prev,
+      [varName]: value,
+    }));
+  };
+
   const handleSendMessage = async () => {
     if (!selectedTemplate || !selectedObligacion) return;
     setIsLoading(true);
     setError('');
     try {
+      const cleanCustomParams = {};
+      Object.entries(customParams).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && String(v).trim() !== '') {
+          cleanCustomParams[k] = String(v).trim();
+        }
+      });
+
       await sendTemplatedMessage({
         template_id: selectedTemplate.id,
         phone_number: conversation.customer_phone_number,
         cedula: conversation.client_cedula,
         obligacion: selectedObligacion,
+        ...(Object.keys(cleanCustomParams).length > 0 && { custom_params: cleanCustomParams }),
       });
       toast.success('Plantilla enviada correctamente');
       onConversationInitiated();
@@ -197,6 +226,13 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
                 />
               </div>
             </div>
+
+            <TemplateVariableForm
+              detectedVariables={detectedVariables}
+              formValues={customParams}
+              onChange={handleCustomParamChange}
+              disabled={isLoading}
+            />
             <div className="flex justify-between mt-4">
               <button onClick={() => setStep(obligaciones.length > 1 ? 2 : 1)} className="px-4 py-2 bg-gray-200 rounded-lg">
                 Atrás

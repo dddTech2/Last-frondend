@@ -74,6 +74,7 @@ const WhatsAppChatPage = () => {
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedObligation, setSelectedObligation] = useState(null);
+  const [templateCustomParams, setTemplateCustomParams] = useState({});
   const [clientInfo, setClientInfo] = useState(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -721,19 +722,30 @@ const WhatsAppChatPage = () => {
     }
   }, [handleScroll]);
 
-    const handleSendMessage = async () => {
+  const handleSendMessage = async () => {
     if (selectedTemplate) {
       if (!selectedConversation || !selectedObligation) return;
       try {
+        const cleanCustomParams = {};
+        if (templateCustomParams) {
+          Object.entries(templateCustomParams).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && String(v).trim() !== '') {
+              cleanCustomParams[k] = String(v).trim();
+            }
+          });
+        }
+
         await sendTemplatedMessage({
           template_id: selectedTemplate.id,
           phone_number: selectedConversation.customer_phone_number,
           cedula: selectedConversation.client_cedula,
           obligacion: selectedObligation,
+          ...(Object.keys(cleanCustomParams).length > 0 && { custom_params: cleanCustomParams }),
         });
         toast.success('Plantilla enviada correctamente');
         setSelectedTemplate(null);
         setSelectedObligation(null);
+        setTemplateCustomParams({});
         fetchAllConversations();
       } catch (error) {
         const message = error?.message || 'Error al enviar la plantilla';

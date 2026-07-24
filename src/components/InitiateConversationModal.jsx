@@ -8,11 +8,13 @@ import {
   sendDirectWhatsAppMessage,
   getTemplatePreviewWithCedula, 
   getObligacionesByCedula,
-  getConversation 
+  getConversation,
+  getTemplateVariablesDetail
 } from '../services/api';
 import { debounce } from 'lodash';
 import { MessageSquare, Phone } from 'lucide-react';
 import { toast } from 'sonner';
+import TemplateVariableForm from './TemplateVariableForm';
 
 const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated }) => {
   const [step, setStep] = useState(1);
@@ -35,6 +37,8 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
   const [previewMessages, setPreviewMessages] = useState({});
   const [loadingPreviewId, setLoadingPreviewId] = useState(null);
   const [previewContent, setPreviewContent] = useState('');
+  const [detectedVariables, setDetectedVariables] = useState([]);
+  const [customParams, setCustomParams] = useState({});
 
   useEffect(() => {
     if (isOpen) {
@@ -75,6 +79,8 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
     setIsLoading(false);
     setError('');
     setPreviewContent('');
+    setDetectedVariables([]);
+    setCustomParams({});
   };
 
   const debouncedSearch = useCallback(
@@ -238,8 +244,17 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
   const fetchPreview = async (obligacion) => {
     setIsLoading(true);
     try {
-      const preview = await getTemplatePreviewWithCedula(selectedTemplate.id, cedula, obligacion);
+      const [preview, variablesRes] = await Promise.all([
+        getTemplatePreviewWithCedula(selectedTemplate.id, cedula, obligacion),
+        getTemplateVariablesDetail(selectedTemplate.id).catch(() => null),
+      ]);
       setPreviewContent(preview.preview_content);
+      if (variablesRes?.detected_variables) {
+        setDetectedVariables(variablesRes.detected_variables);
+      } else {
+        setDetectedVariables([]);
+      }
+      setCustomParams({});
       setStep(4);
     } catch (err) {
       const message = err?.message || 'Error al generar la previsualización';
@@ -248,6 +263,13 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCustomParamChange = (varName, value) => {
+    setCustomParams((prev) => ({
+      ...prev,
+      [varName]: value,
+    }));
   };
 
   const handleObligacionSelect = (obligacion) => {
@@ -266,11 +288,19 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
         });
         toast.success('Mensaje enviado correctamente');
       } else {
+        const cleanCustomParams = {};
+        Object.entries(customParams).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && String(v).trim() !== '') {
+            cleanCustomParams[k] = String(v).trim();
+          }
+        });
+
         await sendTemplatedMessage({
           template_id: selectedTemplate.id,
           phone_number: selectedPhone,
           cedula,
           obligacion: selectedObligacion,
+          ...(Object.keys(cleanCustomParams).length > 0 && { custom_params: cleanCustomParams }),
         });
         toast.success('Plantilla enviada correctamente');
       }
@@ -534,6 +564,15 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
                 </div>
               </div>
             </div>
+
+            {sendMode === 'template' && (
+              <TemplateVariableForm
+                detectedVariables={detectedVariables}
+                formValues={customParams}
+                onChange={handleCustomParamChange}
+                disabled={isLoading}
+              />
+            )}
 
             <div className="flex justify-between mt-6">
               <button 
