@@ -537,6 +537,38 @@ export const getEmployees = (params) => {
 };
 export const createEmployee = (employeeData) => apiRequest('/employees/', 'POST', employeeData);
 
+export const bulkUpdateEmployees = async (file) => {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}/employees/bulk-update`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'Error al procesar el archivo CSV' }));
+    let errorMessage = 'Error al procesar la carga masiva CSV';
+    if (response.status === 422 && Array.isArray(errorData.detail)) {
+      errorMessage = errorData.detail.map(err => `${err.loc.join('.')} -> ${err.msg}`).join('; ');
+    } else if (errorData.detail) {
+      errorMessage = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
+    } else if (errorData.message) {
+      errorMessage = errorData.message;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
 /**
  * Obtener empleado por cédula - maneja 404 sin lanzar excepción
  * Retorna null si no existe (en lugar de lanzar error)

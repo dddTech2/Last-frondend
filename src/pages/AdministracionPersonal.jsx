@@ -17,6 +17,9 @@ import * as api from '../services/api';
 import usePersonalAPI from '../hooks/usePersonalAPI';
 
 import EditPersonalForm from '../components/EditPersonalForm';
+import BulkUpdateCSVModal from '../components/BulkUpdateCSVModal';
+import { useAuth } from '../context/AuthContext';
+import { FileSpreadsheet } from 'lucide-react';
 
 // --- Iconos para las tarjetas de opciones (usando lucide-react) ---
 const UserPlusIcon = () => <UserPlus className="h-10 w-10 text-blue-600 mb-4" />;
@@ -71,6 +74,21 @@ const AdministracionPersonal = () => {
   const [retiroJuridicoModal, setRetiroJuridicoModal] = useState({ isOpen: false, empleado: null });
   const [tecnologiaModal, setTecnologiaModal] = useState(false);
   const [asignacionModal, setAsignacionModal] = useState(false);
+  const [bulkCsvModal, setBulkCsvModal] = useState(false);
+
+  const { user } = useAuth();
+  const userRoles = useMemo(() => {
+    if (!user?.decoded) return [];
+    if (Array.isArray(user.decoded.roles)) return user.decoded.roles;
+    if (user.decoded.role) return [user.decoded.role];
+    return [];
+  }, [user]);
+
+  const canBulkUpdate = useMemo(() => {
+    const allowedRoles = ['Admin', 'Super Administrador', 'talento_humano', 'talentohumano', 'Tecnologia'];
+    if (userRoles.includes('Super Administrador')) return true;
+    return userRoles.some(r => allowedRoles.includes(r));
+  }, [userRoles]);
 
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
@@ -686,6 +704,18 @@ const AdministracionPersonal = () => {
                 <p className="text-gray-500 mt-2">Asignar Adminfo, usuario de red y coordinador.</p>
               </button>
 
+              {/* Tarjeta Carga Masiva CSV (Roles Autorizados) */}
+              {canBulkUpdate && (
+                <button
+                  onClick={() => setBulkCsvModal(true)}
+                  className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out text-center flex flex-col items-center border border-emerald-100 group"
+                >
+                  <FileSpreadsheet className="h-10 w-10 text-emerald-600 mb-4 group-hover:scale-110 transition-transform" />
+                  <h2 className="text-xl font-semibold text-gray-800">Carga Masiva (CSV)</h2>
+                  <p className="text-gray-500 mt-2">Crear y actualizar empleados por CSV.</p>
+                </button>
+              )}
+
               {/* Tarjeta 6: Creación de Usuarios para Proveedores */}
               <div className="bg-gray-100 p-8 rounded-lg shadow-inner text-center flex flex-col items-center cursor-not-allowed">
                 <BriefcaseIcon />
@@ -1097,6 +1127,13 @@ const AdministracionPersonal = () => {
           />
         </ModernModal>
       )}
+
+      {/* MODAL: Carga Masiva (CSV) */}
+      <BulkUpdateCSVModal
+        isOpen={bulkCsvModal}
+        onClose={() => setBulkCsvModal(false)}
+        onSuccess={reloadAllEmployees}
+      />
     </>
   );
 };
