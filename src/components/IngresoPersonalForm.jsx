@@ -870,8 +870,8 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     error={getFieldError("jefe_inmediato")}
-                    disabled={isSubmitting || !formData.cargo}
-                    required
+                    disabled={isSubmitting}
+                    required={formData.cargo !== "GERENTE GENERAL"}
                 />
             </div>
 

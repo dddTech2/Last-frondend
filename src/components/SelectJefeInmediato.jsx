@@ -1,7 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Select from 'react-select';
 import { getEmployees } from '../services/api';
 import { AlertCircle, Loader } from 'lucide-react';
+
+const isCargoExcluido = (cargoStr) => {
+  if (!cargoStr) return false;
+  const upper = cargoStr.toString().trim().toUpperCase();
+
+  // Excluir cualquier cargo que contenga GESTOR, AUXILIAR SERVICIOS, ASISTENTE VENTAS/ADMINISTRATIVO, ABOGADO JUNIOR
+  if (upper.includes('GESTOR')) return true;
+  if (upper.includes('AUXILIAR SERVICIOS') || upper.includes('AUX SERVICIOS')) return true;
+  if (upper.includes('ASISTENTE VENTAS') || upper.includes('ASISTENTE ADMINISTRATIVO')) return true;
+  if (upper.includes('ABOGADO JUNIOR')) return true;
+
+  return false;
+};
 
 const SelectJefeInmediato = ({
   cargo,
@@ -16,44 +29,11 @@ const SelectJefeInmediato = ({
   const [loading, setLoading] = useState(false);
   const [selectedValue, setSelectedValue] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [inputValue, setInputValue] = useState('');
 
-  // Mapeo de cargos a roles para buscar
-  const cargoToRoles = {
-    // GESTORES reportan a COORDINADORES
-    'GESTOR DE COBRANZA': ['COORDINADOR DE COBRANZA'],
-
-    // ANALISTAS (cualquier tipo) reportan a DIRECTORES
-    'ANALISTA TI': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-    'ANALISTA JUNIOR': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-    'ANALISTA SIG': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-    'CIENTIFICO DATOS': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-
-    // COORDINADORES reportan a DIRECTORES
-    'COORDINADOR': ['DIRECTOR JURIDICO', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-
-    // DIRECTORES reportan a GERENTE GENERAL o DIRECTORES superiores
-    'DIRECTOR JURIDICO': ['GERENTE GENERAL', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA'],
-    'DIRECTOR ADMINISTRATIVO Y FINANCIERA': ['GERENTE GENERAL', 'DIRECTORA DE OPERACIONES'],
-    'DIRECTORA DE OPERACIONES': ['GERENTE GENERAL', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA'],
-
-    // OTROS cargos
-    'ABOGADO JUNIOR': ['DIRECTOR JURIDICO'],
-    'ASISTENTE VENTAS': ['COORDINADOR', 'GESTOR'],
-    'AUX SERVICIOS GENERALES': ['COORDINADOR', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA'],
-    'LIDER DE PROCESOS': ['DIRECTORA DE OPERACIONES'],
-    'SUBDIRECTOR': ['GERENTE GENERAL', 'DIRECTOR ADMINISTRATIVO Y FINANCIERA', 'DIRECTORA DE OPERACIONES'],
-    'GERENTE GENERAL': [], // Gerente General no tiene jefe
-  };
-
-  // Cargar empleados con los roles correspondientes
+  // Cargar todos los empleados activos excluyendo los cargos no permitidos como jefe
   useEffect(() => {
     const loadEmployees = async () => {
-      if (!cargo) {
-        setOptions([]);
-        setLoadError(null);
-        return;
-      }
-
       // GERENTE GENERAL no requiere jefe
       if (cargo === 'GERENTE GENERAL') {
         setOptions([]);
@@ -65,72 +45,63 @@ const SelectJefeInmediato = ({
       setLoading(true);
       setLoadError(null);
       try {
-        console.log('Iniciando carga para cargo:', cargo);
-
-        // Obtener los roles permitidos para este cargo
-        const rolesPermitidos = cargoToRoles[cargo] || [];
-        console.log('Roles permitidos:', rolesPermitidos);
-
-        if (rolesPermitidos.length === 0) {
-          console.log('No hay roles permitidos para este cargo');
-          setOptions([]);
-          setLoading(false);
-          return;
-        }
-
         let allEmployees = [];
+        let page = 1;
+        let hasMore = true;
 
-        // Obtener empleados para cada rol
-        for (let i = 0; i < rolesPermitidos.length; i++) {
-          try {
-            console.log(`Fetcheando empleados con cargo: ${rolesPermitidos[i]}`);
-            const response = await getEmployees({
-              cargo: rolesPermitidos[i],
-            });
+        // Obtener todos los empleados activos paginados
+        while (hasMore) {
+          const response = await getEmployees({
+            page,
+            size: 100,
+            estado: 'ACTIVO',
+          });
 
-            console.log(`Respuesta para ${rolesPermitidos[i]}:`, response);
+          const empleados = Array.isArray(response)
+            ? response
+            : response?.items
+              ? response.items
+              : response?.data
+                ? response.data
+                : [];
 
-            // Manejar diferentes formatos de respuesta
-            const empleados = Array.isArray(response)
-              ? response
-              : response?.items  // ← Buscar en "items" primero
-                ? response.items
-                : response?.data
-                  ? response.data
-                  : [];
+          allEmployees = [...allEmployees, ...empleados];
 
-            console.log(`Empleados parseados para ${rolesPermitidos[i]}:`, empleados);
-            allEmployees = [...allEmployees, ...empleados];
-          } catch (err) {
-            console.error(`Error fetching employees for cargo ${rolesPermitidos[i]}:`, err);
-            setLoadError(`Error al cargar ${rolesPermitidos[i]}: ${err.message}`);
+          const totalPages = response?.pages || response?.total_pages;
+          if (empleados.length < 100 || (totalPages && page >= totalPages)) {
+            hasMore = false;
+          } else {
+            page++;
           }
         }
 
-        console.log('Total de empleados encontrados:', allEmployees);
-
-        // Convertir a opciones de react-select
+        // Filtrar empleados válidos: activos y sin cargo excluido
         const selectOptions = allEmployees
-          .filter(emp => emp && emp.nombre && emp.cedula) // Asegurar que tiene nombre y cédula
-          .map(emp => ({
+          .filter((emp) => {
+            if (!emp || !emp.nombre || !emp.cedula) return false;
+            // Estado activo
+            if (emp.estado && emp.estado.toString().toUpperCase() !== 'ACTIVO') {
+              return false;
+            }
+            // Excluir cargos no permitidos
+            if (isCargoExcluido(emp.cargo)) {
+              return false;
+            }
+            return true;
+          })
+          .map((emp) => ({
             value: emp.cedula,
             label: `${emp.nombre} (${emp.cargo || 'Sin cargo'})`,
             cargo: emp.cargo,
             cedula: emp.cedula,
             nombre: emp.nombre,
           }))
-          .sort((a, b) => a.label.localeCompare(b.label)); // Ordenar alfabéticamente
+          .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        console.log('Opciones generadas:', selectOptions);
         setOptions(selectOptions);
       } catch (error) {
-        console.error('Error inesperado en loadEmployees:', error);
-        console.error('Error details:', {
-          message: error.message,
-          status: error.status,
-          stack: error.stack
-        });
-        setLoadError(`Error: ${error.message}`);
+        console.error('Error al cargar empleados para jefe inmediato:', error);
+        setLoadError(error.message || 'Error al cargar empleados');
         setOptions([]);
       } finally {
         setLoading(false);
@@ -144,10 +115,11 @@ const SelectJefeInmediato = ({
   useEffect(() => {
     if (value && options.length > 0) {
       // Buscar por Cédula (value) O por Nombre (si el backend devuelve el nombre)
-      const selected = options.find(opt =>
-        opt.value === value ||
-        opt.cedula === value ||
-        (opt.nombre && value && opt.nombre.toString().toUpperCase() === value.toString().toUpperCase())
+      const selected = options.find(
+        (opt) =>
+          opt.value === value ||
+          opt.cedula === value ||
+          (opt.nombre && value && opt.nombre.toString().toUpperCase() === value.toString().toUpperCase())
       );
       setSelectedValue(selected || null);
     } else {
@@ -155,13 +127,21 @@ const SelectJefeInmediato = ({
     }
   }, [value, options]);
 
+  // Mostrar opciones únicamente si el usuario ha escrito al menos 4 caracteres
+  const displayedOptions = useMemo(() => {
+    if (inputValue.trim().length < 4) {
+      return selectedValue ? [selectedValue] : [];
+    }
+    return options;
+  }, [inputValue, options, selectedValue]);
+
   const customStyles = {
     control: (base, state) => ({
       ...base,
       borderColor: error ? '#dc2626' : state.isFocused ? '#16a34a' : '#d1d5db',
       boxShadow: state.isFocused ? '0 0 0 3px rgba(22, 163, 74, 0.1)' : 'none',
-      backgroundColor: disabled ? '#f3f4f6' : 'white',
-      cursor: disabled ? 'not-allowed' : 'pointer',
+      backgroundColor: disabled || cargo === 'GERENTE GENERAL' ? '#f3f4f6' : 'white',
+      cursor: disabled || cargo === 'GERENTE GENERAL' ? 'not-allowed' : 'pointer',
       minHeight: '40px',
     }),
     option: (base, state) => ({
@@ -185,14 +165,23 @@ const SelectJefeInmediato = ({
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
         Jefe Inmediato
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && cargo !== 'GERENTE GENERAL' && <span className="text-red-500 ml-1">*</span>}
       </label>
 
       <Select
-        options={options}
+        options={displayedOptions}
         value={selectedValue}
+        inputValue={inputValue}
+        onInputChange={(newVal, actionMeta) => {
+          if (actionMeta.action === 'input-change') {
+            setInputValue(newVal);
+          } else if (actionMeta.action === 'menu-close' && !newVal) {
+            setInputValue('');
+          }
+        }}
         onChange={(option) => {
           setSelectedValue(option);
+          setInputValue('');
           onChange({
             target: {
               name: 'jefe_inmediato',
@@ -201,7 +190,7 @@ const SelectJefeInmediato = ({
           });
         }}
         onBlur={onBlur}
-        isDisabled={disabled || loading || !cargo || cargo === 'GERENTE GENERAL' || options.length === 0}
+        isDisabled={disabled || loading || cargo === 'GERENTE GENERAL'}
         isClearable
         isSearchable
         placeholder={
@@ -209,9 +198,7 @@ const SelectJefeInmediato = ({
             ? 'No requiere jefe inmediato'
             : loading
               ? 'Cargando empleados...'
-              : cargo
-                ? 'Busca el jefe inmediato'
-                : 'Selecciona un cargo primero'
+              : 'Escribe al menos 4 letras para buscar...'
         }
         styles={customStyles}
         formatOptionLabel={(option) => (
@@ -222,14 +209,16 @@ const SelectJefeInmediato = ({
         )}
         noOptionsMessage={() => {
           if (cargo === 'GERENTE GENERAL') return 'Este cargo no requiere jefe inmediato';
-          if (!cargo) return 'Selecciona un cargo primero';
           if (loading) return 'Cargando empleados...';
           if (loadError) return `Error: ${loadError}`;
-          return 'No hay empleados disponibles para este cargo';
+          if (inputValue.trim().length < 4) {
+            return 'Escribe al menos 4 letras para buscar...';
+          }
+          return 'No se encontraron empleados con ese nombre';
         }}
       />
 
-      {error && (
+      {error && cargo !== 'GERENTE GENERAL' && (
         <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
           <AlertCircle className="h-4 w-4" /> {error}
         </p>
@@ -251,3 +240,4 @@ const SelectJefeInmediato = ({
 };
 
 export default SelectJefeInmediato;
+
