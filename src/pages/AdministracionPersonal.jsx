@@ -18,6 +18,7 @@ import usePersonalAPI from '../hooks/usePersonalAPI';
 
 import EditPersonalForm from '../components/EditPersonalForm';
 import BulkUpdateCSVModal from '../components/BulkUpdateCSVModal';
+import RehireConfirmModal from '../components/RehireConfirmModal';
 import { useAuth } from '../context/AuthContext';
 import { FileSpreadsheet } from 'lucide-react';
 
@@ -48,6 +49,7 @@ const AdministracionPersonal = () => {
     rejectContract,
     approveRetirement,
     rejectRetirement,
+    rehireEmployee,
     getEmployeeDetails,
   } = usePersonalAPI();
 
@@ -67,6 +69,7 @@ const AdministracionPersonal = () => {
   const [editFormData, setEditFormData] = useState(null);
   const [rejectionModal, setRejectionModal] = useState({ isOpen: false, cedula: null });
   const [rejectionReason, setRejectionReason] = useState('');
+  const [rehireModal, setRehireModal] = useState({ isOpen: false, cedula: null, data: null });
 
   // Nuevos estados para los modales de retiro
   const [aprobacionRetiroModal, setAprobacionRetiroModal] = useState({ isOpen: false, empleado: null });
@@ -266,21 +269,50 @@ const AdministracionPersonal = () => {
     setIsFormSubmitting(true);
     try {
       if (formKey === 'Empleado') {
-        await createEmployee(data);
+        if (data?.is_rehire) {
+          await rehireEmployee(data.cedula, data);
+        } else {
+          await createEmployee(data);
+        }
       } else if (formKey === 'Retiro') {
         await requestRetirement(data);
       }
-      // TODO: Manejar 'Proveedor'
 
       setOpenModal(null);
       // Refrescar la lista
       reloadAllEmployees();
     } catch (error) {
-      // El hook ya muestra el toast de error
+      if (formKey === 'Empleado') {
+        const isConflict = error.status === 409 ||
+          (error.message && (
+            error.message.includes('409') ||
+            error.message.toLowerCase().includes('retirado') ||
+            error.message.toLowerCase().includes('extrabajador') ||
+            error.message.toLowerCase().includes('registrado')
+          ));
+        if (isConflict) {
+          setRehireModal({ isOpen: true, cedula: data.cedula, data });
+        }
+      }
     } finally {
       setIsFormSubmitting(false);
     }
-  }, [createEmployee, requestRetirement, reloadAllEmployees]);
+  }, [createEmployee, rehireEmployee, requestRetirement, reloadAllEmployees]);
+
+  const handleConfirmRehire = async () => {
+    if (!rehireModal.cedula || !rehireModal.data) return;
+    setIsFormSubmitting(true);
+    try {
+      await rehireEmployee(rehireModal.cedula, rehireModal.data);
+      setRehireModal({ isOpen: false, cedula: null, data: null });
+      setOpenModal(null);
+      reloadAllEmployees();
+    } catch (error) {
+      console.error('Error al procesar reintegro:', error);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
 
   const handleViewDetail = async (personal) => {
     setSelectedPersonal(personal); // Muestra datos básicos inmediatamente
@@ -1133,6 +1165,15 @@ const AdministracionPersonal = () => {
         isOpen={bulkCsvModal}
         onClose={() => setBulkCsvModal(false)}
         onSuccess={reloadAllEmployees}
+      />
+
+      {/* MODAL: Confirmación de Reintegro */}
+      <RehireConfirmModal
+        isOpen={rehireModal.isOpen}
+        onClose={() => setRehireModal({ isOpen: false, cedula: null, data: null })}
+        onConfirm={handleConfirmRehire}
+        cedula={rehireModal.cedula}
+        isSubmitting={isFormSubmitting}
       />
     </>
   );

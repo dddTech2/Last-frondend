@@ -123,6 +123,22 @@ const usePersonalAPI = () => {
     setPendingRetirements(prev => prev.filter(emp => emp.cedula !== cedula));
   }, [handleApiCall]);
 
+  const rehireEmployee = useCallback(async (cedula, employeeData) => {
+    const rehireResult = await handleApiCall(api.rehireEmployee, cedula, employeeData);
+    if (rehireResult) {
+      toast.success('Reintegro procesado exitosamente.');
+    }
+    return rehireResult;
+  }, [handleApiCall]);
+
+  const getContractHistory = useCallback(async (cedula) => {
+    return await handleApiCall(api.getContractHistory, cedula);
+  }, [handleApiCall]);
+
+  const getMovementHistory = useCallback(async (cedula) => {
+    return await handleApiCall(api.getMovementHistory, cedula);
+  }, [handleApiCall]);
+
   const getEmployeeDetails = useCallback(async (cedula) => {
     setIsDetailLoading(true);
     try {
@@ -153,6 +169,9 @@ const usePersonalAPI = () => {
     rejectContract,
     approveRetirement,
     rejectRetirement,
+    rehireEmployee,
+    getContractHistory,
+    getMovementHistory,
     getEmployeeDetails,
   };
 };

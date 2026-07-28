@@ -55,6 +55,8 @@ const useIngresoForm = (initialState = {}) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [cedulaValidating, setCedulaValidating] = useState(false);
+  const [isRehire, setIsRehire] = useState(false);
+  const [rehireEmployeeData, setRehireEmployeeData] = useState(null);
 
   /**
    * Determinar el estado del empleado según el tipo de contrato
@@ -196,6 +198,8 @@ const useIngresoForm = (initialState = {}) => {
    */
   const validateCedulaAgainstAPI = useCallback(async (cedula) => {
     if (!cedula || !/^\d{8,12}$/.test(cedula.replace(/\D/g, ''))) {
+      setIsRehire(false);
+      setRehireEmployeeData(null);
       return null;
     }
 
@@ -205,27 +209,60 @@ const useIngresoForm = (initialState = {}) => {
       const employee = await api.getEmployeeByCedula(cedula);
 
       if (employee) {
-        // La cédula ya existe en el sistema - Mostrar toast y retornar error para bloquear
+        // La cédula ya existe en el sistema
         let mensaje = '';
         if (employee.estado === 'ACTIVO') {
           mensaje = 'Esta cédula ya está registrada como empleado activo.';
+          toast.error(mensaje);
+          setIsRehire(false);
+          setRehireEmployeeData(null);
+          return mensaje;
         } else if (employee.estado === 'PENDIENTE_APROBACION_JURIDICO') {
           mensaje = 'Esta cédula está pendiente de aprobación jurídica.';
+          toast.error(mensaje);
+          setIsRehire(false);
+          setRehireEmployeeData(null);
+          return mensaje;
         } else if (employee.estado === 'RETIRADO') {
-          mensaje = 'Esta cédula corresponde a un empleado retirado.';
+          // EXTRABAJADOR RETIRADO: Activar modo reintegro y precargar datos
+          setIsRehire(true);
+          setRehireEmployeeData(employee);
+
+          setFormData(prev => ({
+            ...prev,
+            nombre: prev.nombre || employee.nombre || '',
+            celular: prev.celular || employee.celular || '',
+            correo_personal: prev.correo_personal || employee.correo_personal || '',
+            ciudad: prev.ciudad || employee.ciudad || '',
+            direccion_residencia: prev.direccion_residencia || employee.direccion || employee.direccion_residencia || '',
+            fecha_nacimiento: prev.fecha_nacimiento || (employee.fecha_nacimiento ? String(employee.fecha_nacimiento).split('T')[0] : ''),
+            genero: prev.genero || employee.genero || '',
+            lugar: prev.lugar || employee.lugar || '',
+            eps: prev.eps || employee.eps || '',
+            fondo_pensiones: prev.fondo_pensiones || employee.pensiones || employee.fondo_pensiones || '',
+            arl: prev.arl || employee.arl || '',
+            contacto_emergencia_nombre: prev.contacto_emergencia_nombre || employee.contacto_emergencia || employee.contacto_emergencia_nombre || '',
+            contacto_emergencia_telefono: prev.contacto_emergencia_telefono || employee.telefono_emergencia || employee.contacto_emergencia_telefono || '',
+            cantidad_hijos: prev.cantidad_hijos || String(employee.hijos_cantidad || employee.cantidad_hijos || 0),
+          }));
+
+          toast.info('ℹ️ Extrabajador retirado detectado. Se cargaron sus datos para procesar el reintegro.');
+          return null; // NO bloquea, permite avanzar a datos laborales para reintegro
         } else {
           mensaje = `Esta cédula ya existe en el sistema (Estado: ${employee.estado}).`;
+          toast.error(mensaje);
+          setIsRehire(false);
+          setRehireEmployeeData(null);
+          return mensaje;
         }
-
-        // Mostrar toast de error Y retornar mensaje para bloquear el formulario
-        toast.error(mensaje);
-        return mensaje;
       }
-      // Si retorna null, la cédula no existe (es un usuario nuevo) - permitir continuar
+      setIsRehire(false);
+      setRehireEmployeeData(null);
       return null;
     } catch (error) {
-      // Para otros errores inesperados, no bloquear pero loguear
       console.warn('Error validando cédula:', error);
+      setIsRehire(false);
+      setRehireEmployeeData(null);
       return null;
     } finally {
       setCedulaValidating(false);
@@ -430,8 +467,10 @@ const useIngresoForm = (initialState = {}) => {
       delete payloadData.temporal;
     }
 
+    payloadData.is_rehire = isRehire;
+
     return payloadData;
-  }, [formData]);
+  }, [formData, isRehire]);
 
   /**
    * Resetear el formulario
@@ -440,6 +479,8 @@ const useIngresoForm = (initialState = {}) => {
     setFormData({ ...defaultState });
     setErrors({});
     setTouched({});
+    setIsRehire(false);
+    setRehireEmployeeData(null);
   }, []);
 
   /**
@@ -473,6 +514,8 @@ const useIngresoForm = (initialState = {}) => {
     errors,
     touched,
     cedulaValidating,
+    isRehire,
+    rehireEmployeeData,
     handleChange,
     handleBlur,
     validateField,
@@ -487,6 +530,7 @@ const useIngresoForm = (initialState = {}) => {
     setFormData,
     setErrors,
     setTouched,
+    setIsRehire,
   };
 };
 

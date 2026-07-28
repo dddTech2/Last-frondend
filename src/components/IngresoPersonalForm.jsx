@@ -62,6 +62,8 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
         getFieldError,
         validateCedula,
         cedulaValidating,
+        isRehire,
+        rehireEmployeeData,
         setErrors,
         setTouched,
     } = useIngresoForm();
@@ -648,6 +650,22 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
 
     const renderStep1 = () => (
         <div className="space-y-4">
+            {isRehire && (
+                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="font-semibold text-amber-900 text-sm">
+                                🔄 Extrabajador Retirado Detectado (Modo Reintegro)
+                            </h4>
+                            <p className="text-xs text-amber-800 mt-1">
+                                Esta cédula pertenece a <strong>{rehireEmployeeData?.nombre || formData.nombre}</strong>. Se han precargado sus datos personales existentes. Haz clic en <strong>Siguiente</strong> para definir los datos de su nueva vinculación.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                 <h4 className="font-semibold text-blue-900">
                     👤 Datos Personales
@@ -1820,17 +1838,19 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="px-6 py-2 rounded-lg font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                            className={`px-6 py-2 rounded-lg font-medium text-white disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2 ${
+                                isRehire ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'
+                            }`}
                         >
                             {isSubmitting ? (
                                 <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                                    Creando empleado...
+                                    {isRehire ? 'Procesando reintegro...' : 'Creando empleado...'}
                                 </>
                             ) : (
                                 <>
                                     <CheckCircle2 className="h-4 w-4" />
-                                    Crear Empleado
+                                    {isRehire ? 'Procesar Reintegro' : 'Crear Empleado'}
                                 </>
                             )}
                         </button>

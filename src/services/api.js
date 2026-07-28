@@ -593,6 +593,10 @@ export const approveContract = (cedula) => apiRequest(`/employees/${cedula}/juri
 export const rejectContract = (cedula, motivo) => apiRequest(`/employees/${cedula}/juridico/reject`, 'POST', { motivo });
 export const approveRetirement = (cedula, data = {}) => apiRequest(`/employees/${cedula}/retire/approve`, 'POST', data);
 export const rejectRetirement = (cedula, motivo) => apiRequest(`/employees/${cedula}/retire/reject`, 'POST', { motivo_rechazo_juridico: motivo });
+export const rehireEmployee = (cedula, employeeData) => apiRequest(`/employees/${cedula}/rehire`, 'POST', employeeData);
+export const getContractHistory = (cedula) => apiRequest(`/employees/${cedula}/contract-history`);
+export const getMovementHistory = (cedula) => apiRequest(`/employees/${cedula}/movement-history`);
+
 
 // --- Endpoints de Credenciales de Empleados ---
 export const checkEmployeeCredential = (adminfo) => apiRequest(`/employee-credentials/${adminfo}`);
