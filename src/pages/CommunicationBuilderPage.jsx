@@ -1,11 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, Settings, Save, CheckCircle2, AlertCircle, PlusCircle, PenSquare } from 'lucide-react';
 import * as mammoth from 'mammoth';
 import { toast } from 'sonner';
 import FormField from '../components/FormField';
 import UpdateCommunicationTab from '../components/UpdateCommunicationTab';
-import { createCommunicationTemplate, uploadCommunicationTemplateFile, getCommunicationTemplateFields, updateCommunicationTemplateField } from '../services/api';
+import { 
+  createCommunicationTemplate, 
+  uploadCommunicationTemplateFile, 
+  addCommunicationTemplateField,
+  getAvailableVariables 
+} from '../services/api';
 
 const CommunicationBuilderPage = () => {
   const navigate = useNavigate();
@@ -77,17 +82,29 @@ const CreateCommunicationWizard = () => {
   const [commType, setCommType] = useState('AUTOMATIC'); // AUTOMATIC, FORM, LEGAL
   const [file, setFile] = useState(null);
   const [variables, setVariables] = useState([]);
+  const [availableVariables, setAvailableVariables] = useState([]);
 
-  // Mock de campos del sistema disponibles
-  const systemFields = [
-    { value: 'client.nombre', label: 'Nombre del Cliente' },
-    { value: 'client.cedula', label: 'Cédula del Cliente' },
-    { value: 'client.telefono', label: 'Teléfono del Cliente' },
-    { value: 'client.email', label: 'Email del Cliente' },
-    { value: 'deuda.monto_total', label: 'Monto Total Deuda' },
-    { value: 'deuda.dias_mora', label: 'Días de Mora' },
-    { value: 'fecha.actual', label: 'Fecha Actual' },
-  ];
+  // Cargar variables del sistema desde la API al montar el componente
+  useEffect(() => {
+    const fetchVariables = async () => {
+      try {
+        const response = await getAvailableVariables();
+        const varsArray = Array.isArray(response) ? response : (response?.data || []);
+        const formattedVars = varsArray.map((item) => {
+          const cleanName = item.variable_name.replace(/[{}]/g, '');
+          return {
+            value: cleanName,
+            label: cleanName,
+            description: item.description
+          };
+        });
+        setAvailableVariables(formattedVars);
+      } catch (error) {
+        console.error("Error al cargar variables disponibles del sistema:", error);
+      }
+    };
+    fetchVariables();
+  }, []);
 
   // Tipos de input para usuario (basado en TemplateFieldType)
   const inputTypes = [
@@ -128,14 +145,21 @@ const CreateCommunicationWizard = () => {
         found.add(varName);
       }
 
-      const newVariables = Array.from(found).map(name => ({
-        name,
-        source: '', // 'USER' | 'SYSTEM'
-        label: name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Humanize
-        inputType: 'TEXT',
-        systemField: '',
-        required: true
-      }));
+      const newVariables = Array.from(found).map(rawName => {
+        const cleanName = rawName.replace(/[{}]/g, '').trim();
+        // Intentar auto-emparejar con variables del sistema si coincide
+        const matchedSystemVar = availableVariables.find(av => av.value.toLowerCase() === cleanName.toLowerCase());
+
+        return {
+          name: cleanName,
+          source: 'SYSTEM', // Por defecto 'Dato del Sistema'
+          label: cleanName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Humanize
+          inputType: 'TEXT',
+          systemField: matchedSystemVar ? matchedSystemVar.value : 'CUSTOM', // Si coincide usarlo; si no, 'CUSTOM'
+          customSystemField: cleanName,
+          required: true
+        };
+      });
 
       setVariables(newVariables);
       if (newVariables.length > 0) {
@@ -161,9 +185,21 @@ const CreateCommunicationWizard = () => {
       if (value === 'SYSTEM') {
         newVars[index].inputType = '';
         newVars[index].label = '';
+        // Si el nombre de la variable coincide con alguna del sistema, auto-asignarla; de lo contrario 'CUSTOM'
+        const matched = availableVariables.find(av => av.value.toLowerCase() === newVars[index].name.toLowerCase());
+        if (matched) {
+          newVars[index].systemField = matched.value;
+        } else {
+          newVars[index].systemField = 'CUSTOM';
+          newVars[index].customSystemField = newVars[index].name;
+        }
       } else {
         newVars[index].systemField = '';
+        newVars[index].customSystemField = '';
         newVars[index].inputType = 'TEXT';
+        if (!newVars[index].label) {
+          newVars[index].label = newVars[index].name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
       }
     }
     
@@ -183,7 +219,12 @@ const CreateCommunicationWizard = () => {
   };
 
   const validateStep2 = () => {
-    const incomplete = variables.some(v => !v.source || (v.source === 'SYSTEM' && !v.systemField) || (v.source === 'USER' && !v.label));
+    const incomplete = variables.some(v => 
+      !v.source || 
+      (v.source === 'SYSTEM' && !v.systemField) || 
+      (v.source === 'SYSTEM' && v.systemField === 'CUSTOM' && !v.customSystemField?.trim() && !v.name?.trim()) ||
+      (v.source === 'USER' && !v.label)
+    );
     if (incomplete) {
       toast.error('Por favor configura todas las variables');
       return false;
@@ -224,35 +265,33 @@ const CreateCommunicationWizard = () => {
 
       console.log('Plantilla creada:', createdTemplate);
 
-      // 3. Actualizar configuración de campos (Variables)
-      // Primero obtenemos los campos que el backend extrajo automáticamente
-      const templateFields = await getCommunicationTemplateFields(createdTemplate.id);
-      
-      if (templateFields && templateFields.length > 0) {
-        // Mapeamos nuestras variables configuradas a los campos del backend
-        const updatePromises = templateFields.map(async (field) => {
-          const configuredVar = variables.find(v => v.name === field.field_name);
-          
-          if (configuredVar) {
-            const updateData = {
-              field_label: configuredVar.source === 'USER' ? configuredVar.label : configuredVar.name,
-              field_type: configuredVar.source === 'SYSTEM' ? 'SYSTEM_DATA' : configuredVar.inputType,
-              is_required: configuredVar.required
-            };
-
-            // Si es SYSTEM_DATA, intentamos enviar el system_field aunque no esté en el esquema estándar
-            // (Dependerá de si el backend lo acepta o lo ignora)
-            if (configuredVar.source === 'SYSTEM' && configuredVar.systemField) {
-              updateData.system_field = configuredVar.systemField;
+      // 3. Crear cada uno de los campos configurados para la plantilla en el backend
+      if (variables && variables.length > 0) {
+        const createPromises = variables.map(async (v) => {
+          let fieldName = v.name;
+          if (v.source === 'SYSTEM') {
+            if (v.systemField === 'CUSTOM') {
+              fieldName = (v.customSystemField && v.customSystemField.trim()) ? v.customSystemField.trim() : v.name;
+            } else if (v.systemField) {
+              fieldName = v.systemField;
             }
-
-            console.log(`Actualizando campo ${field.field_name}:`, updateData);
-            return updateCommunicationTemplateField(field.id, updateData);
           }
-          return Promise.resolve();
+
+          const fieldLabel = v.source === 'USER' ? v.label : fieldName;
+          const fieldType = v.source === 'SYSTEM' ? 'SYSTEM_DATA' : (v.inputType || 'TEXT');
+
+          const fieldData = {
+            field_name: fieldName,
+            field_label: fieldLabel,
+            field_type: fieldType,
+            is_required: v.required ?? true
+          };
+
+          console.log(`Registrando campo en plantilla ${createdTemplate.id}:`, fieldData);
+          return addCommunicationTemplateField(createdTemplate.id, fieldData);
         });
 
-        await Promise.all(updatePromises);
+        await Promise.all(createPromises);
       }
       
       toast.success('Comunicación creada y configurada exitosamente');
@@ -433,16 +472,43 @@ const CreateCommunicationWizard = () => {
                             </div>
                           )}
                           {variable.source === 'SYSTEM' && (
-                            <select
-                              className="w-full p-2 border border-gray-300 rounded-lg"
-                              value={variable.systemField}
-                              onChange={(e) => updateVariable(index, 'systemField', e.target.value)}
-                            >
-                              <option value="">Seleccionar campo...</option>
-                              {systemFields.map(f => (
-                                <option key={f.value} value={f.value}>{f.label}</option>
-                              ))}
-                            </select>
+                            <div className="space-y-2">
+                              <select
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                value={variable.systemField}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  updateVariable(index, 'systemField', val);
+                                  if (val === 'CUSTOM' && !variable.customSystemField) {
+                                    updateVariable(index, 'customSystemField', variable.name);
+                                  }
+                                }}
+                              >
+                                <option value="">Seleccionar campo...</option>
+                                <option value="CUSTOM">⚙️ Personalizada (usar nombre original "{variable.name}")</option>
+                                {availableVariables.length > 0 && (
+                                  <optgroup label="Campos del Sistema Backend">
+                                    {availableVariables.map(f => (
+                                      <option key={f.value} value={f.value}>
+                                        {f.value} {f.description ? `- ${f.description}` : ''}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                              </select>
+                              {variable.systemField === 'CUSTOM' && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500 font-medium">Nombre de campo a enviar:</span>
+                                  <input
+                                    type="text"
+                                    placeholder={`Ej: ${variable.name}`}
+                                    className="flex-1 p-1.5 text-xs border border-gray-300 rounded-md font-mono bg-blue-50/50 text-blue-800 font-semibold focus:ring-2 focus:ring-blue-500"
+                                    value={variable.customSystemField ?? variable.name}
+                                    onChange={(e) => updateVariable(index, 'customSystemField', e.target.value)}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -496,7 +562,9 @@ const CreateCommunicationWizard = () => {
                     <span className="font-mono text-blue-600">{v.name}</span>
                     <span className="mx-2 text-gray-400">→</span>
                     <span className="font-medium">
-                      {v.source === 'SYSTEM' ? `Sistema (${v.systemField})` : `Usuario (${v.label})`}
+                      {v.source === 'SYSTEM' 
+                        ? `Sistema (${v.systemField === 'CUSTOM' ? (v.customSystemField || v.name) : v.systemField})` 
+                        : `Usuario (${v.label})`}
                     </span>
                   </div>
                 ))}
