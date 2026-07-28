@@ -9,7 +9,8 @@ import {
   getTemplatePreviewWithCedula, 
   getObligacionesByCedula,
   getConversation,
-  getTemplateVariablesDetail
+  getTemplateVariablesDetail,
+  getTemplateById
 } from '../services/api';
 import { debounce } from 'lodash';
 import { MessageSquare, Phone } from 'lucide-react';
@@ -20,6 +21,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
   const [step, setStep] = useState(1);
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [fullTemplateDetail, setFullTemplateDetail] = useState(null);
   const [cedula, setCedula] = useState('');
   const [phones, setPhones] = useState([]); // [{ phone, hasConversation }]
   const [selectedPhone, setSelectedPhone] = useState('');
@@ -74,6 +76,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
     setSendMode('');
     setFreeTextContent('');
     setSelectedTemplate(null);
+    setFullTemplateDetail(null);
     setObligaciones([]);
     setSelectedObligacion('');
     setIsLoading(false);
@@ -244,15 +247,21 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
   const fetchPreview = async (obligacion) => {
     setIsLoading(true);
     try {
-      const [preview, variablesRes] = await Promise.all([
+      const [preview, variablesRes, templateDetail] = await Promise.all([
         getTemplatePreviewWithCedula(selectedTemplate.id, cedula, obligacion),
         getTemplateVariablesDetail(selectedTemplate.id).catch(() => null),
+        getTemplateById(selectedTemplate.id).catch(() => null),
       ]);
       setPreviewContent(preview.preview_content);
       if (variablesRes?.detected_variables) {
         setDetectedVariables(variablesRes.detected_variables);
       } else {
         setDetectedVariables([]);
+      }
+      if (templateDetail) {
+        setFullTemplateDetail(templateDetail);
+      } else {
+        setFullTemplateDetail(null);
       }
       setCustomParams({});
       setStep(4);
@@ -555,7 +564,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
               
               <div className="p-4 bg-gray-100">
                 <span className="block text-gray-500 text-xs uppercase tracking-wider mb-2">Mensaje a enviar</span>
-                <div className="bg-white p-3 rounded-md shadow-sm text-sm text-gray-800 border border-gray-200 max-h-[200px] overflow-y-auto">
+                <div className="bg-white p-3 rounded-md shadow-sm text-sm text-gray-800 border border-gray-200 max-h-[140px] overflow-y-auto">
                   {sendMode === 'free_text' ? (
                     <div className="whitespace-pre-wrap">{freeTextContent}</div>
                   ) : (
@@ -567,6 +576,7 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
 
             {sendMode === 'template' && (
               <TemplateVariableForm
+                template={fullTemplateDetail || selectedTemplate}
                 detectedVariables={detectedVariables}
                 formValues={customParams}
                 onChange={handleCustomParamChange}
@@ -605,11 +615,11 @@ const InitiateConversationModal = ({ isOpen, onClose, onConversationInitiated })
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-        <div className="p-6">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="p-6 overflow-y-auto flex-1">
           {renderStep()}
         </div>
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}

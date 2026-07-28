@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTemplates, sendTemplatedMessage, getTemplatePreviewWithCedula, getTemplateVariablesDetail } from '../services/api';
+import { getTemplates, sendTemplatedMessage, getTemplatePreviewWithCedula, getTemplateVariablesDetail, getTemplateById } from '../services/api';
 import { toast } from 'sonner';
 import TemplateVariableForm from './TemplateVariableForm';
 
@@ -7,6 +7,7 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
   const [step, setStep] = useState(1);
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [fullTemplateDetail, setFullTemplateDetail] = useState(null);
   const [obligaciones, setObligaciones] = useState([]);
   const [selectedObligacion, setSelectedObligacion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +55,7 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
     setStep(1);
     setTemplates([]);
     setSelectedTemplate(null);
+    setFullTemplateDetail(null);
     setObligaciones([]);
     setSelectedObligacion('');
     setIsLoading(false);
@@ -84,15 +86,21 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
     if (!selectedTemplate || !conversation.client_cedula) return;
     setIsLoading(true);
     try {
-      const [preview, variablesRes] = await Promise.all([
+      const [preview, variablesRes, templateDetail] = await Promise.all([
         getTemplatePreviewWithCedula(selectedTemplate.id, conversation.client_cedula, obligacion),
         getTemplateVariablesDetail(selectedTemplate.id).catch(() => null),
+        getTemplateById(selectedTemplate.id).catch(() => null),
       ]);
       setPreviewContent(preview.preview_content);
       if (variablesRes?.detected_variables) {
         setDetectedVariables(variablesRes.detected_variables);
       } else {
         setDetectedVariables([]);
+      }
+      if (templateDetail) {
+        setFullTemplateDetail(templateDetail);
+      } else {
+        setFullTemplateDetail(null);
       }
       setCustomParams({});
       setStep(3);
@@ -219,7 +227,7 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
               <p className="font-semibold mt-2">Obligación:</p>
               <p>{selectedObligacion}</p>
               <p className="font-semibold mt-4">Mensaje:</p>
-              <div className="p-2 border rounded-md bg-white max-h-[200px] overflow-y-auto">
+              <div className="p-2 border rounded-md bg-white max-h-[140px] overflow-y-auto">
                 <div
                   className="whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: previewContent }}
@@ -228,6 +236,7 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
             </div>
 
             <TemplateVariableForm
+              template={fullTemplateDetail || selectedTemplate}
               detectedVariables={detectedVariables}
               formValues={customParams}
               onChange={handleCustomParamChange}
@@ -253,14 +262,16 @@ const ExpiredSessionModal = ({ isOpen, onClose, onConversationInitiated, convers
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4">
-        {renderStep()}
-        <div className="flex justify-end gap-4 mt-6">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="p-6 overflow-y-auto flex-1">
+          {renderStep()}
+        </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-4 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
           >
             Cancelar
           </button>
