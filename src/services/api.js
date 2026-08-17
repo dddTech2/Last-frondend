@@ -1,7 +1,7 @@
 // La URL se toma de la variable de entorno VITE_API_URL si existe,
 // de lo contrario usa la URL de producción por defecto.
-// export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+// export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
 
 
 // Función para obtener el token de autenticación
@@ -523,10 +523,10 @@ export const getClientCommunicationHistory = (cedula, page = 1, limit = 20, comm
 };
 
 // --- Endpoints de Administración de Personal ---
-export const getEmployees = (params) => {
-  // Filtra los parámetros para excluir claves con valor `undefined`
-  const filteredParams = Object.entries(params).reduce((acc, [key, value]) => {
-    if (value !== undefined) {
+export const getEmployees = (params = {}) => {
+  // Filtra los parámetros para excluir claves con valor undefined, null o vacío
+  const filteredParams = Object.entries(params || {}).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
       acc[key] = value;
     }
     return acc;
@@ -967,7 +967,7 @@ export const getEvolutionInstanceQR = (instanceId) => apiRequest(`/whatsapp/evol
 export const restartEvolutionInstance = (instanceId) => apiRequest(`/whatsapp/evolution-instances/${instanceId}/restart`, 'POST');
 export const syncEvolutionInstanceProfile = (instanceId) => apiRequest(`/whatsapp/evolution-instances/${instanceId}/sync_profile`, 'POST');
 export const configureEvolutionInstanceWebhook = (instanceId, webhookUrl = null) => {
-  const endpoint = webhookUrl 
+  const endpoint = webhookUrl
     ? `/whatsapp/evolution-instances/${instanceId}/configure_webhook?webhook_url=${encodeURIComponent(webhookUrl)}`
     : `/whatsapp/evolution-instances/${instanceId}/configure_webhook`;
   return apiRequest(endpoint, 'POST');
@@ -1017,8 +1017,40 @@ export const createInasistencia = (inasistenciaData) => {
   return apiRequest('/reports-etl/productividad/inasistencias', 'POST', inasistenciaData);
 };
 
+export const createInasistenciasBulk = (inasistenciasList) => {
+  return apiRequest('/reports-etl/productividad/inasistencias/bulk', 'POST', inasistenciasList);
+};
+
 export const deleteInasistencia = (id) => {
   return apiRequest(`/reports-etl/productividad/inasistencias/${id}`, 'DELETE');
+};
+
+export const uploadInasistenciasFile = async (file, separator = ';', registradoPor = null) => {
+  const token = getAuthToken();
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('separator', separator);
+  if (registradoPor) {
+    formData.append('registrado_por', registradoPor);
+  }
+
+  const response = await fetch(`${BASE_URL}/reports-etl/productividad/inasistencias/upload`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Error al procesar el archivo' }));
+    throw new Error(errorData.detail || errorData.message || `Error ${response.status}: ${response.statusText}`);
+  }
+
+  return await response.json();
 };
 
 export const downloadProductividadDesagregadoExcel = async (params) => {

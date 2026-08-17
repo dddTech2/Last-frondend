@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
@@ -40,6 +40,9 @@ const ProductivityReportPage = () => {
   const [loadingTrends, setLoadingTrends] = useState(false);
   const [loadingAbsences, setLoadingAbsences] = useState(false);
   const [uploadingPayments, setUploadingPayments] = useState(false);
+  const [uploadingInasistencias, setUploadingInasistencias] = useState(false);
+  const [inasistenciasSeparator, setInasistenciasSeparator] = useState(';');
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [savingAbsence, setSavingAbsence] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
 
@@ -141,31 +144,72 @@ const ProductivityReportPage = () => {
     }
   }, []);
 
-  const fetchEmployees = useCallback(async () => {
-    try {
-      const response = await api.getEmployees({ limit: 500 });
-      const list = Array.isArray(response)
-        ? response
-        : response?.items
-          ? response.items
-          : response?.data
-            ? response.data
-            : [];
-      
-      const opts = list
-        .filter(emp => emp && emp.nombre && emp.cedula)
-        .map(emp => ({
-          value: emp.cedula,
-          label: `${emp.nombre} (${emp.adminfo || 'Sin código'}) - ${emp.cargo || 'Sin cargo'}`,
-          cedula: emp.cedula,
-          adminfo: emp.adminfo,
-          nombre: emp.nombre
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label));
+  const searchTimeoutRef = useRef(null);
 
-      setEmployeesList(opts);
+  const fetchEmployees = useCallback(async (searchQuery = '') => {
+    setLoadingEmployees(true);
+    try {
+      if (searchQuery && searchQuery.trim().length >= 2) {
+        const response = await api.getEmployees({ search: searchQuery.trim(), size: 100 });
+        const list = Array.isArray(response)
+          ? response
+          : response?.items
+            ? response.items
+            : response?.data
+              ? response.data
+              : [];
+        
+        const searchOpts = list
+          .filter(emp => emp && emp.nombre && emp.cedula)
+          .map(emp => ({
+            value: emp.cedula,
+            label: `${emp.nombre} (${emp.adminfo || 'Sin código'}) - ${emp.cargo || 'Sin cargo'}`,
+            cedula: emp.cedula,
+            adminfo: emp.adminfo,
+            nombre: emp.nombre
+          }));
+        
+        setEmployeesList(prev => {
+          const map = new Map(prev.map(item => [item.value, item]));
+          searchOpts.forEach(item => map.set(item.value, item));
+          return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+        });
+      } else {
+        // Carga paginada completa para tener a todos los empleados en el selector
+        let allEmps = [];
+        let page = 1;
+        let hasMore = true;
+        while (hasMore && page <= 20) {
+          const response = await api.getEmployees({ page, size: 100 });
+          const items = response?.items || response?.data || (Array.isArray(response) ? response : []);
+          if (Array.isArray(items) && items.length > 0) {
+            allEmps = [...allEmps, ...items];
+          }
+          if (response?.page && response?.totalPages && response.page >= response.totalPages) {
+            hasMore = false;
+          } else if (!Array.isArray(items) || items.length < 100) {
+            hasMore = false;
+          }
+          page++;
+        }
+
+        const opts = allEmps
+          .filter(emp => emp && emp.nombre && emp.cedula)
+          .map(emp => ({
+            value: emp.cedula,
+            label: `${emp.nombre} (${emp.adminfo || 'Sin código'}) - ${emp.cargo || 'Sin cargo'}`,
+            cedula: emp.cedula,
+            adminfo: emp.adminfo,
+            nombre: emp.nombre
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label));
+
+        setEmployeesList(opts);
+      }
     } catch (error) {
       console.error('Error al cargar lista de empleados:', error);
+    } finally {
+      setLoadingEmployees(false);
     }
   }, []);
 
@@ -216,6 +260,36 @@ const ProductivityReportPage = () => {
     } finally {
       setUploadingPayments(false);
       // Reset input
+      e.target.value = '';
+    }
+  };
+
+  const handleInasistenciasUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const filename = file.name.toLowerCase();
+    const validExts = ['.csv', '.txt', '.tsv', '.xlsx', '.xls'];
+    if (!validExts.some(ext => filename.endsWith(ext))) {
+      toast.error('Formato no compatible. Suba un archivo .csv, .txt, .tsv, .xlsx o .xls');
+      return;
+    }
+
+    setUploadingInasistencias(true);
+    try {
+      const registradoPor = user?.name || user?.decoded?.full_name || user?.email || 'Sistema';
+      const response = await api.uploadInasistenciasFile(file, inasistenciasSeparator, registradoPor);
+      if (response && (response.status === 'success' || response.message)) {
+        toast.success(response.message || 'Inasistencias cargadas exitosamente y recálculo iniciado.');
+        fetchAbsences();
+        if (rankingData.length > 0) fetchRanking();
+      } else {
+        toast.error('Error al procesar el archivo de inasistencias.');
+      }
+    } catch (error) {
+      toast.error('Error al subir inasistencias: ' + error.message);
+    } finally {
+      setUploadingInasistencias(false);
       e.target.value = '';
     }
   };
@@ -1015,8 +1089,77 @@ const ProductivityReportPage = () => {
       {activeTab === 'admin' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
           
-          {/* Column Left: Upload CSV Payments */}
+          {/* Column Left: Upload Files (Inasistencias Masivo & Pagos CSV) */}
           <div className="space-y-6 lg:col-span-1">
+            
+            {/* Card 1: Carga Masiva de Inasistencias */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+                <FileSpreadsheet className="h-5 w-5 text-indigo-600" />
+                <h3 className="text-lg font-bold text-gray-800">Carga Masiva Inasistencias</h3>
+              </div>
+              
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Cargue archivos CSV, TXT o Excel con licencias e incapacidades para registrar novedades en bloque y recalcular factores de meta.
+              </p>
+
+              {/* Separator selector for CSV/TXT */}
+              <div className="flex items-center justify-between text-xs bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                <span className="text-gray-600 font-medium">Separador (CSV/TXT):</span>
+                <select
+                  value={inasistenciasSeparator}
+                  onChange={(e) => setInasistenciasSeparator(e.target.value)}
+                  className="bg-white border border-gray-300 rounded px-2 py-1 text-xs focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                  disabled={uploadingInasistencias}
+                >
+                  <option value=";">Punto y coma (;)</option>
+                  <option value=",">Coma (,)</option>
+                  <option value="	">Tabulación (\t)</option>
+                  <option value="|">Barra (|)</option>
+                </select>
+              </div>
+
+              {/* Drag and Drop / file area */}
+              <div className="flex items-center justify-center w-full">
+                <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors duration-200
+                  ${uploadingInasistencias 
+                    ? 'border-indigo-400 bg-indigo-50/20 pointer-events-none' 
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
+                  
+                  <div className="flex flex-col items-center justify-center pt-4 pb-5 text-center px-4">
+                    {uploadingInasistencias ? (
+                      <>
+                        <Loader2 className="h-9 w-9 text-indigo-500 animate-spin mb-2" />
+                        <p className="text-xs font-semibold text-indigo-600">Procesando inasistencias...</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">Guardando y recalculando datos</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-9 w-9 text-gray-400 mb-2" />
+                        <p className="text-xs font-semibold text-gray-700">Subir archivo de inasistencias</p>
+                        <p className="text-[10px] text-gray-400 mt-1">CSV, Excel (.xlsx, .xls), TXT</p>
+                      </>
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    accept=".csv,.txt,.tsv,.xlsx,.xls" 
+                    onChange={handleInasistenciasUpload} 
+                    className="hidden" 
+                    disabled={uploadingInasistencias}
+                  />
+                </label>
+              </div>
+
+              <div className="p-3 bg-indigo-50/70 rounded-lg border border-indigo-100 flex gap-2">
+                <AlertCircle className="h-4 w-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-indigo-900 leading-relaxed">
+                  Columnas: <code>cedula</code> o <code>adminfo</code>, <code>fecha_inicio</code>, <code>fecha_fin</code>, <code>razon</code>, <code>observacion</code>.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2: Upload CSV Payments */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
               <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
                 <Upload className="h-5 w-5 text-blue-600" />
@@ -1087,9 +1230,21 @@ const ProductivityReportPage = () => {
                     options={employeesList}
                     value={absenceForm.selectedEmployee}
                     onChange={(opt) => setAbsenceForm(prev => ({ ...prev, selectedEmployee: opt }))}
+                    onInputChange={(inputValue, { action }) => {
+                      if (action === 'input-change') {
+                        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                        if (inputValue.length >= 2) {
+                          searchTimeoutRef.current = setTimeout(() => {
+                            fetchEmployees(inputValue);
+                          }, 300);
+                        }
+                      }
+                    }}
+                    isLoading={loadingEmployees}
                     placeholder="Escribe el nombre o cédula para buscar..."
                     isClearable
                     isSearchable
+                    noOptionsMessage={() => "No se encontraron empleados"}
                     className="text-xs"
                   />
                 </div>
