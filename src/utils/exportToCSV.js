@@ -1,3 +1,31 @@
+const formatDateValue = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  if (value instanceof Date) {
+    return value.toLocaleDateString('es-CO');
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    // Si viene en formato ISO de solo fecha (YYYY-MM-DD) o con timestamp
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const [, year, month, day] = match;
+      return `${day}/${month}/${year}`;
+    }
+
+    const date = new Date(trimmed);
+    if (!Number.isNaN(date.getTime())) {
+      const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60000);
+      return adjustedDate.toLocaleDateString('es-CO');
+    }
+  }
+
+  return value;
+};
+
 /**
  * Exporta datos a formato CSV
  * @param {Array} data - Array de objetos a exportar
@@ -34,14 +62,7 @@ export const exportToCSV = (data, filename = 'export.csv', columns = null) => {
 
       // Si es una fecha, formatearla
       if (col.key.includes('fecha') || col.key.includes('Fecha')) {
-        if (value instanceof Date) {
-          value = value.toLocaleDateString('es-CO');
-        } else if (typeof value === 'string') {
-          const date = new Date(value);
-          if (!isNaN(date)) {
-            value = date.toLocaleDateString('es-CO');
-          }
-        }
+        value = formatDateValue(value);
       }
 
       // Si es número, no agregar comillas
@@ -75,7 +96,7 @@ export const exportToCSV = (data, filename = 'export.csv', columns = null) => {
  * Exporta datos a formato Excel (XLSX)
  * Nota: Utiliza exceljs y file-saver (npm install exceljs file-saver)
  */
-export const exportToXLSX = async (data, filename = 'export.xlsx', sheetName = 'Sheet1', columns = null) => {
+export const exportToXLSX = async (data, filename = 'export.xlsx', sheetName = 'Personal', columns = null) => {
   try {
     // Importar dinámicamente las librerías
     const ExcelJS = (await import('exceljs')).default;
@@ -122,17 +143,10 @@ export const exportToXLSX = async (data, filename = 'export.xlsx', sheetName = '
 
         // Formatear fechas
         if (col.key.includes('fecha') || col.key.includes('Fecha')) {
-          if (value instanceof Date) {
-            value = value.toLocaleDateString('es-CO');
-          } else if (typeof value === 'string') {
-            const date = new Date(value);
-            if (!isNaN(date)) {
-              value = date.toLocaleDateString('es-CO');
-            }
-          }
+          value = formatDateValue(value);
         }
 
-        row[col.key] = value;
+        row[col.key] = value ?? '';
       });
       worksheet.addRow(row);
     });

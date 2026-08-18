@@ -1331,9 +1331,27 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
             }
 
             // Fechas: formatear
-            if (field === "fecha_terminacion_contrato" && value) {
+            if (
+                (field === "fecha_terminacion_contrato" ||
+                    field === "fecha_ingreso" ||
+                    field === "fecha_nacimiento" ||
+                    field === "fecha_fin_contrato_temporal") &&
+                value
+            ) {
                 try {
-                    return new Date(value).toLocaleDateString("es-CO", {
+                    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) {
+                        const [, year, month, day] = match;
+                        const d = new Date(Number(year), Number(month) - 1, Number(day));
+                        return d.toLocaleDateString("es-CO", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                        });
+                    }
+                    const d = new Date(value);
+                    const adjustedDate = new Date(d.valueOf() + d.getTimezoneOffset() * 60000);
+                    return adjustedDate.toLocaleDateString("es-CO", {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
@@ -1355,21 +1373,6 @@ const IngresoPersonalForm = ({ onSubmit, isSubmitting = false, onCancel }) => {
                     : value === "INDEFINIDO"
                       ? "Indefinido"
                       : value;
-            }
-
-            if (
-                (field === "fecha_ingreso" || field === "fecha_nacimiento") &&
-                value
-            ) {
-                try {
-                    return new Date(value).toLocaleDateString("es-CO", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    });
-                } catch {
-                    return value;
-                }
             }
 
             // Default
