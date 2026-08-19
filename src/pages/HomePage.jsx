@@ -25,7 +25,7 @@ const BuilderIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8
 
 
 const HomePage = () => {
-  const { user } = useAuth();
+  const { user, hasPermission, hasAnyPermission, isAdmin } = useAuth();
   const resolvedRoles = Array.isArray(user?.decoded?.roles)
     ? user.decoded.roles
     : user?.decoded?.role
@@ -34,35 +34,27 @@ const HomePage = () => {
 
   console.log('Usuario actual:', user);
 
-  // Definimos todos los accesos rápidos posibles y los roles que pueden verlos
+  // Definimos todos los accesos rápidos posibles filtrados por permisos
   const allQuickAccessItems = [
-    { title: "Gestionar Clientes", description: "Administra y consulta información de clientes", icon: <ManageClientsIcon />, path: "/clients", roles: ["Admin", "Coordinador", "Gestor"] },
-    { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", roles: ["Admin", "Coordinador", "Directora de Operaciones"] },
-    { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", public: true, roles: ["Admin", "Coordinador", "Gestor", "Directora de Operaciones"] },
-    { title: "Constructor de Comunicaciones", description: "Crea y configura plantillas de documentos", icon: <BuilderIcon />, path: "/communications/builder", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
-    { title: "Aprobación de Plantillas", description: "Revisa y aprueba plantillas de mensajes", icon: <TemplateApprovalIcon />, path: "/templates/approval", roles: ["Admin", "Jurídico", "Directora de Operaciones"] },
-    { title: "Crear Plantilla", description: "Crea nuevas plantillas de SMS, WhatsApp o Email", icon: <BuilderIcon />, path: "/templates/new", roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
-    { title: "Aprobación Jurídica", description: "Revisa comunicaciones pendientes de Jurídico", icon: <LegalApprovalIcon />, path: "/communications/legal-approval", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico"], strictForRoles: true },
-    { title: "Demográficos", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", public: true, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Directora de Operaciones", "Jurídico", "Juridico"] },
-    { title: "Gestión de Usuarios", description: "Administra usuarios del sistema", icon: <UserManagementIcon />, path: "/users", roles: ["Admin"] },
-    { title: "Reportes y Analítica", description: "Visualiza métricas y genera reportes", icon: <ReportsIcon />, path: "/reports", roles: ["Admin", "Coordinador"] },
-    { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", roles: ["Admin", "Coordinador", "Gestor", "Directora de Operaciones"] },
-    { title: "Administración de Personal", description: "Gestionar altas, bajas y usuarios de proveedores", icon: <BriefcaseIcon />, path: "/administracion-personal", roles: ["Admin", "Super Administrador", "Jurídico", "Juridico", "Tecnologia", "talento_humano", "analista"] },
+    { title: "Gestionar Clientes", description: "Administra y consulta información de clientes", icon: <ManageClientsIcon />, path: "/clients", permission: "clients:read" },
+    { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", permission: "campaigns:read" },
+    { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", permissions: ["communications:read", "communications:generate"] },
+    { title: "Constructor de Comunicaciones", description: "Crea y configura plantillas de documentos", icon: <BuilderIcon />, path: "/communications/builder", permission: "communications:generate" },
+    { title: "Aprobación de Plantillas", description: "Revisa y aprueba plantillas de mensajes", icon: <TemplateApprovalIcon />, path: "/templates/approval", permissions: ["templates:approve_legal", "templates:approve_ops"] },
+    { title: "Crear Plantilla", description: "Crea nuevas plantillas de SMS, WhatsApp o Email", icon: <BuilderIcon />, path: "/templates/new", permission: "templates:create" },
+    { title: "Aprobación Jurídica", description: "Revisa comunicaciones pendientes de Jurídico", icon: <LegalApprovalIcon />, path: "/communications/legal-approval", permission: "communications:approve_legal" },
+    { title: "Demográficos", description: "Automatiza flujos de comunicación inteligentes", icon: <WorkflowIcon />, path: "/workflows", permission: "workflows:manage" },
+    { title: "Gestión de Usuarios y Roles", description: "Administra usuarios, roles y permisos granulares", icon: <UserManagementIcon />, path: "/users", permissions: ["users:read", "roles:manage"] },
+    { title: "Reportes y Analítica", description: "Visualiza métricas y genera reportes", icon: <ReportsIcon />, path: "/reports", permission: "reports:read" },
+    { title: "Chat Unificado", description: "Gestiona conversaciones de WhatsApp con clientes", icon: <ChatIcon />, path: "/chat", permission: "whatsapp:chat" },
+    { title: "Administración de Personal", description: "Gestionar altas, bajas y usuarios de nómina", icon: <BriefcaseIcon />, path: "/administracion-personal", permissions: ["employees:read", "employees:write"] },
   ];
 
-  console.log('Todos los accesos rápidos:', allQuickAccessItems);
-
-  // Filtramos los accesos rápidos basados en los roles del usuario
-  const hasSuperAdmin = resolvedRoles.includes("Super Administrador");
   const accessibleItems = allQuickAccessItems.filter(item => {
     if (item.public) return true;
-
-    if (resolvedRoles.length === 0) return false;
-
-    if (hasSuperAdmin && !item.strictForRoles) {
-      return true;
-    }
-    return resolvedRoles.some(userRole => item.roles.includes(userRole));
+    if (item.permission) return hasPermission(item.permission);
+    if (item.permissions) return hasAnyPermission(item.permissions);
+    return false;
   });
 
   console.log('Accesos filtrados:', accessibleItems);

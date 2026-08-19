@@ -29,7 +29,7 @@ const SettingsIcon = () => (
 
 
 const Header = ({ onOpenChangePassword }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission, hasAnyPermission, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -64,46 +64,36 @@ const Header = ({ onOpenChangePassword }) => {
   const navLinkClasses = "flex items-center text-gray-600 hover:text-blue-600 transition-all duration-300 ease-in-out group";
   const activeLinkClasses = "text-blue-600 font-semibold";
 
-  const resolvedRoles = Array.isArray(user?.decoded?.roles)
-    ? user.decoded.roles
-    : user?.decoded?.role
-      ? [user.decoded.role]
-      : [];
-
   const allNavLinks = [
-    { to: "/", text: "Dashboard", icon: <DashboardIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Jurídico", "Directora de Operaciones"] },
-    { to: "/clients", text: "Clientes", icon: <ClientsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor"] },
-    { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
-    { to: "/comunicaciones", text: "Comunicaciones", icon: <CommunicationsNavIcon />, roles: ["Admin", "Coordinador", "Gestor"] },
+    { to: "/", text: "Dashboard", icon: <DashboardIcon /> },
+    { to: "/clients", text: "Clientes", icon: <ClientsIcon />, permission: "clients:read" },
+    { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, permission: "campaigns:read" },
+    { to: "/comunicaciones", text: "Comunicaciones", icon: <CommunicationsNavIcon />, permissions: ["communications:read", "communications:generate"] },
     {
-      to: resolvedRoles.some(r => ["Admin", "Super Administrador", "Jurídico", "Directora de Operaciones"].includes(r)) ? "/templates/approval" : "/templates",
+      to: (hasPermission("templates:approve_legal") || hasPermission("templates:approve_ops")) ? "/templates/approval" : "/templates",
       text: "Plantillas",
       icon: <TemplatesIcon />,
-      roles: ["Admin", "Super Administrador", "Coordinador", "Jurídico", "Directora de Operaciones"]
+      permissions: ["templates:read", "templates:create", "templates:approve_legal", "templates:approve_ops"]
     },
     {
       to: "/communications/legal-approval",
       text: "Aprobación Jurídica",
       icon: <LegalApprovalIcon />,
-      roles: ["Admin", "Super Administrador", "Jurídico", "Juridico"],
-      strictForRoles: true
+      permission: "communications:approve_legal"
     },
-    { to: "/reports", text: "Reportes", icon: <ReportsIcon />, roles: ["Admin", "Super Administrador", "Coordinador"] },
-    { to: "/chat", text: "Chat Unificado", icon: <ChatIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor"] },
-    { to: "/administracion-personal", text: "Admón. Personal", icon: <BriefcaseIcon />, roles: ["Admin", "Super Administrador", "Jurídico"] },
-    { to: "/whatsapp/evolution", text: "Evo WhatsApp", icon: <SettingsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Directora de Operaciones"] },
-    { to: "/tickets", text: "Soporte", icon: <TicketsIcon />, roles: ["Admin", "Super Administrador", "Coordinador", "Gestor", "Jurídico", "Directora de Operaciones", "Tecnologia", "talento_humano"] },
+    { to: "/reports", text: "Reportes", icon: <ReportsIcon />, permission: "reports:read" },
+    { to: "/chat", text: "Chat Unificado", icon: <ChatIcon />, permission: "whatsapp:chat" },
+    { to: "/administracion-personal", text: "Admón. Personal", icon: <BriefcaseIcon />, permissions: ["employees:read", "employees:write"] },
+    { to: "/whatsapp/evolution", text: "Evo WhatsApp", icon: <SettingsIcon />, permission: "whatsapp:instances:manage" },
+    { to: "/tickets", text: "Soporte", icon: <TicketsIcon />, permissions: ["tickets:read", "tickets:create"] },
   ];
 
-  const hasSuperAdmin = resolvedRoles.includes("Super Administrador");
-  const accessibleNavLinks = resolvedRoles.length > 0
-    ? allNavLinks.filter(link => {
-        if (hasSuperAdmin && !link.strictForRoles) {
-          return true;
-        }
-        return resolvedRoles.some(userRole => link.roles.includes(userRole));
-      })
-    : [];
+  const accessibleNavLinks = allNavLinks.filter(link => {
+    if (!link.permission && !link.permissions) return true;
+    if (link.permission) return hasPermission(link.permission);
+    if (link.permissions) return hasAnyPermission(link.permissions);
+    return false;
+  });
 
   return (
     <header className="bg-white shadow-md p-3 flex justify-between items-center sticky top-0 z-50 bg-opacity-95 backdrop-blur-sm border-b border-gray-100">
@@ -145,6 +135,14 @@ const Header = ({ onOpenChangePassword }) => {
                     <span className="ml-3">Mi Perfil</span>
                   </a>
                 </li>
+                {hasAnyPermission(["users:read", "roles:manage"]) && (
+                  <li>
+                    <NavLink to="/users" onClick={() => setIsMenuOpen(false)} className="flex items-center px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 font-medium">
+                      <SettingsIcon />
+                      <span className="ml-3">Usuarios y Roles</span>
+                    </NavLink>
+                  </li>
+                )}
                 <li>
                 <button onClick={onOpenChangePassword} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   <LockIcon />

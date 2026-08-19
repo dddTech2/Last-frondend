@@ -1,7 +1,7 @@
 // La URL se toma de la variable de entorno VITE_API_URL si existe,
 // de lo contrario usa la URL de producción por defecto.
-// export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+// export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
 
 
 // Función para obtener el token de autenticación
@@ -173,6 +173,13 @@ export const deleteUser = (userId) => apiRequest(`/users/${userId}`, 'DELETE');
 export const resetUserPassword = (userId, new_password) => apiRequest(`/users/${userId}/password`, 'PUT', { new_password });
 export const updateUserRoles = (userId, role_ids) => apiRequest(`/users/${userId}/roles`, 'PUT', { role_ids });
 export const unlockUser = (userId) => apiRequest(`/users/${userId}/unlock`, 'POST');
+
+// --- Endpoints de Roles y Permisos ---
+export const getRoles = () => apiRequest('/roles/');
+export const getAllPermissions = () => apiRequest('/roles/permissions/all');
+export const createRole = (roleData) => apiRequest('/roles/', 'POST', roleData);
+export const updateRolePermissions = (roleId, permissionIds) => apiRequest(`/roles/${roleId}/permissions`, 'PUT', { permission_ids: permissionIds });
+
 
 
 // --- Endpoints de Segmentación ---
