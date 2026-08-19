@@ -15,6 +15,7 @@ import CommunicationBuilderPage from '../pages/CommunicationBuilderPage';
 import DemographicsPage from '../pages/DemographicsPage';
 import ClientSearchPage from '../pages/ClientSearchPage';
 import Vision360Page from '../pages/Vision360Page';
+import LocalizacionPage from '../pages/LocalizacionPage';
 import ReportsLandingPage from '../pages/reports/ReportsLandingPage';
 import EffectivenessReportPage from '../pages/reports/EffectivenessReportPage';
 import CampaignEffectivenessPage from '../pages/reports/CampaignEffectivenessPage';
@@ -52,6 +53,9 @@ export const AppRouter = () => {
             <Vision360Page />
           </PermissionGuard>
         } />
+
+        {/* Localización y Scraping */}
+        <Route path="localizacion" element={<LocalizacionPage />} />
 
         {/* Usuarios y Roles */}
         <Route path="users" element={
