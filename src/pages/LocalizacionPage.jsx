@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, 
   Layers, 
-  UserCheck, 
   History, 
   Activity, 
   Phone, 
@@ -11,16 +10,9 @@ import {
   Shield, 
   Car, 
   Play, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  AlertTriangle, 
   RefreshCw, 
   Database,
-  ExternalLink,
-  ChevronRight,
-  Sparkles,
-  Users
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import localizacionService from '../services/localizacionService';
@@ -49,8 +41,8 @@ export default function LocalizacionPage() {
   const [singleCedula, setSingleCedula] = useState('');
   const [selectedSingleSources, setSelectedSingleSources] = useState(['ADRES', 'EMSANAR', 'SALUD_TOTAL', 'VIVA1A']);
   const [isSingleLoading, setIsSingleLoading] = useState(false);
+  const [singleProgressStatus, setSingleProgressStatus] = useState('');
   const [singleProfile, setSingleProfile] = useState(null);
-  const [singleRawResults, setSingleRawResults] = useState(null);
 
   const toggleSourceSelection = (sourceId) => {
     if (selectedSingleSources.includes(sourceId)) {
@@ -81,26 +73,77 @@ export default function LocalizacionPage() {
     }
 
     setIsSingleLoading(true);
-    setSingleProfile(null);
-    setSingleRawResults(null);
+    setSingleProgressStatus('Consultando base de datos...');
 
     try {
-      toast.info(`Iniciando consulta en vivo para cédula ${cleanCedula}...`);
-      const rawRes = await localizacionService.consultarInmediato(
+      // 1. Cargar snapshot actual si existe
+      try {
+        const cached = await localizacionService.getPerfilPersona(cleanCedula);
+        if (cached && (cached.telefonos?.length > 0 || cached.nombre_completo)) {
+          setSingleProfile(cached);
+        }
+      } catch (e_cached) {
+        console.debug('No cached profile', e_cached);
+      }
+
+      // 2. Encolar a Celery con prioridad ALTA
+      setSingleProgressStatus('Encolando tarea en Celery...');
+      const enqueueRes = await localizacionService.consultarInmediato(
         cleanCedula,
         selectedSingleSources
       );
-      setSingleRawResults(rawRes);
 
-      // Cargar de inmediato el perfil 360 consolidado actualizado
-      const perfilRes = await localizacionService.getPerfilPersona(cleanCedula);
-      setSingleProfile(perfilRes);
-      toast.success(`Consulta completada exitosamente.`);
+      const taskId = enqueueRes.task_id;
+      if (!taskId) {
+        throw new Error('No se recibió ID de tarea desde el backend.');
+      }
+
+      // 3. Polling de Celery
+      let attempts = 0;
+      const maxAttempts = 120; // Hasta 2 minutos máximo
+      
+      const poll = async () => {
+        attempts++;
+        const state = await localizacionService.getEstadoTarea(taskId);
+
+        if (state.status === 'PROGRESS') {
+          const currentFuente = state.progreso?.actual_fuente || 'Scraping';
+          setSingleProgressStatus(`Procesando ${currentFuente} (${state.progreso?.porcentaje || 0}%)...`);
+        }
+
+        if (state.status === 'SUCCESS') {
+          setSingleProgressStatus('Consolidando resultados...');
+          const freshProfile = await localizacionService.getPerfilPersona(cleanCedula);
+          setSingleProfile(freshProfile);
+          toast.success('¡Consulta completada con éxito!');
+          setIsSingleLoading(false);
+          setSingleProgressStatus('');
+          return;
+        }
+
+        if (state.status === 'FAILURE' || state.status === 'REVOKED') {
+          toast.error(`La tarea finalizó con error: ${state.error || state.status}`);
+          setIsSingleLoading(false);
+          setSingleProgressStatus('');
+          return;
+        }
+
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 1500);
+        } else {
+          toast.warning('La consulta sigue procesándose en segundo plano.');
+          setIsSingleLoading(false);
+          setSingleProgressStatus('');
+        }
+      };
+
+      setTimeout(poll, 1000);
+
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Error al ejecutar la consulta en vivo.');
-    } finally {
+      toast.error(err.message || 'Error al ejecutar la consulta.');
       setIsSingleLoading(false);
+      setSingleProgressStatus('');
     }
   };
 
@@ -150,7 +193,7 @@ export default function LocalizacionPage() {
     }
   };
 
-  // Polling de tarea Celery
+  // Polling de tarea Celery masiva
   useEffect(() => {
     if (!activeTask) return;
 
@@ -350,12 +393,12 @@ export default function LocalizacionPage() {
                 <button
                   type="submit"
                   disabled={isSingleLoading || !singleCedula.trim()}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 min-w-[200px] transition-all"
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 min-w-[220px] transition-all"
                 >
                   {isSingleLoading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Consultando en Vivo...
+                      <span>{singleProgressStatus || 'Consultando...'}</span>
                     </>
                   ) : (
                     <>
@@ -449,9 +492,9 @@ export default function LocalizacionPage() {
                   <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-3">
                       <Phone className="w-4 h-4 text-blue-600" />
-                      Teléfonos & Celulares ({singleProfile.telefonos.length})
+                      Teléfonos & Celulares ({singleProfile.telefonos?.length || 0})
                     </div>
-                    {singleProfile.telefonos.length === 0 ? (
+                    {(!singleProfile.telefonos || singleProfile.telefonos.length === 0) ? (
                       <p className="text-xs text-slate-400 italic">No se encontraron teléfonos.</p>
                     ) : (
                       <div className="space-y-2">
@@ -471,9 +514,9 @@ export default function LocalizacionPage() {
                   <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-3">
                       <Mail className="w-4 h-4 text-indigo-600" />
-                      Correos Electrónicos ({singleProfile.correos.length})
+                      Correos Electrónicos ({singleProfile.correos?.length || 0})
                     </div>
-                    {singleProfile.correos.length === 0 ? (
+                    {(!singleProfile.correos || singleProfile.correos.length === 0) ? (
                       <p className="text-xs text-slate-400 italic">No se encontraron correos.</p>
                     ) : (
                       <div className="space-y-2">
@@ -493,9 +536,9 @@ export default function LocalizacionPage() {
                   <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-3">
                       <MapPin className="w-4 h-4 text-emerald-600" />
-                      Direcciones ({singleProfile.direcciones.length})
+                      Direcciones ({singleProfile.direcciones?.length || 0})
                     </div>
-                    {singleProfile.direcciones.length === 0 ? (
+                    {(!singleProfile.direcciones || singleProfile.direcciones.length === 0) ? (
                       <p className="text-xs text-slate-400 italic">No se encontraron direcciones.</p>
                     ) : (
                       <div className="space-y-2">
@@ -568,7 +611,7 @@ export default function LocalizacionPage() {
                           </span>
                         </div>
                         <div className="text-xs text-slate-500">
-                          Placas Asociadas: {singleProfile.vehiculos.placas.length > 0 ? singleProfile.vehiculos.placas.join(', ') : 'Ninguna'}
+                          Placas Asociadas: {singleProfile.vehiculos.placas?.length > 0 ? singleProfile.vehiculos.placas.join(', ') : 'Ninguna'}
                         </div>
                       </div>
                     ) : (

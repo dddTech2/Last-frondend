@@ -1,7 +1,7 @@
 // La URL se toma de la variable de entorno VITE_API_URL si existe,
 // de lo contrario usa la URL de producción por defecto.
-export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-// export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
+// export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_URL || "https://backend-475190189080.us-central1.run.app/api/v1";
 
 
 // Función para obtener el token de autenticación
