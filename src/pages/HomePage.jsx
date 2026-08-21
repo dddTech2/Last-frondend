@@ -40,7 +40,7 @@ const HomePage = () => {
   // Definimos todos los accesos rápidos posibles filtrados por permisos
   const allQuickAccessItems = [
     { title: "Gestionar Clientes", description: "Administra y consulta información de clientes", icon: <ManageClientsIcon />, path: "/clients", permission: "clients:read" },
-    { title: "Localización y Scraping", description: "Consulta datos de contacto, EPS, seguridad social y vehículos en vivo", icon: <LocationIcon />, path: "/localizacion" },
+    { title: "Localización y Scraping", description: "Consulta datos de contacto, EPS, seguridad social y vehículos en vivo", icon: <LocationIcon />, path: "/localizacion", permissions: ["localizacion:read", "localizacion:manage"] },
     { title: "Campañas Masivas", description: "Crea y gestiona campañas de comunicación", icon: <BulkCampaignIcon />, path: "/campaigns", permission: "campaigns:read" },
     { title: "Centro de Comunicaciones", description: "Crea campañas por Email, SMS o WhatsApp", icon: <CommunicationsIcon />, path: "/comunicaciones", permissions: ["communications:read", "communications:generate"] },
     { title: "Constructor de Comunicaciones", description: "Crea y configura plantillas de documentos", icon: <BuilderIcon />, path: "/communications/builder", permission: "communications:generate" },

@@ -55,7 +55,11 @@ export const AppRouter = () => {
         } />
 
         {/* Localización y Scraping */}
-        <Route path="localizacion" element={<LocalizacionPage />} />
+        <Route path="localizacion" element={
+          <PermissionGuard requiredPermissions={["localizacion:read", "localizacion:manage"]}>
+            <LocalizacionPage />
+          </PermissionGuard>
+        } />
 
         {/* Usuarios y Roles */}
         <Route path="users" element={

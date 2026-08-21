@@ -78,7 +78,7 @@ const Header = ({ onOpenChangePassword }) => {
   const allNavLinks = [
     { to: "/", text: "Dashboard", icon: <DashboardIcon /> },
     { to: "/clients", text: "Clientes", icon: <ClientsIcon />, permission: "clients:read" },
-    { to: "/localizacion", text: "Localización", icon: <LocationNavIcon /> },
+    { to: "/localizacion", text: "Localización", icon: <LocationNavIcon />, permissions: ["localizacion:read", "localizacion:manage"] },
     { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, permission: "campaigns:read" },
     { to: "/comunicaciones", text: "Comunicaciones", icon: <CommunicationsNavIcon />, permissions: ["communications:read", "communications:generate"] },
     {
