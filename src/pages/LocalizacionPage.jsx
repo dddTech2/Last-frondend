@@ -37,8 +37,7 @@ import { toast } from 'sonner';
 import localizacionService from '../services/localizacionService';
 
 const AVAILABLE_SOURCES = [
-  { id: 'ADRES', label: 'ADRES (BDUA)', category: 'Salud', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { id: 'RUAF', label: 'RUAF SISPRO', category: 'Seguridad Social', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  // ADRES y RUAF deshabilitados temporalmente para consultas en nube (Geo-Bloqueo SISPRO / Datacenter IP)
   { id: 'EMSANAR', label: 'Emsanar EPS', category: 'EPS', color: 'bg-teal-50 text-teal-700 border-teal-200' },
   { id: 'SALUD_TOTAL', label: 'Salud Total EPS', category: 'EPS', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
   { id: 'VIVA1A', label: 'Viva 1A IPS', category: 'EPS', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
@@ -516,7 +515,7 @@ export default function LocalizacionPage() {
   // TAB 2: CONSULTA RÁPIDA (1 CÉDULA)
   // ==========================================
   const [singleCedula, setSingleCedula] = useState('');
-  const [selectedSingleSources, setSelectedSingleSources] = useState(['ADRES', 'EMSANAR', 'SALUD_TOTAL', 'VIVA1A']);
+  const [selectedSingleSources, setSelectedSingleSources] = useState(['EMSANAR', 'SALUD_TOTAL', 'VIVA1A', 'SENA']);
   const [isSingleLoading, setIsSingleLoading] = useState(false);
   const [singleProgressStatus, setSingleProgressStatus] = useState('');
   const [singleProfile, setSingleProfile] = useState(null);
@@ -531,7 +530,7 @@ export default function LocalizacionPage() {
 
   const handleSelectAllSources = () => {
     if (selectedSingleSources.length === AVAILABLE_SOURCES.length) {
-      setSelectedSingleSources(['ADRES', 'EMSANAR']);
+      setSelectedSingleSources(['EMSANAR', 'SALUD_TOTAL']);
     } else {
       setSelectedSingleSources(AVAILABLE_SOURCES.map(s => s.id));
     }
@@ -625,7 +624,7 @@ export default function LocalizacionPage() {
   // TAB 3: CONSULTA MASIVA (CELERY BATCH)
   // ==========================================
   const [batchInput, setBatchInput] = useState('');
-  const [batchSources, setBatchSources] = useState(['ADRES', 'EMSANAR', 'SALUD_TOTAL', 'VIVA1A', 'SENA', 'SERVICIO_EMPLEO']);
+  const [batchSources, setBatchSources] = useState(['EMSANAR', 'SALUD_TOTAL', 'VIVA1A', 'SENA', 'SERVICIO_EMPLEO']);
   const [batchPriority, setBatchPriority] = useState('NORMAL');
   const [activeTask, setActiveTask] = useState(null);
   const [taskProgress, setTaskProgress] = useState(null);
