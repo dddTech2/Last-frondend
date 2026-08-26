@@ -77,6 +77,40 @@ export const localizacionService = {
   async getHealth() {
     return await apiRequest('/localizacion/health', 'GET');
   },
+
+  /**
+   * Consulta la lista de lotes/campañas de scraping ejecutadas.
+   */
+  async getLotes(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = `/localizacion/lotes${query ? `?${query}` : ''}`;
+    return await apiRequest(endpoint, 'GET');
+  },
+
+  /**
+   * Descarga el archivo CSV consolidado de un lote.
+   */
+  async descargarLoteCSV(runId) {
+    const token = localStorage.getItem('token');
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+    const response = await fetch(`${baseUrl}/localizacion/lotes/${runId}/exportar`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Error descargando reporte del lote ${runId}`);
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `localizacion_lote_${runId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
 };
 
 export default localizacionService;

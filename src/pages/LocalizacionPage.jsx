@@ -31,21 +31,25 @@ import {
   Calendar,
   User,
   Building,
-  ExternalLink
+  ExternalLink,
+  Download,
+  FileSpreadsheet,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import localizacionService from '../services/localizacionService';
 
 const AVAILABLE_SOURCES = [
-  // ADRES y RUAF deshabilitados temporalmente para consultas en nube (Geo-Bloqueo SISPRO / Datacenter IP)
+  { id: 'ADRES', label: 'ADRES BDUA', category: 'Salud', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   { id: 'EMSANAR', label: 'Emsanar EPS', category: 'EPS', color: 'bg-teal-50 text-teal-700 border-teal-200' },
-  { id: 'SALUD_TOTAL', label: 'Salud Total EPS', category: 'EPS', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  { id: 'SALUD_TOTAL', label: 'Salud Total EPS', category: 'EPS', color: 'bg-cyan-50 text-cyan-700 border-cyan-200', note: 'Req. Nacimiento' },
   { id: 'VIVA1A', label: 'Viva 1A IPS', category: 'EPS', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
   { id: 'ASMET', label: 'Asmet Salud', category: 'EPS', color: 'bg-sky-50 text-sky-700 border-sky-200' },
   { id: 'NUEVA_EPS', label: 'Nueva EPS', category: 'EPS', color: 'bg-blue-50 text-blue-800 border-blue-300' },
   { id: 'SENA', label: 'SENA (APE)', category: 'Laboral', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   { id: 'SERVICIO_EMPLEO', label: 'Servicio de Empleo', category: 'Laboral', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { id: 'MI_VACUNA', label: 'Mi Vacuna SISPRO', category: 'Salud', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  { id: 'MI_VACUNA', label: 'Mi Vacuna SISPRO', category: 'Salud', color: 'bg-purple-50 text-purple-700 border-purple-200', note: 'Req. Expedición' },
+  { id: 'RUAF', label: 'RUAF SISPRO', category: 'Salud', color: 'bg-pink-50 text-pink-700 border-pink-200', note: 'Req. Expedición' },
   { id: 'RUES', label: 'RUES Cámaras', category: 'Empresarial', color: 'bg-slate-50 text-slate-700 border-slate-200' },
   { id: 'SIMIT', label: 'SIMIT Multas', category: 'Vehículos', color: 'bg-rose-50 text-rose-700 border-rose-200' },
 ];
@@ -512,8 +516,52 @@ export default function LocalizacionPage() {
   const totalPages = Math.max(1, Math.ceil((historialSearchCedula ? displayedHistorialList.length : historialTotal) / historialLimit));
 
   // ==========================================
+  // TAB 4: HISTORIAL DE LOTES (RUNS)
+  // ==========================================
+  const [lotesList, setLotesList] = useState([]);
+  const [lotesTotal, setLotesTotal] = useState(0);
+  const [isLotesLoading, setIsLotesLoading] = useState(false);
+  const [lotesPage, setLotesPage] = useState(1);
+  const [lotesLimit, setLotesLimit] = useState(25);
+
+  const loadLotes = async (page = lotesPage, limit = lotesLimit) => {
+    setIsLotesLoading(true);
+    try {
+      const offset = (page - 1) * limit;
+      const res = await localizacionService.getLotes({ limit, offset });
+      setLotesList(res.items || []);
+      setLotesTotal(res.total || 0);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al cargar historial de lotes.');
+    } finally {
+      setIsLotesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'lotes') {
+      loadLotes(lotesPage, lotesLimit);
+    }
+  }, [activeTab, lotesPage, lotesLimit]);
+
+  const handleDescargarLoteCSV = async (runId) => {
+    try {
+      toast.loading('Generando descarga de lote...', { id: 'csv-dl' });
+      await localizacionService.descargarLoteCSV(runId);
+      toast.success('Archivo CSV descargado con éxito.', { id: 'csv-dl' });
+    } catch (err) {
+      toast.error(err.message || 'Error al descargar CSV del lote.', { id: 'csv-dl' });
+    }
+  };
+
+  // ==========================================
   // TAB 2: CONSULTA RÁPIDA (1 CÉDULA)
   // ==========================================
+  const [singleTipoDoc, setSingleTipoDoc] = useState('CC');
+  const [singleFechaExpedicion, setSingleFechaExpedicion] = useState('');
+  const [singleFechaNacimiento, setSingleFechaNacimiento] = useState('');
+  const [showOptionalDates, setShowOptionalDates] = useState(false);
   const [singleCedula, setSingleCedula] = useState('');
   const [selectedSingleSources, setSelectedSingleSources] = useState(['EMSANAR', 'SALUD_TOTAL', 'VIVA1A', 'SENA']);
   const [isSingleLoading, setIsSingleLoading] = useState(false);
@@ -564,7 +612,10 @@ export default function LocalizacionPage() {
       setSingleProgressStatus('Encolando tarea en Celery...');
       const enqueueRes = await localizacionService.consultarInmediato(
         cleanCedula,
-        selectedSingleSources
+        selectedSingleSources,
+        singleTipoDoc,
+        singleFechaNacimiento.trim() || null,
+        singleFechaExpedicion.trim() || null
       );
 
       const taskId = enqueueRes.task_id;
@@ -787,6 +838,18 @@ export default function LocalizacionPage() {
           >
             <Layers className="w-4 h-4" />
             Consulta Masiva (En Lote)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('lotes')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'lotes'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            Lotes Procesados
           </button>
 
           <button
@@ -1116,6 +1179,68 @@ export default function LocalizacionPage() {
                 </button>
               </div>
 
+              {/* Fechas y Parámetros Opcionales */}
+              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowOptionalDates(!showOptionalDates)}>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Datos Complementarios (Opcionales para RUAF, Mi Vacuna y Salud Total)
+                    </span>
+                  </div>
+                  <button type="button" className="text-xs text-blue-600 font-semibold hover:underline">
+                    {showOptionalDates ? 'Ocultar Parámetros' : 'Configurar Fechas'}
+                  </button>
+                </div>
+
+                {showOptionalDates && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-3 border-t border-slate-200">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Tipo de Documento
+                      </label>
+                      <select
+                        value={singleTipoDoc}
+                        onChange={(e) => setSingleTipoDoc(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="CC">Cédula de Ciudadanía (CC)</option>
+                        <option value="CE">Cédula de Extranjería (CE)</option>
+                        <option value="TI">Tarjeta de Identidad (TI)</option>
+                        <option value="PEP">PEP / Permiso Especial (PEP)</option>
+                        <option value="PPT">PPT / Protección Temporal (PPT)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center justify-between">
+                        <span>Fecha de Expedición</span>
+                        <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-1.5 py-0.5 rounded">RUAF / Mi Vacuna</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={singleFechaExpedicion}
+                        onChange={(e) => setSingleFechaExpedicion(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center justify-between">
+                        <span>Fecha de Nacimiento</span>
+                        <span className="text-[10px] text-cyan-600 font-bold bg-cyan-50 px-1.5 py-0.5 rounded">Salud Total</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={singleFechaNacimiento}
+                        onChange={(e) => setSingleFechaNacimiento(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Selector de Fuentes */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -1150,6 +1275,11 @@ export default function LocalizacionPage() {
                           <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-current' : 'bg-slate-300'}`} />
                         </div>
                         <span className="text-[11px] truncate">{src.label}</span>
+                        {src.note && (
+                          <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-1 py-0.5 rounded mt-1 border border-amber-200/50 truncate">
+                            {src.note}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -1443,8 +1573,124 @@ export default function LocalizacionPage() {
                   </span>
                 </div>
               </div>
+
+              {taskProgress.run_id && (
+                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleDescargarLoteCSV(taskProgress.run_id)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Descargar Resultados del Lote (CSV)
+                  </button>
+                </div>
+              )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: LOTES Y HISTORIAL DE RUNS */}
+      {/* ========================================================================= */}
+      {activeTab === 'lotes' && (
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Historial de Lotes y Campañas</h3>
+                <p className="text-xs text-slate-500">
+                  Registro de ejecuciones masivas con métricas de rendimiento y descarga directa en CSV.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => loadLotes(lotesPage, lotesLimit)}
+                disabled={isLotesLoading}
+                className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold flex items-center gap-2 transition-all self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLotesLoading ? 'animate-spin' : ''}`} />
+                Actualizar Lotes
+              </button>
+            </div>
+
+            {/* Tabla de Lotes */}
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">ID Lote</th>
+                    <th className="py-3 px-4">Origen</th>
+                    <th className="py-3 px-4">Total</th>
+                    <th className="py-3 px-4">Exitosas</th>
+                    <th className="py-3 px-4">Fallidas</th>
+                    <th className="py-3 px-4">Duración</th>
+                    <th className="py-3 px-4">Fecha Inicio</th>
+                    <th className="py-3 px-4">Estado</th>
+                    <th className="py-3 px-4 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {isLotesLoading ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-10 text-slate-400">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-600" />
+                        Cargando lotes...
+                      </td>
+                    </tr>
+                  ) : lotesList.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-10 text-slate-400">
+                        No hay lotes ejecutados registrados.
+                      </td>
+                    </tr>
+                  ) : (
+                    lotesList.map((lote) => (
+                      <tr key={lote.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">#{lote.id}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            {lote.source}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-bold">{lote.total_count}</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">{lote.success_count}</td>
+                        <td className="py-3 px-4 text-rose-600 font-bold">{lote.error_count + lote.not_found_count}</td>
+                        <td className="py-3 px-4 font-mono text-slate-500">
+                          {lote.duration_seconds ? `${lote.duration_seconds}s` : 'En proceso'}
+                        </td>
+                        <td className="py-3 px-4 text-slate-500">
+                          {lote.started_at ? new Date(lote.started_at).toLocaleString('es-CO') : 'N/A'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            lote.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            lote.status === 'RUNNING' ? 'bg-blue-50 text-blue-700 border border-blue-200 animate-pulse' :
+                            'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {lote.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDescargarLoteCSV(lote.id)}
+                            className="p-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 rounded-lg transition-all inline-flex items-center gap-1 text-[11px] font-semibold border border-slate-200"
+                            title="Descargar CSV del Lote"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            CSV
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
