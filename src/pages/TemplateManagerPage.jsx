@@ -178,6 +178,12 @@ const TemplateManagerPage = () => {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            to="/obligation-urls"
+            className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-md hover:bg-blue-100 font-medium transition-colors text-sm shadow-sm"
+          >
+            <span>🔗</span> Tokens / URLs de Pago
+          </Link>
+          <Link
             to="/condonation-policies"
             className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-100 font-medium transition-colors text-sm shadow-sm"
           >

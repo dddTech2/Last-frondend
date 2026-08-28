@@ -1,17 +1,17 @@
-// src/routes/AppRouter.jsx
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import HomePage from '../pages/HomePage';
 import LoginPage from '../pages/LoginPage';
+import HomePage from '../pages/HomePage';
 import CampaignsPage from '../pages/CampaignsPage';
 import CreateCampaignPage from '../pages/CreateCampaignPage';
 import TemplateManagerPage from '../pages/TemplateManagerPage';
 import TemplateEditorPage from '../pages/TemplateEditorPage';
 import TemplateApprovalPage from '../pages/TemplateApprovalPage';
 import LegalCommunicationsApprovalPage from '../pages/LegalCommunicationsApprovalPage';
+import CommunicationBuilderPage from '../pages/CommunicationBuilderPage';
+import ComunicacionesPage from '../pages/ComunicacionesPage';
 import WhatsAppChatPage from '../pages/WhatsAppChatPage';
 import AdministracionPersonal from '../pages/AdministracionPersonal';
-import ComunicacionesPage from '../pages/ComunicacionesPage';
-import CommunicationBuilderPage from '../pages/CommunicationBuilderPage';
 import DemographicsPage from '../pages/DemographicsPage';
 import ClientSearchPage from '../pages/ClientSearchPage';
 import Vision360Page from '../pages/Vision360Page';
@@ -31,6 +31,7 @@ import TicketFormPage from '../pages/tickets/TicketFormPage';
 import TicketDetailPage from '../pages/tickets/TicketDetailPage';
 import EvolutionInstancesPage from '../pages/EvolutionInstancesPage';
 import CondonationPoliciesPage from '../pages/CondonationPoliciesPage';
+import ObligationUrlsPage from '../pages/ObligationUrlsPage';
 import PermissionGuard from '../components/PermissionGuard';
 
 export const AppRouter = () => {
@@ -112,6 +113,23 @@ export const AppRouter = () => {
         <Route path="templates/policies" element={
           <PermissionGuard requiredPermissions={["templates:read", "templates:create", "communications:read", "communications:generate", "roles:manage"]}>
             <CondonationPoliciesPage />
+          </PermissionGuard>
+        } />
+
+        {/* Tokens y Enlaces de Pago de Obligaciones */}
+        <Route path="obligation-urls" element={
+          <PermissionGuard requiredPermissions={["campaigns:create", "communications:generate", "users:read"]}>
+            <ObligationUrlsPage />
+          </PermissionGuard>
+        } />
+        <Route path="tokens" element={
+          <PermissionGuard requiredPermissions={["campaigns:create", "communications:generate", "users:read"]}>
+            <ObligationUrlsPage />
+          </PermissionGuard>
+        } />
+        <Route path="templates/tokens" element={
+          <PermissionGuard requiredPermissions={["campaigns:create", "communications:generate", "users:read"]}>
+            <ObligationUrlsPage />
           </PermissionGuard>
         } />
 
