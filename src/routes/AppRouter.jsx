@@ -30,6 +30,7 @@ import TicketsListPage from '../pages/tickets/TicketsListPage';
 import TicketFormPage from '../pages/tickets/TicketFormPage';
 import TicketDetailPage from '../pages/tickets/TicketDetailPage';
 import EvolutionInstancesPage from '../pages/EvolutionInstancesPage';
+import CondonationPoliciesPage from '../pages/CondonationPoliciesPage';
 import PermissionGuard from '../components/PermissionGuard';
 
 export const AppRouter = () => {
@@ -99,6 +100,18 @@ export const AppRouter = () => {
         <Route path="templates/approval" element={
           <PermissionGuard requiredPermissions={["templates:approve_legal", "templates:approve_ops"]}>
             <TemplateApprovalPage />
+          </PermissionGuard>
+        } />
+
+        {/* Políticas de Condonación */}
+        <Route path="condonation-policies" element={
+          <PermissionGuard requiredPermissions={["templates:read", "templates:create", "communications:read", "communications:generate", "roles:manage"]}>
+            <CondonationPoliciesPage />
+          </PermissionGuard>
+        } />
+        <Route path="templates/policies" element={
+          <PermissionGuard requiredPermissions={["templates:read", "templates:create", "communications:read", "communications:generate", "roles:manage"]}>
+            <CondonationPoliciesPage />
           </PermissionGuard>
         } />
 

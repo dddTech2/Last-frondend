@@ -176,9 +176,17 @@ const TemplateManagerPage = () => {
           <h1 className="text-3xl font-bold text-gray-800">Gestión de Plantillas</h1>
           <p className="text-gray-500">Administra plantillas de mensajes para todos los canales</p>
         </div>
-        <Link to="/campaigns" className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100">
-          Volver a Campañas
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/condonation-policies"
+            className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-100 font-medium transition-colors text-sm shadow-sm"
+          >
+            <span>⚖️</span> Políticas de Condonación
+          </Link>
+          <Link to="/campaigns" className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 text-sm">
+            Volver a Campañas
+          </Link>
+        </div>
       </div>
 
       <div className="bg-gray-100 p-1 rounded-xl flex gap-2 mb-6">
