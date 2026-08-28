@@ -1,11 +1,5 @@
 // src/services/obligationUrlService.js
-import { apiRequest } from './api';
-
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://backend-renovar-475190189080.us-central1.run.app/api/v1';
-
-const getAuthToken = () => {
-  return localStorage.getItem('authToken');
-};
+import { apiRequest, apiRequestWithFile } from './api';
 
 /**
  * Servicio para gestión y carga por lotes (batches) de Tokens y Enlaces de Pago de Obligaciones.
@@ -15,27 +9,7 @@ export const obligationUrlService = {
    * Carga masiva por lotes (batches) de archivo CSV, TSV, TXT o Excel.
    */
   async uploadFile(file) {
-    const token = getAuthToken();
-    const headers = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${BASE_URL}/obligation-urls/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Error al procesar el archivo' }));
-      throw new Error(errorData.detail || errorData.message || 'Error en la carga masiva');
-    }
-
-    return await response.json();
+    return await apiRequestWithFile('/obligation-urls/upload', 'POST', file);
   },
 
   /**

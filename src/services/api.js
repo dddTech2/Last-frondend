@@ -97,7 +97,7 @@ export const apiRequest = async (endpoint, method = 'GET', body = null) => {
   }
 };
 
-const apiRequestWithFile = async (endpoint, method = 'POST', file) => {
+export const apiRequestWithFile = async (endpoint, method = 'POST', file) => {
   const token = getAuthToken();
   const headers = {};
 
