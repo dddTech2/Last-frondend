@@ -372,7 +372,7 @@ export default function ObligationUrlsPage() {
             <Zap className="w-3.5 h-3.5 text-blue-400" />
             Motor de Ingesta Masiva por Lotes (Batch Engine)
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Tokens y URLs de Pago</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">URLs y Tokens de Gestión</h1>
           <p className="text-sm text-blue-200/90 max-w-2xl leading-relaxed">
             Administra y carga masivamente los enlaces seguros de pago de las obligaciones para su reemplazo dinámico 
             en campañas y plantillas mediante la variable <code className="bg-blue-950/60 px-2 py-0.5 rounded text-yellow-300 font-mono text-xs border border-blue-800">{'{{link_pago_seguro}}'}</code>.
@@ -653,7 +653,7 @@ export default function ObligationUrlsPage() {
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <LinkIcon className="w-5 h-5 text-indigo-600" />
-              Explorador de Tokens y URLs
+              Explorador de URLs y Tokens de Gestión
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Consulta, copia o ajusta individualmente los enlaces asignados a cada obligación
@@ -697,7 +697,7 @@ export default function ObligationUrlsPage() {
               <tr>
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Código Obligación</th>
-                <th className="py-3 px-4">Token / URL de Pago</th>
+                <th className="py-3 px-4">URL / Token de Gestión</th>
                 <th className="py-3 px-4 text-center">Enlace Directo</th>
                 <th className="py-3 px-4 text-right">Acciones</th>
               </tr>
@@ -820,7 +820,7 @@ export default function ObligationUrlsPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Plus className="w-4 h-4 text-blue-600" />
-                Registrar Token Manualmente
+                Registrar URL de Gestión Manualmente
               </h3>
               <button 
                 onClick={() => setIsManualModalOpen(false)}
@@ -847,12 +847,12 @@ export default function ObligationUrlsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Token o URL de Pago <span className="text-rose-500">*</span>
+                  URL o Token de Gestión <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="https://pago.renovar.com/tok/xyz123 o xyz123"
+                  placeholder="https://gestion.renovar.com/c/xyz123 o enlace del cliente"
                   value={manualForm.url}
                   onChange={(e) => setManualForm({ ...manualForm, url: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 font-mono"
@@ -872,7 +872,7 @@ export default function ObligationUrlsPage() {
                   disabled={savingManual}
                   className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  {savingManual ? 'Guardando...' : 'Guardar Token'}
+                  {savingManual ? 'Guardando...' : 'Guardar URL de Gestión'}
                 </button>
               </div>
             </form>
