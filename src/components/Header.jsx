@@ -32,6 +32,11 @@ const SettingsIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
+const LinkNavIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+  </svg>
+);
 const RagNavIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
@@ -80,6 +85,7 @@ const Header = ({ onOpenChangePassword }) => {
     { to: "/clients", text: "Clientes", icon: <ClientsIcon />, permission: "clients:read" },
     { to: "/localizacion", text: "Localización", icon: <LocationNavIcon />, permissions: ["localizacion:read", "localizacion:manage"] },
     { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, permission: "campaigns:read" },
+    { to: "/obligation-urls", text: "URLs Gestión", icon: <LinkNavIcon />, permissions: ["campaigns:read", "campaigns:create", "communications:read", "templates:read", "users:read"] },
     { to: "/comunicaciones", text: "Comunicaciones", icon: <CommunicationsNavIcon />, permissions: ["communications:read", "communications:generate"] },
     {
       to: (hasPermission("templates:approve_legal") || hasPermission("templates:approve_ops")) ? "/templates/approval" : "/templates",
