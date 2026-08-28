@@ -6,10 +6,17 @@ import { apiRequest, apiRequestWithFile } from './api';
  */
 export const obligationUrlService = {
   /**
-   * Carga masiva por lotes (batches) de archivo CSV, TSV, TXT o Excel.
+   * Carga masiva directa por archivo CSV, TSV, TXT o Excel (para archivos <= 25MB).
    */
   async uploadFile(file) {
     return await apiRequestWithFile('/obligation-urls/upload', 'POST', file);
+  },
+
+  /**
+   * Ingesta un lote JSON de registros {obligacion, url} (para chunking cliente sin límite de tamaño).
+   */
+  async ingestBatch(items) {
+    return await apiRequest('/obligation-urls/batch', 'POST', { items });
   },
 
   /**
