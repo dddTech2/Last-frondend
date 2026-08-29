@@ -5,30 +5,22 @@ import logo from '../assets/logos renovar_Mesa vertic_fondoblanco.svg';
 import NotificationIcon from './NotificationIcon';
 
 // --- Iconos para el menú de usuario ---
-const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
-const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
-const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
+const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
+const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 
-// --- Iconos para la navegación ---
+// --- Iconos de Navegación Directa ---
 const DashboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const ClientsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const LocationNavIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-);
 const CampaignsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
-const ReportsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const TemplatesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 const CommunicationsNavIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
+const LegalApprovalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5-2h-3V4a1 1 0 00-1-1H8a1 1 0 00-1 1v4H4a1 1 0 00-1 1v11a1 1 0 001 1h16a1 1 0 001-1V11a1 1 0 00-1-1z" /></svg>;
+const ReportsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
 const TicketsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>;
 
-// Iconos para menús desplegables
-const WhatsAppMenuIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-  </svg>
-);
+// --- Icono de Administración y Dropdown ---
 const AdminMenuIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -42,16 +34,14 @@ const ChevronDownIcon = () => (
 );
 
 const Header = ({ onOpenChangePassword }) => {
-  const { user, logout, hasPermission, hasAnyPermission, isAdmin } = useAuth();
+  const { user, logout, hasPermission, hasAnyPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isWppMenuOpen, setIsWppMenuOpen] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
 
   const userMenuRef = useRef(null);
-  const wppMenuRef = useRef(null);
   const adminMenuRef = useRef(null);
 
   const handleLogout = () => {
@@ -64,9 +54,6 @@ const Header = ({ onOpenChangePassword }) => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setIsUserMenuOpen(false);
-      }
-      if (wppMenuRef.current && !wppMenuRef.current.contains(event.target)) {
-        setIsWppMenuOpen(false);
       }
       if (adminMenuRef.current && !adminMenuRef.current.contains(event.target)) {
         setIsAdminMenuOpen(false);
@@ -81,7 +68,6 @@ const Header = ({ onOpenChangePassword }) => {
   // Cerrar menús al cambiar de ruta
   useEffect(() => {
     setIsUserMenuOpen(false);
-    setIsWppMenuOpen(false);
     setIsAdminMenuOpen(false);
   }, [location.pathname]);
 
@@ -95,59 +81,32 @@ const Header = ({ onOpenChangePassword }) => {
   };
 
   const navLinkClasses = "flex items-center text-gray-600 hover:text-blue-600 transition-all duration-200 text-sm font-medium py-1 px-2 rounded-lg hover:bg-gray-50";
-  const activeLinkClasses = "text-blue-600 font-semibold bg-blue-50/60";
+  const activeLinkClasses = "text-blue-600 font-semibold bg-blue-50/70";
 
   // 1. Enlaces Directos del Menú Principal
   const directNavLinks = [
     { to: "/", text: "Dashboard", icon: <DashboardIcon /> },
     { to: "/clients", text: "Clientes", icon: <ClientsIcon />, permission: "clients:read" },
-    { to: "/localizacion", text: "Localización", icon: <LocationNavIcon />, permissions: ["localizacion:read", "localizacion:manage"] },
     { to: "/campaigns", text: "Campañas", icon: <CampaignsIcon />, permission: "campaigns:read" },
+    {
+      to: (hasPermission("templates:approve_legal") || hasPermission("templates:approve_ops")) ? "/templates/approval" : "/templates",
+      text: "Plantillas",
+      icon: <TemplatesIcon />,
+      permissions: ["templates:read", "templates:create", "templates:approve_legal", "templates:approve_ops"]
+    },
     { to: "/comunicaciones", text: "Comunicaciones", icon: <CommunicationsNavIcon />, permissions: ["communications:read", "communications:generate"] },
+    {
+      to: "/communications/legal-approval",
+      text: "Aprobación Jurídica",
+      icon: <LegalApprovalIcon />,
+      permission: "communications:approve_legal"
+    },
     { to: "/reports", text: "Reportes", icon: <ReportsIcon />, permission: "reports:read" },
+    { to: "/chat", text: "Chat Unificado", icon: <ChatIcon />, permission: "whatsapp:chat" },
     { to: "/tickets", text: "Soporte", icon: <TicketsIcon />, permissions: ["tickets:read", "tickets:create"] },
   ];
 
-  // 2. Submenú "WhatsApp"
-  const wppSubmenuLinks = [
-    {
-      to: "/chat",
-      title: "Chat Unificado",
-      desc: "Conversaciones en vivo con clientes",
-      icon: "💬",
-      permission: "whatsapp:chat"
-    },
-    {
-      to: "/templates",
-      title: "Plantillas de WhatsApp",
-      desc: "Gestión de plantillas y mensajes",
-      icon: "📝",
-      permissions: ["templates:read", "templates:create"]
-    },
-    {
-      to: "/whatsapp/evolution",
-      title: "Reglas e Instancias (Evolution)",
-      desc: "Configuración y estados de WhatsApp",
-      icon: "⚡",
-      permission: "whatsapp:instances:manage"
-    },
-    {
-      to: "/templates/approval",
-      title: "Aprobación de Plantillas",
-      desc: "Revisión jurídica y operativa",
-      icon: "⚖️",
-      permissions: ["templates:approve_legal", "templates:approve_ops"]
-    },
-    {
-      to: "/reports/whatsapp-dashboard",
-      title: "Métricas WhatsApp (BI)",
-      desc: "Reporte de mensajes y entregas",
-      icon: "📊",
-      permission: "reports:whatsapp:read"
-    },
-  ];
-
-  // 3. Submenú "Administración"
+  // 2. Submenú "Administración"
   const adminSubmenuLinks = [
     {
       to: "/obligation-urls",
@@ -155,6 +114,20 @@ const Header = ({ onOpenChangePassword }) => {
       desc: "Ingesta masiva y links de clientes",
       icon: "🔗",
       permissions: ["campaigns:read", "campaigns:create", "communications:read", "templates:read", "users:read"]
+    },
+    {
+      to: "/whatsapp/rules",
+      title: "Reglas de WhatsApp (Límites)",
+      desc: "Periodos de gracia, reintentos y elegibilidad",
+      icon: "⚡",
+      permissions: ["roles:manage", "users:read", "campaigns:create", "templates:create"]
+    },
+    {
+      to: "/whatsapp/evolution",
+      title: "Instancias WhatsApp (Evolution)",
+      desc: "Estado de conexión y números",
+      icon: "📱",
+      permission: "whatsapp:instances:manage"
     },
     {
       to: "/condonation-policies",
@@ -173,7 +146,7 @@ const Header = ({ onOpenChangePassword }) => {
     {
       to: "/administracion-personal",
       title: "Administración de Personal",
-      desc: "Gestión de empleados y asesores",
+      desc: "Gestión de empleados y coordinadores",
       icon: "💼",
       permissions: ["employees:read", "employees:write"]
     },
@@ -196,10 +169,8 @@ const Header = ({ onOpenChangePassword }) => {
   };
 
   const accessibleDirectLinks = filterAccessible(directNavLinks);
-  const accessibleWppLinks = filterAccessible(wppSubmenuLinks);
   const accessibleAdminLinks = filterAccessible(adminSubmenuLinks);
 
-  const isWppActive = accessibleWppLinks.some(l => location.pathname.startsWith(l.to));
   const isAdminActive = accessibleAdminLinks.some(l => location.pathname.startsWith(l.to));
 
   return (
@@ -225,65 +196,12 @@ const Header = ({ onOpenChangePassword }) => {
           </NavLink>
         ))}
 
-        {/* Menú Desplegable WhatsApp */}
-        {accessibleWppLinks.length > 0 && (
-          <div className="relative" ref={wppMenuRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setIsWppMenuOpen(!isWppMenuOpen);
-                setIsAdminMenuOpen(false);
-              }}
-              className={`flex items-center text-sm font-medium py-1 px-2.5 rounded-lg transition-all cursor-pointer ${
-                isWppActive || isWppMenuOpen ? 'text-emerald-700 bg-emerald-50 font-semibold' : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-50'
-              }`}
-            >
-              <WhatsAppMenuIcon />
-              <span className="ml-1.5">WhatsApp</span>
-              <span className={isWppMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'}>
-                <ChevronDownIcon />
-              </span>
-            </button>
-
-            {isWppMenuOpen && (
-              <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
-                <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800/70 border-b border-gray-100 mb-1">
-                  Módulo WhatsApp
-                </div>
-                <div className="space-y-1">
-                  {accessibleWppLinks.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => setIsWppMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-start gap-2.5 p-2 rounded-xl transition-all ${
-                          isActive ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'hover:bg-gray-50 text-gray-700'
-                        }`
-                      }
-                    >
-                      <span className="text-lg mt-0.5">{item.icon}</span>
-                      <div>
-                        <div className="text-xs font-semibold">{item.title}</div>
-                        <div className="text-[10px] text-gray-500 font-normal">{item.desc}</div>
-                      </div>
-                    </NavLink>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Menú Desplegable Administración */}
         {accessibleAdminLinks.length > 0 && (
           <div className="relative" ref={adminMenuRef}>
             <button
               type="button"
-              onClick={() => {
-                setIsAdminMenuOpen(!isAdminMenuOpen);
-                setIsWppMenuOpen(false);
-              }}
+              onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
               className={`flex items-center text-sm font-medium py-1 px-2.5 rounded-lg transition-all cursor-pointer ${
                 isAdminActive || isAdminMenuOpen ? 'text-indigo-700 bg-indigo-50 font-semibold' : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
               }`}

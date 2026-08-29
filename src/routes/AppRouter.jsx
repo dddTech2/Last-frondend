@@ -1,3 +1,4 @@
+import WhatsAppRulesPage from '../pages/WhatsAppRulesPage';
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import LoginPage from '../pages/LoginPage';
@@ -212,6 +213,19 @@ export const AppRouter = () => {
         <Route path="rag-admin" element={
           <PermissionGuard requiredPermission="rag:manage">
             <RagManagementPage />
+          </PermissionGuard>
+        } />
+
+        
+        {/* Reglas de WhatsApp y Configuración del Sistema */}
+        <Route path="whatsapp/rules" element={
+          <PermissionGuard requiredPermissions={["roles:manage", "users:read", "campaigns:create", "templates:create"]}>
+            <WhatsAppRulesPage />
+          </PermissionGuard>
+        } />
+        <Route path="system-configurations" element={
+          <PermissionGuard requiredPermissions={["roles:manage", "users:read", "campaigns:create", "templates:create"]}>
+            <WhatsAppRulesPage />
           </PermissionGuard>
         } />
 
