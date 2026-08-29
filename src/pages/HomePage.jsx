@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import WelcomeHeader from '../components/WelcomeHeader';
-import QuickAccessCard from '../components/QuickAccessCard';
 import { useAuth } from '../context/AuthContext';
+import systemConfigurationService from '../services/systemConfigurationService';
+import { AlertTriangle, Info, AlertCircle, CheckCircle2, X } from 'lucide-react';
 
-// --- Iconos para las tarjetas de acceso rápido ---
-const ManageClientsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const BulkCampaignIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
-const WorkflowIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
-const UserManagementIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
-const ReportsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const WelcomeHeader = ({ name }) => (
+  <div className="mb-8">
+    <h1 className="text-3xl font-bold text-gray-800">Bienvenido de vuelta, {name}</h1>
+    <p className="text-gray-500">Aquí tienes un resumen de tu actividad y herramientas principales</p>
+  </div>
+);
+
+const QuickAccessCard = ({ title, description, icon }) => (
+  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col justify-between">
+    <div>
+      <div className="mb-4">{icon}</div>
+      <h3 className="text-base font-bold text-gray-800 mb-2">{title}</h3>
+      <p className="text-gray-500 text-xs leading-relaxed">{description}</p>
+    </div>
+  </div>
+);
+
+// --- Iconos para los accesos rápidos ---
+const ManageClientsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
+const BulkCampaignIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>;
+const UserManagementIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const ReportsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const WorkflowIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>;
 const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
 const TemplateApprovalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const BriefcaseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
@@ -28,14 +45,23 @@ const RagIcon = () => (
   </svg>
 );
 
-
 const HomePage = () => {
-  const { user, hasPermission, hasAnyPermission, isAdmin } = useAuth();
-  const resolvedRoles = Array.isArray(user?.decoded?.roles)
-    ? user.decoded.roles
-    : user?.decoded?.role
-      ? [user.decoded.role]
-      : [];
+  const { user, hasPermission, hasAnyPermission } = useAuth();
+  const [banner, setBanner] = useState(null);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    loadBanner();
+  }, []);
+
+  const loadBanner = async () => {
+    try {
+      const data = await systemConfigurationService.getPublicBanner();
+      setBanner(data);
+    } catch (err) {
+      console.error('Error fetching system banner:', err);
+    }
+  };
 
   // Definimos todos los accesos rápidos posibles filtrados por permisos
   const allQuickAccessItems = [
@@ -63,19 +89,64 @@ const HomePage = () => {
     return false;
   });
 
+  const getBannerStyles = (type) => {
+    switch (type) {
+      case 'danger':
+        return {
+          container: 'bg-rose-50 border-rose-200 text-rose-900',
+          icon: <AlertCircle className="h-5 w-5 text-rose-600 flex-shrink-0" />,
+          title: 'text-rose-950 font-bold',
+        };
+      case 'info':
+        return {
+          container: 'bg-blue-50 border-blue-200 text-blue-900',
+          icon: <Info className="h-5 w-5 text-blue-600 flex-shrink-0" />,
+          title: 'text-blue-950 font-bold',
+        };
+      case 'success':
+        return {
+          container: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+          icon: <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />,
+          title: 'text-emerald-950 font-bold',
+        };
+      case 'warning':
+      default:
+        return {
+          container: 'bg-amber-50 border-amber-200 text-amber-900',
+          icon: <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />,
+          title: 'text-amber-950 font-bold',
+        };
+    }
+  };
+
+  const bannerStyles = banner ? getBannerStyles(banner.type) : null;
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <WelcomeHeader name={user ? user.name : 'Invitado'} />
+      <WelcomeHeader name={user && user.decoded ? user.decoded.full_name : 'Usuario'} />
 
-      {/* Banner de Mantenimiento de WhatsApp */}
-      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 flex items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <div>
-          <span className="font-semibold">Atención:</span> El servicio de WhatsApp se encuentra actualmente en mantenimiento. Por favor, evite utilizar este módulo hasta que se restablezca el servicio.
+      {/* Banner Dinámico del Sistema */}
+      {banner && banner.enabled && !isBannerDismissed && (
+        <div className={`mb-6 p-4 border rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200 ${bannerStyles.container}`}>
+          <div className="flex items-center gap-3">
+            {bannerStyles.icon}
+            <div className="text-sm">
+              <span className={bannerStyles.title}>{banner.title}:</span>{' '}
+              <span className="text-gray-800 font-medium">{banner.text}</span>
+            </div>
+          </div>
+
+          {banner.dismissible && (
+            <button
+              onClick={() => setIsBannerDismissed(true)}
+              className="p-1 hover:bg-black/5 rounded-lg transition-colors cursor-pointer text-gray-500 hover:text-gray-800"
+              title="Cerrar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-      </div>
+      )}
 
       <div>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Acceso Rápido</h2>

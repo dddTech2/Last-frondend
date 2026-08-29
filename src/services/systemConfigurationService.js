@@ -6,6 +6,13 @@ import { apiRequest } from './api';
  */
 export const systemConfigurationService = {
   /**
+   * Obtiene el banner público para cualquier usuario autenticado en el Dashboard.
+   */
+  async getPublicBanner() {
+    return await apiRequest('/system-configurations/public-banner', 'GET');
+  },
+
+  /**
    * Obtiene todas las configuraciones del sistema.
    */
   async getAll() {
@@ -46,6 +53,19 @@ export const systemConfigurationService = {
       value: String(value),
       description,
     });
+  },
+
+  /**
+   * Guarda todos los parámetros del banner del sistema de una sola vez.
+   */
+  async saveBannerConfig({ enabled, title, text, type, dismissible }) {
+    return await Promise.all([
+      this.upsert('SYSTEM_BANNER_ENABLED', enabled ? 'true' : 'false', 'Activar o desactivar el banner en el Dashboard', 'boolean'),
+      this.upsert('SYSTEM_BANNER_TITLE', title || 'Atención', 'Título del banner de aviso', 'string'),
+      this.upsert('SYSTEM_BANNER_TEXT', text || '', 'Mensaje descriptivo del banner', 'string'),
+      this.upsert('SYSTEM_BANNER_TYPE', type || 'warning', 'Estilo visual del banner (warning, info, danger, success)', 'string'),
+      this.upsert('SYSTEM_BANNER_DISMISSIBLE', dismissible ? 'true' : 'false', 'Permitir cerrar el banner temporalmente', 'boolean'),
+    ]);
   },
 
   /**
