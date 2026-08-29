@@ -374,8 +374,7 @@ export default function ObligationUrlsPage() {
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight">URLs y Tokens de Gestión</h1>
           <p className="text-sm text-blue-200/90 max-w-2xl leading-relaxed">
-            Administra y carga masivamente los enlaces seguros de pago de las obligaciones para su reemplazo dinámico 
-            en campañas y plantillas mediante la variable <code className="bg-blue-950/60 px-2 py-0.5 rounded text-yellow-300 font-mono text-xs border border-blue-800">{'{{link_pago_seguro}}'}</code>.
+            Administra y carga masivamente los enlaces personalizados de gestión de los clientes para su reemplazo dinámico en campañas, plantillas y comunicaciones.
           </p>
         </div>
 
@@ -429,7 +428,7 @@ export default function ObligationUrlsPage() {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="font-semibold text-emerald-700">Listos</span> para reemplazar en tag {'{{link_pago_seguro}}'}
+            <span className="font-semibold text-emerald-700">Listos</span> para gestión directa y seguimiento del cliente
           </div>
         </div>
 
