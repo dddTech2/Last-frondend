@@ -80,7 +80,7 @@ const Header = ({ onOpenChangePassword }) => {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const navLinkClasses = "flex items-center text-gray-600 hover:text-blue-600 transition-all duration-200 text-sm font-medium py-1 px-2 rounded-lg hover:bg-gray-50";
+  const navLinkClasses = "flex items-center text-gray-600 hover:text-blue-600 transition-all duration-300 ease-in-out group text-sm font-medium py-1.5 px-2.5 rounded-xl hover:bg-gray-50";
   const activeLinkClasses = "text-blue-600 font-semibold bg-blue-50/70";
 
   // 1. Enlaces Directos del Menú Principal
@@ -113,7 +113,7 @@ const Header = ({ onOpenChangePassword }) => {
       title: "URLs y Tokens de Gestión",
       desc: "Ingesta masiva y links de clientes",
       icon: "🔗",
-      permissions: ["campaigns:read", "campaigns:create", "communications:read", "templates:read", "users:read"]
+      permissions: ["campaigns:create", "roles:manage", "users:read"]
     },
     {
       to: "/whatsapp/rules",
@@ -134,7 +134,7 @@ const Header = ({ onOpenChangePassword }) => {
       title: "Políticas de Condonación",
       desc: "Reglas de descuentos y acuerdos",
       icon: "⚖️",
-      permissions: ["templates:read", "templates:create", "communications:read", "roles:manage"]
+      permissions: ["templates:create", "campaigns:create", "roles:manage"]
     },
     {
       to: "/users",
@@ -192,7 +192,9 @@ const Header = ({ onOpenChangePassword }) => {
             title={link.text}
           >
             {link.icon}
-            <span className="ml-1.5">{link.text}</span>
+            <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-1.5 transition-all duration-300 ease-in-out whitespace-nowrap">
+              {link.text}
+            </span>
           </NavLink>
         ))}
 

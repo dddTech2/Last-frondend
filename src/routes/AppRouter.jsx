@@ -107,29 +107,29 @@ export const AppRouter = () => {
 
         {/* Políticas de Condonación */}
         <Route path="condonation-policies" element={
-          <PermissionGuard requiredPermissions={["templates:read", "templates:create", "communications:read", "communications:generate", "roles:manage"]}>
+          <PermissionGuard requiredPermissions={["templates:create", "campaigns:create", "roles:manage"]}>
             <CondonationPoliciesPage />
           </PermissionGuard>
         } />
         <Route path="templates/policies" element={
-          <PermissionGuard requiredPermissions={["templates:read", "templates:create", "communications:read", "communications:generate", "roles:manage"]}>
+          <PermissionGuard requiredPermissions={["templates:create", "campaigns:create", "roles:manage"]}>
             <CondonationPoliciesPage />
           </PermissionGuard>
         } />
 
         {/* Tokens y Enlaces de Pago de Obligaciones */}
         <Route path="obligation-urls" element={
-          <PermissionGuard requiredPermissions={["campaigns:create", "communications:generate", "users:read"]}>
+          <PermissionGuard requiredPermissions={["campaigns:create", "roles:manage", "users:read"]}>
             <ObligationUrlsPage />
           </PermissionGuard>
         } />
         <Route path="tokens" element={
-          <PermissionGuard requiredPermissions={["campaigns:create", "communications:generate", "users:read"]}>
+          <PermissionGuard requiredPermissions={["campaigns:create", "roles:manage", "users:read"]}>
             <ObligationUrlsPage />
           </PermissionGuard>
         } />
         <Route path="templates/tokens" element={
-          <PermissionGuard requiredPermissions={["campaigns:create", "communications:generate", "users:read"]}>
+          <PermissionGuard requiredPermissions={["campaigns:create", "roles:manage", "users:read"]}>
             <ObligationUrlsPage />
           </PermissionGuard>
         } />

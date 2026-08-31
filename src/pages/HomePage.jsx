@@ -2,22 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import systemConfigurationService from '../services/systemConfigurationService';
+import QuickAccessCard from '../components/QuickAccessCard';
 import { AlertTriangle, Info, AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 const WelcomeHeader = ({ name }) => (
   <div className="mb-8">
     <h1 className="text-3xl font-bold text-gray-800">Bienvenido de vuelta, {name}</h1>
     <p className="text-gray-500">Aquí tienes un resumen de tu actividad y herramientas principales</p>
-  </div>
-);
-
-const QuickAccessCard = ({ title, description, icon }) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col justify-between">
-    <div>
-      <div className="mb-4">{icon}</div>
-      <h3 className="text-base font-bold text-gray-800 mb-2">{title}</h3>
-      <p className="text-gray-500 text-xs leading-relaxed">{description}</p>
-    </div>
   </div>
 );
 
