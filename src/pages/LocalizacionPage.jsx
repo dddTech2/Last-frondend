@@ -40,7 +40,6 @@ import { toast } from 'sonner';
 import localizacionService from '../services/localizacionService';
 
 const AVAILABLE_SOURCES = [
-  { id: 'ADRES', label: 'ADRES BDUA', category: 'Salud', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   { id: 'EMSANAR', label: 'Emsanar EPS', category: 'EPS', color: 'bg-teal-50 text-teal-700 border-teal-200' },
   { id: 'SALUD_TOTAL', label: 'Salud Total EPS', category: 'EPS', color: 'bg-cyan-50 text-cyan-700 border-cyan-200', note: 'Req. Nacimiento' },
   { id: 'VIVA1A', label: 'Viva 1A IPS', category: 'EPS', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
@@ -49,8 +48,6 @@ const AVAILABLE_SOURCES = [
   { id: 'SENA', label: 'SENA (APE)', category: 'Laboral', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   { id: 'SERVICIO_EMPLEO', label: 'Servicio de Empleo', category: 'Laboral', color: 'bg-amber-50 text-amber-700 border-amber-200' },
   { id: 'MI_VACUNA', label: 'Mi Vacuna SISPRO', category: 'Salud', color: 'bg-purple-50 text-purple-700 border-purple-200', note: 'Req. Expedición' },
-  { id: 'RUAF', label: 'RUAF SISPRO', category: 'Salud', color: 'bg-pink-50 text-pink-700 border-pink-200', note: 'Req. Expedición' },
-  { id: 'RUES', label: 'RUES Cámaras', category: 'Empresarial', color: 'bg-slate-50 text-slate-700 border-slate-200' },
   { id: 'SIMIT', label: 'SIMIT Multas', category: 'Vehículos', color: 'bg-rose-50 text-rose-700 border-rose-200' },
 ];
 
@@ -446,7 +443,7 @@ export default function LocalizacionPage() {
   const [historialList, setHistorialList] = useState([]);
   const [historialTotal, setHistorialTotal] = useState(0);
   const [historialFilterFuente, setHistorialFilterFuente] = useState('');
-  const [historialFilterStatus, setHistorialFilterStatus] = useState('SUCCESS');
+  const [historialFilterStatus, setHistorialFilterStatus] = useState('');
   const [historialInputCedula, setHistorialInputCedula] = useState('');
   const [historialSearchCedula, setHistorialSearchCedula] = useState('');
   const [historialPage, setHistorialPage] = useState(1);
@@ -552,6 +549,23 @@ export default function LocalizacionPage() {
       toast.success('Archivo CSV descargado con éxito.', { id: 'csv-dl' });
     } catch (err) {
       toast.error(err.message || 'Error al descargar CSV del lote.', { id: 'csv-dl' });
+    }
+  };
+
+  const [isCleaningLotes, setIsCleaningLotes] = useState(false);
+
+  const handleCleanupLotes = async () => {
+    if (!window.confirm('¿Desea sincronizar y finalizar todos los lotes antiguos atascados en progreso?')) return;
+    setIsCleaningLotes(true);
+    try {
+      toast.loading('Sincronizando y finalizando lotes huérfanos...', { id: 'clean-lotes' });
+      const res = await localizacionService.cleanupLotes();
+      toast.success(res.message || 'Lotes regularizados correctamente.', { id: 'clean-lotes' });
+      await loadLotes(1, lotesLimit);
+    } catch (err) {
+      toast.error(err.message || 'Error al limpiar lotes huérfanos.', { id: 'clean-lotes' });
+    } finally {
+      setIsCleaningLotes(false);
     }
   };
 
@@ -689,6 +703,68 @@ export default function LocalizacionPage() {
 
   const parsedCedulas = parseBatchCedulas();
 
+  const handleCsvFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const textContent = event.target.result;
+        if (!textContent || typeof textContent !== 'string') {
+          toast.error('El archivo está vacío o no es legible.');
+          return;
+        }
+
+        const lines = textContent.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) {
+          toast.error('No se encontraron líneas en el archivo.');
+          return;
+        }
+
+        let foundCedulas = [];
+        const firstLine = lines[0].toLowerCase();
+        const delimiter = firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : ',';
+        const headers = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+
+        let cedulaColIndex = headers.findIndex(h =>
+          h.includes('cedula') || h.includes('cédula') || h.includes('documento') ||
+          h.includes('identificacion') || h.includes('identificación') || h.includes('nit') || h.includes('cc')
+        );
+
+        if (cedulaColIndex !== -1 && lines.length > 1) {
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(delimiter);
+            if (cols[cedulaColIndex]) {
+              const val = cols[cedulaColIndex].trim().replace(/^["']|["']$/g, '');
+              const cleanVal = val.replace(/\D/g, '');
+              if (cleanVal.length >= 4) {
+                foundCedulas.push(cleanVal);
+              }
+            }
+          }
+        } else {
+          const numbers = textContent.split(/[\n,;\t\r "']+/).map(v => v.replace(/\D/g, '')).filter(v => v.length >= 4);
+          foundCedulas = numbers;
+        }
+
+        const uniqueCedulas = Array.from(new Set(foundCedulas));
+        if (uniqueCedulas.length === 0) {
+          toast.error('No se encontraron números de cédula válidos en el archivo.');
+          return;
+        }
+
+        setBatchInput(uniqueCedulas.join('\n'));
+        toast.success(`Archivo "${file.name}" cargado: ${uniqueCedulas.length} cédulas detectadas.`);
+      } catch (err) {
+        console.error('Error procesando archivo CSV:', err);
+        toast.error('Error al procesar el archivo CSV.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleEncolarLote = async () => {
     if (parsedCedulas.length === 0) {
       toast.error('Ingrese al menos una cédula para procesar.');
@@ -793,11 +869,11 @@ export default function LocalizacionPage() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Conexión Directa (Sin Tor)
+              Conexión Directa
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
               <Database className="w-3.5 h-3.5" />
-              13 Portales Integrados
+              {AVAILABLE_SOURCES.length} Portales Integrados
             </span>
           </div>
         </div>
@@ -1480,6 +1556,29 @@ export default function LocalizacionPage() {
               </span>
             </div>
 
+            {/* Zona de Subida de Archivo CSV / TXT */}
+            <div className="mb-4 p-4 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl bg-slate-50/50 hover:bg-blue-50/30 transition-all flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800">Cargar Archivo CSV o TXT con Cédulas</p>
+                  <p className="text-[11px] text-slate-500">Detecta automáticamente la columna de cédulas o números de identificación.</p>
+                </div>
+              </div>
+              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs transition-all hover:border-blue-300">
+                <Upload className="w-3.5 h-3.5 text-blue-600" />
+                <span>Seleccionar Archivo CSV</span>
+                <input
+                  type="file"
+                  accept=".csv,.txt"
+                  className="hidden"
+                  onChange={handleCsvFileUpload}
+                />
+              </label>
+            </div>
+
             <textarea
               rows={6}
               placeholder="1064438082&#10;1024511109&#10;80188977&#10;55059598..."
@@ -1605,15 +1704,27 @@ export default function LocalizacionPage() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => loadLotes(lotesPage, lotesLimit)}
-                disabled={isLotesLoading}
-                className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold flex items-center gap-2 transition-all self-start sm:self-auto"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLotesLoading ? 'animate-spin' : ''}`} />
-                Actualizar Lotes
-              </button>
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleCleanupLotes}
+                  disabled={isCleaningLotes || isLotesLoading}
+                  className="px-3.5 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
+                  title="Sincroniza y cierra lotes que quedaron en estado RUNNING de ejecuciones previas"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isCleaningLotes ? 'animate-spin text-amber-600' : ''}`} />
+                  Limpiar Lotes Huérfanos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => loadLotes(lotesPage, lotesLimit)}
+                  disabled={isLotesLoading}
+                  className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold flex items-center gap-2 transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLotesLoading ? 'animate-spin' : ''}`} />
+                  Actualizar Lotes
+                </button>
+              </div>
             </div>
 
             {/* Tabla de Lotes */}

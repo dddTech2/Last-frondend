@@ -91,12 +91,23 @@ export const localizacionService = {
    * Descarga el archivo CSV consolidado de un lote.
    */
   async descargarLoteCSV(runId) {
-    const token = localStorage.getItem('token');
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+    let token = null;
+    const tokenData = localStorage.getItem('authToken');
+    if (tokenData) {
+      try {
+        const parsed = JSON.parse(tokenData);
+        token = parsed.access_token || parsed;
+      } catch {
+        token = tokenData;
+      }
+    }
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://backend-475190189080.us-central1.run.app/api/v1';
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await fetch(`${baseUrl}/localizacion/lotes/${runId}/exportar`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
     });
     if (!response.ok) {
       throw new Error(`Error descargando reporte del lote ${runId}`);
@@ -110,6 +121,13 @@ export const localizacionService = {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+  },
+
+  /**
+   * Sincroniza y cierra lotes huérfanos que quedaron en RUNNING.
+   */
+  async cleanupLotes() {
+    return await apiRequest('/localizacion/lotes/cleanup', 'POST');
   },
 };
 
