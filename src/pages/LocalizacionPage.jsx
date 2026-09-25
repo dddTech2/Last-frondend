@@ -47,7 +47,6 @@ const AVAILABLE_SOURCES = [
   { id: 'NUEVA_EPS', label: 'Nueva EPS', category: 'EPS', color: 'bg-blue-50 text-blue-800 border-blue-300' },
   { id: 'SENA', label: 'SENA (APE)', category: 'Laboral', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   { id: 'SERVICIO_EMPLEO', label: 'Servicio de Empleo', category: 'Laboral', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { id: 'MI_VACUNA', label: 'Mi Vacuna SISPRO', category: 'Salud', color: 'bg-purple-50 text-purple-700 border-purple-200', note: 'Req. Expedición' },
   { id: 'SIMIT', label: 'SIMIT Multas', category: 'Vehículos', color: 'bg-rose-50 text-rose-700 border-rose-200' },
 ];
 
@@ -1314,7 +1313,7 @@ export default function LocalizacionPage() {
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Datos Complementarios (Opcionales para RUAF, Mi Vacuna y Salud Total)
+                      Datos Complementarios (Opcional para Salud Total)
                     </span>
                   </div>
                   <button type="button" className="text-xs text-blue-600 font-semibold hover:underline">
@@ -1344,7 +1343,7 @@ export default function LocalizacionPage() {
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center justify-between">
                         <span>Fecha de Expedición</span>
-                        <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-1.5 py-0.5 rounded">RUAF / Mi Vacuna</span>
+                        <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded">Opcional</span>
                       </label>
                       <input
                         type="date"
