@@ -581,6 +581,7 @@ export default function LocalizacionPage() {
   const [isSingleLoading, setIsSingleLoading] = useState(false);
   const [singleProgressStatus, setSingleProgressStatus] = useState('');
   const [singleProfile, setSingleProfile] = useState(null);
+  const [singleQueryNotice, setSingleQueryNotice] = useState(null);
 
   const toggleSourceSelection = (sourceId) => {
     if (selectedSingleSources.includes(sourceId)) {
@@ -612,6 +613,7 @@ export default function LocalizacionPage() {
 
     setIsSingleLoading(true);
     setSingleProgressStatus('Consultando base de datos...');
+    setSingleQueryNotice(null);
 
     try {
       try {
@@ -653,7 +655,43 @@ export default function LocalizacionPage() {
           setSingleProgressStatus('Consolidando resultados...');
           const freshProfile = await localizacionService.getPerfilPersona(cleanCedula);
           setSingleProfile(freshProfile);
-          toast.success('¡Consulta completada con éxito!');
+
+          const exitosas = state.resultados?.exitosas ?? state.progreso?.exitosas ?? 0;
+          const fallidas = state.resultados?.fallidas ?? state.progreso?.fallidas ?? 0;
+          const detalleCedula = state.resultados?.detalle?.[cleanCedula] || {};
+
+          const fallasDetalle = Object.entries(detalleCedula)
+            .filter(([_, info]) => info && info.status !== 'SUCCESS')
+            .map(([fuente, info]) => `${fuente}: ${info.error || info.status || 'Sin datos'}`);
+
+          if (exitosas > 0 && fallidas === 0) {
+            toast.success(`¡Consulta completada con éxito! (${exitosas} fuente${exitosas > 1 ? 's' : ''} con datos)`);
+            setSingleQueryNotice({
+              type: 'success',
+              title: 'Consulta realizada con éxito',
+              message: `Se consolidaron datos correctamente de ${exitosas} fuente(s) consultada(s).`,
+            });
+          } else if (exitosas > 0 && fallidas > 0) {
+            toast.warning(`Consulta completada con fallas: ${exitosas} éxito(s), ${fallidas} con error.`);
+            setSingleQueryNotice({
+              type: 'warning',
+              title: 'Consulta completada con fallas parciales',
+              message: `Se obtuvieron datos de ${exitosas} fuente(s), pero ${fallidas} portal(es) presentaron inconvenientes:`,
+              details: fallasDetalle,
+            });
+          } else {
+            const mainMsg = fallasDetalle.length > 0
+              ? fallasDetalle.join(' | ')
+              : 'No se encontraron registros en las fuentes consultadas.';
+            toast.error(`La consulta no arrojó resultados: ${mainMsg}`, { duration: 6000 });
+            setSingleQueryNotice({
+              type: 'error',
+              title: 'La consulta no pudo completarse con éxito',
+              message: 'Ninguna de las fuentes seleccionadas retornó datos válidos:',
+              details: fallasDetalle.length > 0 ? fallasDetalle : ['El portal no respondió o la cédula no cuenta con registros.'],
+            });
+          }
+
           setIsSingleLoading(false);
           setSingleProgressStatus('');
           return;
@@ -661,6 +699,11 @@ export default function LocalizacionPage() {
 
         if (state.status === 'FAILURE' || state.status === 'REVOKED') {
           toast.error(`La tarea finalizó con error: ${state.error || state.status}`);
+          setSingleQueryNotice({
+            type: 'error',
+            title: 'Error de ejecución en Celery',
+            message: state.error || `Estado: ${state.status}`,
+          });
           setIsSingleLoading(false);
           setSingleProgressStatus('');
           return;
@@ -804,7 +847,17 @@ export default function LocalizacionPage() {
         if (data.status === 'SUCCESS' || data.status === 'FAILURE' || data.status === 'REVOKED') {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           if (data.status === 'SUCCESS') {
-            toast.success('¡Procesamiento del lote completado con éxito!');
+            const exitosas = data.resultados?.exitosas ?? data.progreso?.exitosas ?? 0;
+            const fallidas = data.resultados?.fallidas ?? data.progreso?.fallidas ?? 0;
+            if (exitosas > 0 && fallidas === 0) {
+              toast.success(`¡Procesamiento del lote completado con éxito! (${exitosas} registros exitosos)`);
+            } else if (exitosas > 0 && fallidas > 0) {
+              toast.warning(`Lote completado con advertencias: ${exitosas} exitosos, ${fallidas} fallidos.`);
+            } else if (fallidas > 0 && exitosas === 0) {
+              toast.error(`El lote finalizó sin registros exitosos (${fallidas} fallas).`);
+            } else {
+              toast.success('¡Procesamiento del lote completado!');
+            }
           } else {
             toast.error(`La tarea finalizó con estado: ${data.status}`);
           }
@@ -1363,6 +1416,45 @@ export default function LocalizacionPage() {
               </div>
             </form>
           </div>
+
+          {/* Alerta / Notificación de Resultado de la Consulta */}
+          {singleQueryNotice && (
+            <div className={`p-4 rounded-2xl border transition-all animate-fadeIn ${
+              singleQueryNotice.type === 'error'
+                ? 'bg-rose-50/90 border-rose-200 text-rose-900 shadow-sm'
+                : singleQueryNotice.type === 'warning'
+                ? 'bg-amber-50/90 border-amber-200 text-amber-900 shadow-sm'
+                : 'bg-emerald-50/90 border-emerald-200 text-emerald-900 shadow-sm'
+            }`}>
+              <div className="flex items-start gap-3">
+                <span className="text-xl shrink-0 mt-0.5">
+                  {singleQueryNotice.type === 'error' ? '❌' : singleQueryNotice.type === 'warning' ? '⚠️' : '✅'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-sm tracking-tight">{singleQueryNotice.title}</h4>
+                  <p className="text-xs mt-0.5 opacity-90">{singleQueryNotice.message}</p>
+                  {singleQueryNotice.details && singleQueryNotice.details.length > 0 && (
+                    <ul className="mt-2.5 space-y-1 text-xs">
+                      {singleQueryNotice.details.map((d, idx) => (
+                        <li key={idx} className="flex items-start gap-2 font-mono text-[11px] bg-white/70 px-2 py-1 rounded-md border border-current/10">
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 shrink-0 mt-1"></span>
+                          <span className="break-all">{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSingleQueryNotice(null)}
+                  className="text-xs opacity-50 hover:opacity-100 font-bold p-1 transition-opacity"
+                  title="Cerrar notificación"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Resultados Consolidados */}
           {singleProfile && (
