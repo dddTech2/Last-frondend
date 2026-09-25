@@ -443,7 +443,7 @@ export default function LocalizacionPage() {
   const [historialList, setHistorialList] = useState([]);
   const [historialTotal, setHistorialTotal] = useState(0);
   const [historialFilterFuente, setHistorialFilterFuente] = useState('');
-  const [historialFilterStatus, setHistorialFilterStatus] = useState('');
+  const [historialFilterStatus, setHistorialFilterStatus] = useState('SUCCESS');
   const [historialInputCedula, setHistorialInputCedula] = useState('');
   const [historialSearchCedula, setHistorialSearchCedula] = useState('');
   const [historialPage, setHistorialPage] = useState(1);
