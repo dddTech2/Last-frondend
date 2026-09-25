@@ -118,6 +118,39 @@ function humanizeKey(key) {
 }
 
 /**
+ * Helper para formatear de manera concisa los datos extraídos por cada fuente en la ejecución actual.
+ */
+function formatExtractedSummary(fuente, data) {
+  if (!data) return 'Datos de afiliación y localización guardados en base de datos.';
+  if (typeof data === 'string') return data;
+
+  const parts = [];
+  if (data.celular || data.telefono || data.telefono_fijo) {
+    const tels = [data.celular, data.telefono, data.telefono_fijo].filter(Boolean);
+    parts.push(`📞 Tel: ${tels.join(', ')}`);
+  }
+  if (data.correo || data.email) {
+    parts.push(`✉️ ${data.correo || data.email}`);
+  }
+  if (data.direccion) {
+    parts.push(`📍 ${data.direccion}${data.ciudad ? ` (${data.ciudad})` : ''}`);
+  }
+  if (data.nombres || data.nombre_completo) {
+    parts.push(`👤 ${data.nombres || data.nombre_completo}`);
+  }
+  if (data.tiene_multas !== undefined) {
+    parts.push(data.tiene_multas ? '⚠️ Con multas pendientes' : '✅ Al día / Sin multas');
+  }
+  if (data.placas && Array.isArray(data.placas) && data.placas.length > 0) {
+    parts.push(`🚗 Placas: ${data.placas.join(', ')}`);
+  }
+  if (data.eps_nombre || data.estado_afiliacion) {
+    parts.push(`🏥 ${data.eps_nombre || ''} (${data.estado_afiliacion || 'ACTIVO'})`);
+  }
+  return parts.length > 0 ? parts.join(' • ') : 'Registro almacenado en base de datos.';
+}
+
+/**
  * Componente recursivo para renderizar campos dinámicos de diccionarios JSON.
  */
 function DynamicValueRenderer({ value, depth = 0 }) {
@@ -581,6 +614,7 @@ export default function LocalizacionPage() {
   const [singleProgressStatus, setSingleProgressStatus] = useState('');
   const [singleProfile, setSingleProfile] = useState(null);
   const [singleQueryNotice, setSingleQueryNotice] = useState(null);
+  const [recentUpdatedSources, setRecentUpdatedSources] = useState([]);
 
   const toggleSourceSelection = (sourceId) => {
     if (selectedSingleSources.includes(sourceId)) {
@@ -613,6 +647,7 @@ export default function LocalizacionPage() {
     setIsSingleLoading(true);
     setSingleProgressStatus('Consultando base de datos...');
     setSingleQueryNotice(null);
+    setRecentUpdatedSources([]);
 
     try {
       try {
@@ -659,35 +694,67 @@ export default function LocalizacionPage() {
           const fallidas = state.resultados?.fallidas ?? state.progreso?.fallidas ?? 0;
           const detalleCedula = state.resultados?.detalle?.[cleanCedula] || {};
 
-          const fallasDetalle = Object.entries(detalleCedula)
+          const exitosasList = Object.entries(detalleCedula)
+            .filter(([_, info]) => info && info.status === 'SUCCESS')
+            .map(([fuente, info]) => ({
+              fuente,
+              elapsed: info.elapsed,
+              data: info.data || info.sample || null,
+            }));
+
+          const fallidasList = Object.entries(detalleCedula)
             .filter(([_, info]) => info && info.status !== 'SUCCESS')
-            .map(([fuente, info]) => `${fuente}: ${info.error || info.status || 'Sin datos'}`);
+            .map(([fuente, info]) => ({
+              fuente,
+              status: info.status,
+              error: info.error || info.status || 'Sin datos',
+              elapsed: info.elapsed,
+            }));
+
+          const updatedNames = exitosasList.map(e => e.fuente);
+          setRecentUpdatedSources(updatedNames);
 
           if (exitosas > 0 && fallidas === 0) {
-            toast.success(`¡Consulta completada con éxito! (${exitosas} fuente${exitosas > 1 ? 's' : ''} con datos)`);
+            toast.success(`¡Consulta completada con éxito! (${exitosas} fuentes con datos: ${updatedNames.join(', ')})`);
             setSingleQueryNotice({
               type: 'success',
-              title: 'Consulta realizada con éxito',
-              message: `Se consolidaron datos correctamente de ${exitosas} fuente(s) consultada(s).`,
+              title: 'Consulta completada con éxito',
+              message: `Se consolidaron datos correctamente de ${exitosas} fuente(s) en esta ejecución.`,
+              exitosasCount: exitosas,
+              fallidasCount: fallidas,
+              exitosas: exitosasList,
+              fallidas: fallidasList,
+              cedula: cleanCedula,
+              ejecucion_at: new Date().toLocaleTimeString(),
             });
           } else if (exitosas > 0 && fallidas > 0) {
-            toast.warning(`Consulta completada con fallas: ${exitosas} éxito(s), ${fallidas} con error.`);
+            toast.warning(`Consulta completada con fallas parciales: ${exitosas} exitosa(s) (${updatedNames.join(', ')}), ${fallidas} con incidencias.`);
             setSingleQueryNotice({
               type: 'warning',
-              title: 'Consulta completada con fallas parciales',
-              message: `Se obtuvieron datos de ${exitosas} fuente(s), pero ${fallidas} portal(es) presentaron inconvenientes:`,
-              details: fallasDetalle,
+              title: 'Consulta completada con resultados parciales',
+              message: `Se obtuvieron datos de ${exitosas} fuente(s), mientras que ${fallidas} portal(es) presentaron incidencias:`,
+              exitosasCount: exitosas,
+              fallidasCount: fallidas,
+              exitosas: exitosasList,
+              fallidas: fallidasList,
+              cedula: cleanCedula,
+              ejecucion_at: new Date().toLocaleTimeString(),
             });
           } else {
-            const mainMsg = fallasDetalle.length > 0
-              ? fallasDetalle.join(' | ')
+            const mainMsg = fallidasList.length > 0
+              ? fallidasList.map(f => `${f.fuente}: ${f.error}`).join(' | ')
               : 'No se encontraron registros en las fuentes consultadas.';
             toast.error(`La consulta no arrojó resultados: ${mainMsg}`, { duration: 6000 });
             setSingleQueryNotice({
               type: 'error',
               title: 'La consulta no pudo completarse con éxito',
-              message: 'Ninguna de las fuentes seleccionadas retornó datos válidos:',
-              details: fallasDetalle.length > 0 ? fallasDetalle : ['El portal no respondió o la cédula no cuenta con registros.'],
+              message: 'Ninguna de las fuentes seleccionadas retornó datos válidos en esta ejecución:',
+              exitosasCount: 0,
+              fallidasCount: fallidas,
+              exitosas: [],
+              fallidas: fallidasList,
+              cedula: cleanCedula,
+              ejecucion_at: new Date().toLocaleTimeString(),
             });
           }
 
@@ -1416,32 +1483,26 @@ export default function LocalizacionPage() {
             </form>
           </div>
 
-          {/* Alerta / Notificación de Resultado de la Consulta */}
+          {/* Alerta / Resumen Detallado de la Consulta Actual */}
           {singleQueryNotice && (
-            <div className={`p-4 rounded-2xl border transition-all animate-fadeIn ${
+            <div className={`p-5 rounded-2xl border transition-all animate-fadeIn shadow-sm ${
               singleQueryNotice.type === 'error'
-                ? 'bg-rose-50/90 border-rose-200 text-rose-900 shadow-sm'
+                ? 'bg-rose-50/95 border-rose-200 text-rose-950'
                 : singleQueryNotice.type === 'warning'
-                ? 'bg-amber-50/90 border-amber-200 text-amber-900 shadow-sm'
-                : 'bg-emerald-50/90 border-emerald-200 text-emerald-900 shadow-sm'
+                ? 'bg-amber-50/95 border-amber-200 text-amber-950'
+                : 'bg-emerald-50/95 border-emerald-200 text-emerald-950'
             }`}>
-              <div className="flex items-start gap-3">
-                <span className="text-xl shrink-0 mt-0.5">
-                  {singleQueryNotice.type === 'error' ? '❌' : singleQueryNotice.type === 'warning' ? '⚠️' : '✅'}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-sm tracking-tight">{singleQueryNotice.title}</h4>
-                  <p className="text-xs mt-0.5 opacity-90">{singleQueryNotice.message}</p>
-                  {singleQueryNotice.details && singleQueryNotice.details.length > 0 && (
-                    <ul className="mt-2.5 space-y-1 text-xs">
-                      {singleQueryNotice.details.map((d, idx) => (
-                        <li key={idx} className="flex items-start gap-2 font-mono text-[11px] bg-white/70 px-2 py-1 rounded-md border border-current/10">
-                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 shrink-0 mt-1"></span>
-                          <span className="break-all">{d}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl shrink-0">
+                    {singleQueryNotice.type === 'error' ? '❌' : singleQueryNotice.type === 'warning' ? '⚠️' : '✅'}
+                  </span>
+                  <div>
+                    <h4 className="font-bold text-base tracking-tight">{singleQueryNotice.title}</h4>
+                    <p className="text-xs opacity-80 mt-0.5">
+                      Cédula <span className="font-mono font-bold">{singleQueryNotice.cedula}</span> • Ejecutado a las {singleQueryNotice.ejecucion_at} ({singleQueryNotice.exitosasCount} fuentes con datos, {singleQueryNotice.fallidasCount} con incidencias)
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1451,6 +1512,70 @@ export default function LocalizacionPage() {
                 >
                   ✕
                 </button>
+              </div>
+
+              {/* Secciones de Fuentes: Exitosas vs Fallidas */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-3 pt-3 border-t border-current/15">
+                {/* 1. FUENTES EXITOSAS EN ESTA EJECUCIÓN */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200"></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">
+                      Fuentes con Datos en Esta Consulta ({singleQueryNotice.exitosas?.length || 0})
+                    </span>
+                  </div>
+                  {(!singleQueryNotice.exitosas || singleQueryNotice.exitosas.length === 0) ? (
+                    <div className="text-xs italic bg-white/60 p-2.5 rounded-xl border border-current/10 text-slate-500">
+                      Ningún portal aportó datos nuevos en esta ejecución.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {singleQueryNotice.exitosas.map((item, idx) => (
+                        <div key={idx} className="bg-white/90 p-2.5 rounded-xl border border-emerald-300 shadow-xs flex flex-col gap-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-emerald-800 flex items-center gap-1.5">
+                              <span className="text-emerald-600">✓</span> {item.fuente}
+                            </span>
+                            {item.elapsed && (
+                              <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">{item.elapsed}s</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-700 font-medium">
+                            {formatExtractedSummary(item.fuente, item.data)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. FUENTES CON FALLAS O SIN DATOS */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-200"></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Fuentes sin Datos o con Incidencias ({singleQueryNotice.fallidas?.length || 0})
+                    </span>
+                  </div>
+                  {(!singleQueryNotice.fallidas || singleQueryNotice.fallidas.length === 0) ? (
+                    <div className="text-xs italic bg-white/60 p-2.5 rounded-xl border border-current/10 text-emerald-700 font-medium">
+                      Todas las fuentes seleccionadas respondieron satisfactoriamente.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {singleQueryNotice.fallidas.map((item, idx) => (
+                        <div key={idx} className="bg-white/70 p-2 rounded-xl border border-slate-200/80 flex items-start justify-between text-xs gap-2">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-700 shrink-0">
+                            <span className="text-rose-500">✕</span> {item.fuente}:
+                          </div>
+                          <span className="text-[11px] text-slate-600 break-words flex-1 text-right font-mono">
+                            {item.error}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1483,10 +1608,16 @@ export default function LocalizacionPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {singleProfile.total_fuentes_exitosas} Fuentes con Datos
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {singleProfile.total_fuentes_exitosas} Fuentes en BD (Total Histórico)
                     </span>
+                    {recentUpdatedSources.length > 0 && (
+                      <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                        +{recentUpdatedSources.length} Obtenidas en esta consulta ({recentUpdatedSources.join(', ')})
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1502,14 +1633,26 @@ export default function LocalizacionPage() {
                       <p className="text-xs text-slate-400 italic">No se encontraron teléfonos.</p>
                     ) : (
                       <div className="space-y-2">
-                        {singleProfile.telefonos.map((t, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 text-sm">
-                            <span className="font-mono font-semibold text-slate-800">{t.numero}</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                              {t.fuente}
-                            </span>
-                          </div>
-                        ))}
+                        {singleProfile.telefonos.map((t, idx) => {
+                          const isNew = recentUpdatedSources.includes(t.fuente);
+                          return (
+                            <div key={idx} className={`flex items-center justify-between p-2.5 rounded-lg border text-sm transition-all ${
+                              isNew 
+                                ? 'bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-200 shadow-xs' 
+                                : 'bg-white border-slate-200'
+                            }`}>
+                              <span className="font-mono font-semibold text-slate-800">{t.numero}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                                isNew 
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
+                                  : 'bg-blue-50 text-blue-700 border-blue-100'
+                              }`}>
+                                {isNew && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>}
+                                {t.fuente} {isNew ? '• Recién Extraído' : ''}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1524,14 +1667,26 @@ export default function LocalizacionPage() {
                       <p className="text-xs text-slate-400 italic">No se encontraron correos.</p>
                     ) : (
                       <div className="space-y-2">
-                        {singleProfile.correos.map((c, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 text-sm">
-                            <span className="text-slate-800 truncate mr-2">{c.email}</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
-                              {c.fuente}
-                            </span>
-                          </div>
-                        ))}
+                        {singleProfile.correos.map((c, idx) => {
+                          const isNew = recentUpdatedSources.includes(c.fuente);
+                          return (
+                            <div key={idx} className={`flex items-center justify-between p-2.5 rounded-lg border text-sm transition-all ${
+                              isNew 
+                                ? 'bg-indigo-50/80 border-indigo-300 ring-1 ring-indigo-200 shadow-xs' 
+                                : 'bg-white border-slate-200'
+                            }`}>
+                              <span className="text-slate-800 truncate mr-2 font-medium">{c.email}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                                isNew 
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
+                                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
+                              }`}>
+                                {isNew && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>}
+                                {c.fuente} {isNew ? '• Recién Extraído' : ''}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1546,17 +1701,29 @@ export default function LocalizacionPage() {
                       <p className="text-xs text-slate-400 italic">No se encontraron direcciones.</p>
                     ) : (
                       <div className="space-y-2">
-                        {singleProfile.direcciones.map((d, idx) => (
-                          <div key={idx} className="bg-white p-2.5 rounded-lg border border-slate-200 text-sm">
-                            <p className="font-medium text-slate-800">{d.direccion}</p>
-                            <div className="flex items-center justify-between mt-1 text-xs text-slate-500">
-                              <span>{d.ciudad ? `${d.ciudad}, ${d.departamento || ''}` : 'Ciudad N/A'}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                {d.fuente}
-                              </span>
+                        {singleProfile.direcciones.map((d, idx) => {
+                          const isNew = recentUpdatedSources.includes(d.fuente);
+                          return (
+                            <div key={idx} className={`p-2.5 rounded-lg border text-sm transition-all ${
+                              isNew 
+                                ? 'bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-200 shadow-xs' 
+                                : 'bg-white border-slate-200'
+                            }`}>
+                              <p className="font-medium text-slate-800">{d.direccion}</p>
+                              <div className="flex items-center justify-between mt-1 text-xs text-slate-500">
+                                <span>{d.ciudad ? `${d.ciudad}, ${d.departamento || ''}` : 'Ciudad N/A'}</span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                                  isNew 
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                }`}>
+                                  {isNew && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>}
+                                  {d.fuente} {isNew ? '• Recién Extraído' : ''}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -1598,9 +1765,17 @@ export default function LocalizacionPage() {
 
                   {/* Vehículos & Tránsito */}
                   <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
-                    <div className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-3">
-                      <Car className="w-4 h-4 text-rose-600" />
-                      Vehículos & Tránsito (SIMIT)
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                        <Car className="w-4 h-4 text-rose-600" />
+                        Vehículos & Tránsito (SIMIT)
+                      </div>
+                      {recentUpdatedSources.includes('SIMIT') && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                          Verificado en esta consulta
+                        </span>
+                      )}
                     </div>
                     {singleProfile.vehiculos ? (
                       <div className="bg-white p-3 rounded-lg border border-slate-200 text-sm">
