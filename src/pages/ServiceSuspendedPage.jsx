@@ -12,9 +12,8 @@ const ServiceSuspendedPage = () => {
           Servicio temporalmente suspendido
         </h1>
         <p className="text-gray-600">
-          El acceso a la plataforma se encuentra suspendido por temas
-          administrativos pendientes. Para restablecer el servicio,
-          comuníquese con su proveedor para normalizar el estado de su cuenta.
+          El acceso a la plataforma se encuentra suspendido. Comuníquese con
+          su proveedor para normalizar el estado de su cuenta.
         </p>
       </div>
     </div>
